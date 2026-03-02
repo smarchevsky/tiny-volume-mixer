@@ -125,32 +125,32 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
     }
 
     case WM_LBUTTONDOWN: {
-        SetCapture(hWnd);
-        ShowCursor(FALSE);
-
         RECT rect;
         GetClientRect(hWnd, &rect);
-
-        POINT cursorScreenPos, cursorClientPos;
+        POINT cursorScreenPos;
         GetCursorPos(&cursorScreenPos);
-
-        cursorClientPos = cursorScreenPos;
+        POINT cursorClientPos = cursorScreenPos;
         ScreenToClient(hWnd, &cursorClientPos);
 
         if (auto newCaptured = sliderManager.getHoveredSlider(cursorClientPos)) {
             selectedSliderInfo = newCaptured;
             cursorScreenPosCaptured = cursorScreenPos;
             SetTimer(hWnd, IDT_TIMER_1, 25, (TIMERPROC)NULL);
+            SetCapture(hWnd);
+            ShowCursor(FALSE);
+            printf("slider dragging\n");
         }
         break;
     }
 
     case WM_LBUTTONUP: {
-        selectedSliderInfo = {};
-        ReleaseCapture();
-        ShowCursor(TRUE);
-        KillTimer(hWnd, IDT_TIMER_1);
-        cursorOffsetAccumulatorY = 0;
+        if (selectedSliderInfo) {
+            selectedSliderInfo = {};
+            ReleaseCapture();
+            ShowCursor(TRUE);
+            KillTimer(hWnd, IDT_TIMER_1);
+            cursorOffsetAccumulatorY = 0;
+        }
         break;
     }
 
