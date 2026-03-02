@@ -6,10 +6,10 @@
 
 #include "AudioUtils.h"
 
-// #include <windowsx.h>
 #include <algorithm>
 #include <iostream>
 #include <string>
+#include <windowsx.h>
 
 #define MAX_LOADSTRING 100
 #define HEX_TO_RGB(hex) RGB((hex >> 16) & 0xFF, (hex >> 8) & 0xFF, hex & 0xFF)
@@ -216,14 +216,39 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         InvalidateRect(hWnd, NULL, TRUE); // UpdateWindow(hWnd); // works without it
         return 0;
     }
-    // case WM_NCCALCSIZE: {
-    //     if (wParam == TRUE)
-    //         return 0; // Removes the default standard frame padding
-    //     return DefWindowProc(hWnd, message, wParam, lParam);
-    // }
+
+#define BORDERLESS 1
+#if BORDERLESS == 1
+    case WM_NCCALCSIZE: {
+        if (wParam == TRUE)
+            return 0; // Removes the default standard frame padding
+        break;
+    }
+#endif
+
     case WM_NCHITTEST: {
         POINT pt = { LOWORD(lParam), HIWORD(lParam) };
         ScreenToClient(hWnd, &pt);
+
+        RECT rc;
+        GetClientRect(hWnd, &rc);
+#if BORDERLESS == 1
+        // clang-format off
+        const int border = 8; // resize thickness
+        bool left   = pt.x < border;
+        bool right  = pt.x >= rc.right - border;
+        bool top    = pt.y < border;
+        bool bottom = pt.y >= rc.bottom - border;
+        if (top && left)     return HTTOPLEFT;
+        if (top && right)    return HTTOPRIGHT;
+        if (bottom && left)  return HTBOTTOMLEFT;
+        if (bottom && right) return HTBOTTOMRIGHT;
+        if (left)            return HTLEFT;
+        if (right)           return HTRIGHT;
+        if (top)             return HTTOP;
+        if (bottom)          return HTBOTTOM;
+        // clang-format on
+#endif
         LRESULT hit = DefWindowProc(hWnd, message, wParam, lParam); // handle resize first
         if (hit == HTCLIENT) {
             if (pt.x < captionSizeLeft) {
