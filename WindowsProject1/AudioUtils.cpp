@@ -93,6 +93,7 @@ public:
         }
         return r;
     }
+
     HRESULT STDMETHODCALLTYPE QueryInterface(REFIID riid, void** ppv)
     {
         if (riid == IID_IUnknown || riid == __uuidof(IAudioSessionEvents)) {
@@ -118,24 +119,32 @@ public:
     HRESULT STDMETHODCALLTYPE OnChannelVolumeChanged(DWORD, float[], DWORD, LPCGUID) override { return S_OK; }
     HRESULT STDMETHODCALLTYPE OnGroupingParamChanged(LPCGUID, LPCGUID) override { return S_OK; }
     HRESULT STDMETHODCALLTYPE OnStateChanged(AudioSessionState newState) override
-    {
+    { // expired when app naturally closed
         if (newState == AudioSessionStateExpired) {
-            std::lock_guard<std::mutex> lock(g_mutex);
-            auto it = std::find(g_trackedSessions.begin(), g_trackedSessions.end(), _pCtrl);
-            if (it != g_trackedSessions.end()) {
-                g_trackedSessions.erase(it);
-                g_expiredSessions.push_back({ _pCtrl, this });
-                AddRef();
-            }
-            AudioUpdateInfo info(VolumeType::App, _pid, 0, false);
-            PostMessage(_hWnd, WM_APP_UNREGISTERED, info._wp, info._lp);
+            wprintf(L"OnStateChanged, AudioSessionStateExpired [PID %u]\n", _pid);
+            Cleanup();
         }
         return S_OK;
     }
+
     HRESULT STDMETHODCALLTYPE OnSessionDisconnected(AudioSessionDisconnectReason) override
-    {
+    { // disconnected when app crashes
         wprintf(L"OnSessionDisconnected [PID %u]\n", _pid);
+        Cleanup();
         return S_OK;
+    }
+
+    void Cleanup()
+    {
+        std::lock_guard<std::mutex> lock(g_mutex);
+        auto it = std::find(g_trackedSessions.begin(), g_trackedSessions.end(), _pCtrl);
+        if (it != g_trackedSessions.end()) {
+            g_trackedSessions.erase(it);
+            g_expiredSessions.push_back({ _pCtrl, this });
+            AddRef();
+        }
+        AudioUpdateInfo info(VolumeType::App, _pid, 0, false);
+        PostMessage(_hWnd, WM_APP_UNREGISTERED, info._wp, info._lp);
     }
 };
 
@@ -344,4 +353,3 @@ void AudioUpdateListener::setVol(SelectInfo selectInfo, float vol)
         }
     }
 }
-
