@@ -8,19 +8,6 @@
 //
 
 namespace {
-std::wstring getProcessName(PID pid)
-{
-    if (pid == 0)
-        return L"System Sounds";
-    TCHAR szName[MAX_PATH] = TEXT("<unknown>");
-    HANDLE hProc = OpenProcess(PROCESS_QUERY_INFORMATION | PROCESS_VM_READ, FALSE, pid);
-    if (hProc) {
-        GetModuleBaseName(hProc, NULL, szName, MAX_PATH);
-        CloseHandle(hProc);
-    }
-    return szName;
-};
-
 COLORREF getIconColor(BITMAP bmp, ICONINFO iconInfo)
 {
     // 1. Setup the bitmap info header
@@ -64,6 +51,37 @@ COLORREF getIconColor(BITMAP bmp, ICONINFO iconInfo)
     }
     return RGB(160, 160, 160);
 }
+
+IconInfo createIconInfo(HICON icon)
+{
+    if (!icon)
+        return {};
+
+    ICONINFO iconInfo;
+    GetIconInfo(icon, &iconInfo);
+
+    BITMAP bmp;
+    GetObject(iconInfo.hbmColor, sizeof(BITMAP), &bmp);
+
+    IconInfo info {};
+    info.hBrush = CreateSolidBrush(getIconColor(bmp, iconInfo));
+    info.hLarge = icon;
+    info.width = bmp.bmWidth;
+    return info;
+}
+
+std::wstring getProcessName(PID pid)
+{
+    if (pid == 0)
+        return L"System Sounds";
+    TCHAR szName[MAX_PATH] = TEXT("<unknown>");
+    HANDLE hProc = OpenProcess(PROCESS_QUERY_INFORMATION | PROCESS_VM_READ, FALSE, pid);
+    if (hProc) {
+        GetModuleBaseName(hProc, NULL, szName, MAX_PATH);
+        CloseHandle(hProc);
+    }
+    return szName;
+};
 }
 
 //
@@ -81,21 +99,6 @@ void IconManager::uninit()
     DestroyIcon(iiMasterSpeaker.hLarge);
     DestroyIcon(iiMasterHeadphones.hLarge);
     DestroyIcon(iiSystemSounds.hLarge);
-}
-
-static IconInfo createIconInfo(HICON icon)
-{
-    ICONINFO iconInfo;
-    GetIconInfo(icon, &iconInfo);
-
-    BITMAP bmp;
-    GetObject(iconInfo.hbmColor, sizeof(BITMAP), &bmp);
-
-    IconInfo info {};
-    info.hBrush = CreateSolidBrush(getIconColor(bmp, iconInfo));
-    info.hLarge = icon;
-    info.width = bmp.bmWidth;
-    return info;
 }
 
 IconManager::IconManager()
