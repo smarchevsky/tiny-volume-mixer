@@ -78,6 +78,7 @@ class AudioUpdateListener {
 public:
     void init(HWND hWnd);
     void uninit();
+    void cleanupExpiredSessions();
 
     void setVol(SelectInfo selectInfo, float vol);
 

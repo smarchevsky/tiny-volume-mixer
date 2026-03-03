@@ -47,7 +47,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
     _In_ LPWSTR lpCmdLine,
     _In_ int nCmdShow)
 {
-    //CreateConsole();
+    CreateConsole();
 
     CoinitializeWrapper coinitializeRAII;
 
@@ -206,6 +206,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         sliderManager.removeAppSlider(info._pid);
         sliderManager.recalculateSliderRects(getSliderRegion(hWnd));
         InvalidateRect(hWnd, NULL, FALSE);
+        AudioUpdateListener::get().cleanupExpiredSessions();
     } break;
 
     case WM_REFRESH_VOL: {

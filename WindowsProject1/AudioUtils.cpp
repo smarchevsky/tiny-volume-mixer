@@ -11,11 +11,19 @@
 #include <mutex>
 #include <string>
 
+struct IAudioSessionControl;
+struct IAudioSessionEvents;
+
 // S_OK, S_FALSE
 CoinitializeWrapper::CoinitializeWrapper() { (void)CoInitialize(NULL); }
 CoinitializeWrapper::~CoinitializeWrapper() { CoUninitialize(); }
 
 namespace {
+struct ExpiredSession {
+    IAudioSessionControl* pCtrl;
+    IAudioSessionEvents* pEvents;
+};
+std::vector<ExpiredSession> g_expiredSessions;
 std::vector<IAudioSessionControl*> g_trackedSessions;
 std::mutex g_mutex;
 
@@ -117,7 +125,8 @@ public:
             auto it = std::find(g_trackedSessions.begin(), g_trackedSessions.end(), _pCtrl);
             if (it != g_trackedSessions.end()) {
                 g_trackedSessions.erase(it);
-                Release();
+                g_expiredSessions.push_back({ _pCtrl, this });
+                AddRef();
             }
             AudioUpdateInfo info(VolumeType::App, _pid, 0, false);
             PostMessage(_hWnd, WM_APP_UNREGISTERED, info._wp, info._lp);
@@ -289,6 +298,18 @@ void AudioUpdateListener::uninit()
 
     pDevice->Release();
     pEnumerator->Release();
+}
+
+void AudioUpdateListener::cleanupExpiredSessions()
+{
+    std::lock_guard<std::mutex> lock(g_mutex);
+    for (auto& e : g_expiredSessions) {
+        e.pCtrl->UnregisterAudioSessionNotification(e.pEvents);
+        e.pEvents->Release(); // pair for AddRef above
+        e.pCtrl->Release(); // pair for AddRef in OnSessionCreated
+    }
+    g_expiredSessions.clear();
+    printf("Cleanup session, g_trackedSessions num %llu\n", g_trackedSessions.size());
 }
 
 void AudioUpdateListener::setVol(SelectInfo selectInfo, float vol)
