@@ -10,6 +10,13 @@
 #include <string>
 #include <vector>
 
+#define CHECK_REF_COUNT(object)                      \
+    do {                                             \
+        object->AddRef();                            \
+        ULONG refCount = object->Release();          \
+        wprintf(L"REFERENCE COUNT: %u\n", refCount); \
+    } while (0);
+
 struct IAudioSessionControl;
 struct IAudioSessionEvents;
 
@@ -22,6 +29,7 @@ struct ExpiredSession {
     IAudioSessionControl* pCtrl;
     IAudioSessionEvents* pEvents;
 };
+
 std::vector<ExpiredSession> g_expiredSessions;
 std::vector<IAudioSessionControl*> g_trackedSessions;
 std::mutex g_mutex;
@@ -148,6 +156,43 @@ public:
     }
 };
 
+static void addSessionImpl(IAudioSessionControl* pCtrl, HWND hWnd, const wchar_t* dbgActionName)
+{
+    IAudioSessionControl2* pCtrl2 = nullptr;
+    pCtrl->QueryInterface(__uuidof(IAudioSessionControl2), (void**)&pCtrl2);
+
+    PID pid = 0;
+    if (pCtrl2) {
+        pCtrl2->GetProcessId(&pid);
+        pCtrl2->Release();
+    }
+
+    // wchar_t* iconPathPtr {},* displayNamePtr{};
+    // pCtrl->GetIconPath(&iconPathPtr);
+    // pCtrl->GetDisplayName(&displayNamePtr);
+    // wprintf(L"Name: %s, Icon Path: %s\n", displayNamePtr, iconPathPtr);
+    // CoTaskMemFree(displayNamePtr);
+    // CoTaskMemFree(iconPathPtr);
+
+    ISimpleAudioVolume* pVol = NULL;
+    if (SUCCEEDED(pCtrl->QueryInterface(__uuidof(ISimpleAudioVolume), (void**)&pVol))) {
+        BOOL bMute;
+        float vol;
+        pVol->GetMasterVolume(&vol);
+        pVol->GetMute(&bMute);
+        AudioUpdateInfo info(VolumeType::App, pid, vol, bMute);
+        PostMessage(hWnd, WM_APP_REGISTERED, info._wp, info._lp);
+        wprintf(L"%s [PID %u], vol: %d\n", dbgActionName, pid, (int)(info._vol * 100));
+        pVol->Release();
+    }
+
+    AudioSessionEvents* pEvents = new AudioSessionEvents(pid, pCtrl, hWnd);
+    pCtrl->RegisterAudioSessionNotification(pEvents);
+    pEvents->Release();
+
+    g_trackedSessions.push_back(pCtrl);
+}
+
 class SessionNotification : public IAudioSessionNotification {
     LONG _cRef;
     HWND _hWnd;
@@ -179,40 +224,10 @@ public:
     }
 
     // Fired when ANY new audio session (new app) starts playing
-    HRESULT STDMETHODCALLTYPE OnSessionCreated(IAudioSessionControl* pNewSession) override
+    HRESULT STDMETHODCALLTYPE OnSessionCreated(IAudioSessionControl* pCtrl) override
     {
-        // QI to IAudioSessionControl2 for a stable reference
-        IAudioSessionControl2* pCtrl2 = nullptr;
-        pNewSession->QueryInterface(__uuidof(IAudioSessionControl2), (void**)&pCtrl2);
-
-        PID pid = 0;
-        if (pCtrl2)
-            pCtrl2->GetProcessId(&pid);
-
-        ISimpleAudioVolume* pVol = NULL;
-        if (SUCCEEDED(pNewSession->QueryInterface(__uuidof(ISimpleAudioVolume), (void**)&pVol))) {
-            BOOL bMute;
-            float vol;
-            pVol->GetMasterVolume(&vol);
-            pVol->GetMute(&bMute);
-            AudioUpdateInfo info(VolumeType::App, pid, vol, bMute);
-            PostMessage(_hWnd, WM_APP_REGISTERED, info._wp, info._lp);
-            wprintf(L"New session [PID %u], vol: %d\n", pid, (int)(info._vol * 100));
-            pVol->Release();
-        }
-
-        AudioSessionEvents* pEvents = new AudioSessionEvents(pid, pNewSession, _hWnd);
-
-        // Register on the ORIGINAL pNewSession, but also AddRef it
-        pNewSession->AddRef(); // Keep it alive
-        pNewSession->RegisterAudioSessionNotification(pEvents); // IAudioSessionEvents
-
-        // Store pNewSession somewhere so it doesn't get released!
-        g_trackedSessions.push_back(pNewSession); // example
-
-        pEvents->Release();
-        if (pCtrl2)
-            pCtrl2->Release();
+        pCtrl->AddRef();
+        addSessionImpl(pCtrl, _hWnd, L"New session");
         return S_OK;
     }
 };
@@ -228,34 +243,7 @@ void RegisterAllExistingSessions(IAudioSessionManager2* pMgr, HWND hWnd)
     for (int i = 0; i < count; i++) {
         IAudioSessionControl* pCtrl = nullptr;
         pEnum->GetSession(i, &pCtrl);
-
-        IAudioSessionControl2* pCtrl2 = nullptr;
-        pCtrl->QueryInterface(__uuidof(IAudioSessionControl2), (void**)&pCtrl2);
-
-        PID pid = 0;
-        if (pCtrl2) {
-            pCtrl2->GetProcessId(&pid);
-            pCtrl2->Release();
-        }
-
-        // extract master vol
-        ISimpleAudioVolume* pVol = NULL;
-        if (SUCCEEDED(pCtrl->QueryInterface(__uuidof(ISimpleAudioVolume), (void**)&pVol))) {
-            BOOL bMute;
-            float vol;
-            pVol->GetMasterVolume(&vol);
-            pVol->GetMute(&bMute);
-            AudioUpdateInfo info(VolumeType::App, pid, vol, bMute);
-            PostMessage(hWnd, WM_APP_REGISTERED, info._wp, info._lp);
-            wprintf(L"Registering [PID %u], vol: %d\n", pid, (int)(info._vol * 100));
-            pVol->Release();
-        }
-
-        // create master event listener
-        AudioSessionEvents* pEvents = new AudioSessionEvents(pid, pCtrl, hWnd);
-        pCtrl->RegisterAudioSessionNotification(pEvents);
-        pEvents->Release();
-        g_trackedSessions.push_back(pCtrl); // keep alive!
+        addSessionImpl(pCtrl, hWnd, L"Registering");
     }
 
     pEnum->Release();
