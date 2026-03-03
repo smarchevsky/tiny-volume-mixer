@@ -5,20 +5,9 @@
 #include <string>
 #include <unordered_map>
 
-class FileManager {
-    std::wstring _iniPath;
-    FileManager();
-
-public:
-    static FileManager& get()
-    {
-        static FileManager instance;
-        return instance;
-    }
-
-    void loadWindowRect(HWND hwnd) const;
-    void saveWindowRect(HWND hwnd) const;
-};
+//
+// ICON
+//
 
 struct IconInfo {
     HBRUSH hBrush;
@@ -86,4 +75,23 @@ public:
 
     void recalculateSliderRects(const RECT& rect);
     void drawSliders(HDC hdc);
+};
+
+//
+// FILE
+//
+
+class FileManager {
+    std::wstring _iniPath;
+    FileManager();
+
+public:
+    static FileManager& get()
+    {
+        static FileManager instance;
+        return instance;
+    }
+
+    void loadWindowRect(HWND hwnd) const;
+    void saveWindowRect(HWND hwnd) const;
 };
