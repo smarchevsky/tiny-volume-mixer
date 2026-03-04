@@ -30,8 +30,13 @@ struct ExpiredSession {
     IAudioSessionEvents* pEvents;
 };
 
+struct ActiveSession {
+    IAudioSessionControl* pCtrl;
+    PID pid;
+};
+
 std::vector<ExpiredSession> g_expiredSessions;
-std::vector<IAudioSessionControl*> g_trackedSessions;
+std::vector<ActiveSession> g_trackedSessions;
 std::mutex g_mutex;
 
 class CVolumeNotification : public IAudioEndpointVolumeCallback {
@@ -145,7 +150,9 @@ public:
     void Cleanup()
     {
         std::lock_guard<std::mutex> lock(g_mutex);
-        auto it = std::find(g_trackedSessions.begin(), g_trackedSessions.end(), _pCtrl);
+        auto it = std::find_if(g_trackedSessions.begin(), g_trackedSessions.end(),
+            [&](const ActiveSession& s) { return s.pCtrl == _pCtrl; });
+
         if (it != g_trackedSessions.end()) {
             g_trackedSessions.erase(it);
             g_expiredSessions.push_back({ _pCtrl, this });
@@ -190,7 +197,7 @@ static void addSessionImpl(IAudioSessionControl* pCtrl, HWND hWnd, const wchar_t
     pCtrl->RegisterAudioSessionNotification(pEvents);
     pEvents->Release();
 
-    g_trackedSessions.push_back(pCtrl);
+    g_trackedSessions.push_back({ pCtrl, pid });
 }
 
 class SessionNotification : public IAudioSessionNotification {
@@ -316,25 +323,16 @@ void AudioUpdateListener::setVol(SelectInfo selectInfo, float vol)
 
     } else if (selectInfo._type == VolumeType::App) {
         std::lock_guard<std::mutex> lock(g_mutex);
-        for (auto* pCtrl : g_trackedSessions) {
-            IAudioSessionControl2* pCtrl2 = nullptr;
-            pCtrl->QueryInterface(__uuidof(IAudioSessionControl2), (void**)&pCtrl2);
-            if (!pCtrl2)
-                continue;
-
-            DWORD sessionPid = 0;
-            pCtrl2->GetProcessId(&sessionPid);
-            pCtrl2->Release();
-
-            if (sessionPid == selectInfo._pid) {
+        for (auto& trackedSession : g_trackedSessions) {
+            if (trackedSession.pid == selectInfo._pid) {
                 ISimpleAudioVolume* pVolume = nullptr;
-                pCtrl->QueryInterface(__uuidof(ISimpleAudioVolume), (void**)&pVolume);
+                trackedSession.pCtrl->QueryInterface(__uuidof(ISimpleAudioVolume), (void**)&pVolume);
                 if (pVolume) {
                     pVolume->SetMasterVolume(vol, nullptr);
                     pVolume->Release();
                     // wprintf(L"Setting app vol [PID %u], vol: %d\n", selectInfo._pid, (int)(vol * 100));
                 }
-                break; // remove if app has multiple sessions
+                break;
             }
         }
     }
