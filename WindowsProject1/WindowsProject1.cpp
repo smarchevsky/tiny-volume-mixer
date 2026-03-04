@@ -214,7 +214,11 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
             if (cursorOffsetAccumulatorY) {
                 if (auto slider = sliderManager.getSliderFromSelect(sliderInfoSelected)) {
                     float sliderHeight = slider->getHeight();
-                    float newVal = std::clamp(slider->_val + (float)cursorOffsetAccumulatorY / sliderHeight, 0.f, 1.f);
+
+                    float oldVal = pow(slider->_val, .5f);
+                    float newVal = std::clamp(oldVal + (float)cursorOffsetAccumulatorY / sliderHeight, 0.f, 1.f);
+                    newVal = pow(newVal, 2.f);
+
                     if (newVal != slider->_val) {
                         AudioUpdateListener::get().setVol(sliderInfoSelected, newVal);
                     }
@@ -234,8 +238,12 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
             auto hoverInfo = sliderManager.getSelectAtPosition(cursorClientPos);
             if (auto slider = sliderManager.getSliderFromSelect(hoverInfo)) {
                 float sliderHeight = slider->getHeight();
-                float newVal = std::clamp(slider->_val - wheelSteps * 0.5f, 0.f, 1.f);
-                if (newVal != slider->_val) {
+
+                float oldVal = pow(slider->_val, .5f);
+                float newVal = std::clamp(oldVal + wheelSteps / 16, 0.f, 1.f);
+                newVal = pow(newVal, 2.f);
+
+                if (newVal != oldVal) {
                     AudioUpdateListener::get().setVol(hoverInfo, newVal);
                 }
             }
