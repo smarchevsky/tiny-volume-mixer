@@ -121,8 +121,9 @@ POINT cursorScreenPosCaptured;
 LONG cursorOffsetAccumulatorY;
 
 SliderManager sliderManager;
-SelectInfo selectedSliderInfo;
-
+SelectInfo sliderInfoSelected;
+SelectInfo sliderInfoHovered;
+bool fMouseTracking;
 RECT getSliderRegion(HWND hWnd)
 {
     RECT windowRect;
@@ -149,7 +150,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         ScreenToClient(hWnd, &cursorClientPos);
 
         if (auto newCaptured = sliderManager.getHoveredSlider(cursorClientPos)) {
-            selectedSliderInfo = newCaptured;
+            sliderInfoSelected = newCaptured;
             cursorScreenPosCaptured = cursorScreenPos;
             SetTimer(hWnd, IDT_TIMER_1, 25, (TIMERPROC)NULL);
             SetCapture(hWnd);
@@ -159,8 +160,8 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
     }
 
     case WM_LBUTTONUP: {
-        if (selectedSliderInfo) {
-            selectedSliderInfo = {};
+        if (sliderInfoSelected) {
+            sliderInfoSelected = {};
             ReleaseCapture();
             ShowCursor(TRUE);
             KillTimer(hWnd, IDT_TIMER_1);
@@ -172,23 +173,50 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
     case WM_MOUSEMOVE: {
         POINT cursorScreenPos;
         GetCursorPos(&cursorScreenPos);
-        if (selectedSliderInfo) {
+        if (sliderInfoSelected) {
             if (int dy = cursorScreenPos.y - cursorScreenPosCaptured.y) {
                 cursorOffsetAccumulatorY -= dy;
                 SetCursorPos(cursorScreenPosCaptured.x, cursorScreenPosCaptured.y);
             }
         }
+        if (!fMouseTracking) {
+            TRACKMOUSEEVENT tme;
+            tme.cbSize = sizeof(TRACKMOUSEEVENT);
+            tme.dwFlags = TME_LEAVE;
+            tme.hwndTrack = hWnd;
+            if (TrackMouseEvent(&tme)) {
+                fMouseTracking = true;
+                // MOUSE ENTER
+                POINT cursorClientPos = cursorScreenPos;
+                ScreenToClient(hWnd, &cursorClientPos);
+                auto newHoverInfo = sliderManager.getHoveredSlider(cursorClientPos);
+                if (auto pSlider = sliderManager.getGetBySelectInfo(newHoverInfo)) {
+                    pSlider->_focused = true;
+                    InvalidateRect(hWnd, NULL, FALSE);
+                }
+            }
+        }
         break;
     }
+
+    case WM_MOUSELEAVE:
+        fMouseTracking = false;
+        // MOUSE LEAVE
+        if (auto pSlider = sliderManager.getGetBySelectInfo(sliderInfoHovered)) {
+            pSlider->_focused = false;
+            InvalidateRect(hWnd, NULL, FALSE);
+        }
+
+        break;
 
     case WM_TIMER: {
         if (wParam == IDT_TIMER_1) {
             if (cursorOffsetAccumulatorY) {
-                if (auto slider = sliderManager.getGetBySelectInfo(selectedSliderInfo)) {
+                if (auto slider = sliderManager.getGetBySelectInfo(sliderInfoSelected)) {
                     float sliderHeight = slider->getHeight();
                     float newVal = std::clamp(slider->_val + (float)cursorOffsetAccumulatorY / sliderHeight, 0.f, 1.f);
                     if (newVal != slider->_val) {
-                        AudioUpdateListener::get().setVol(selectedSliderInfo, newVal);
+                        AudioUpdateListener::get().setVol(sliderInfoSelected, newVal);
                     }
                 }
             }
@@ -197,7 +225,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
     } break;
 
     case WM_MOUSEWHEEL: {
-        if (!selectedSliderInfo) {
+        if (!sliderInfoSelected) {
             POINT cursorClientPos { GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam) };
             ScreenToClient(hWnd, &cursorClientPos);
             int zDelta = GET_WHEEL_DELTA_WPARAM(wParam);
@@ -281,17 +309,33 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
     }
 
     case WM_SETCURSOR: {
+        bool customCursor = false;
+        SelectInfo newHoverInfo = {};
         if (LOWORD(lParam) == HTCAPTION) {
             SetCursor(cursorDrag);
-            return TRUE;
+            customCursor = true;
+
         } else if (LOWORD(lParam) == HTCLIENT) {
             POINT cursorClientPos;
             GetCursorPos(&cursorClientPos);
             ScreenToClient(hWnd, &cursorClientPos);
-            auto newHoverInfo = sliderManager.getHoveredSlider(cursorClientPos);
+            newHoverInfo = sliderManager.getHoveredSlider(cursorClientPos);
             SetCursor(newHoverInfo ? cursorHand : cursorDefault);
-            return TRUE;
+            customCursor = true;
         }
+
+        if (newHoverInfo != sliderInfoHovered) {
+            if (auto pSlider = sliderManager.getGetBySelectInfo(newHoverInfo))
+                pSlider->_focused = true;
+            if (auto pSlider = sliderManager.getGetBySelectInfo(sliderInfoHovered))
+                pSlider->_focused = false;
+            InvalidateRect(hWnd, NULL, FALSE);
+            // printf("changed from %d to %d\n", sliderInfoHovered._type, newHoverInfo._type);
+            sliderInfoHovered = newHoverInfo;
+        }
+
+        if (customCursor)
+            return TRUE;
         return DefWindowProc(hWnd, message, wParam, lParam);
     }
 

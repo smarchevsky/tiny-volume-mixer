@@ -176,8 +176,8 @@ void Slider::draw(HDC hdc, bool isSystem) const
     float drawHeight = (_rect.bottom - _rect.top) * (1.f - _val);
 
     RECT drawRect {
-        _rect.left + margin, _rect.top + LONG(drawHeight),
-        _rect.right - margin, _rect.bottom
+        _rect.left + (_focused ? 0 : margin), _rect.top + LONG(drawHeight),
+        _rect.right - (_focused ? 0 : margin), _rect.bottom
     };
 
     auto& im = IconManager::get();

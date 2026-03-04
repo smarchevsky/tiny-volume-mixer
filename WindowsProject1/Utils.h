@@ -49,8 +49,9 @@ class Slider {
 public:
     RECT _rect;
     float _val;
+    bool _focused;
 
-    Slider(PID pid, float value) { _pid = pid, _rect = { 0 }, _val = value; }
+    Slider(PID pid, float value) { _pid = pid, _rect = { 0 }, _val = value, _focused = false; }
     Slider() = default;
 
     PID getPID() const { return _pid; }
