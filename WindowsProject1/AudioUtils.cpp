@@ -136,6 +136,8 @@ public:
         if (newState == AudioSessionStateExpired) {
             wprintf(L"OnStateChanged, AudioSessionStateExpired [PID %u]\n", _pid);
             Cleanup();
+        } else {
+            wprintf(L"State changed: [PID %u], state: %s\n", _pid, newState == AudioSessionStateActive ? L"active" : L"inactive");
         }
         return S_OK;
     }
@@ -169,8 +171,10 @@ static void addSessionImpl(IAudioSessionControl* pCtrl, HWND hWnd, const wchar_t
     pCtrl->QueryInterface(__uuidof(IAudioSessionControl2), (void**)&pCtrl2);
 
     PID pid = 0;
+    AudioSessionState state;
     if (pCtrl2) {
         pCtrl2->GetProcessId(&pid);
+        pCtrl2->GetState(&state);
         pCtrl2->Release();
     }
 
