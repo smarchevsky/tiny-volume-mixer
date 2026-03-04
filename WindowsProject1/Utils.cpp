@@ -118,6 +118,7 @@ IconManager::IconManager()
     iiMasterSpeaker = loadIcon(L"\\mmres.dll", 0);
     iiMasterHeadphones = loadIcon(L"\\mmres.dll", 2);
     iiSystemSounds = loadIcon(L"\\imageres.dll", 104);
+    iiNoIconApp = loadIcon(L"\\imageres.dll", 11);
 }
 
 IconInfo IconManager::getIconFromProcess(PID pid)
@@ -144,8 +145,10 @@ IconInfo IconManager::getIconFromProcess(PID pid)
 
         HICON icon;
         UINT icons = ExtractIconExW(exePath, 0, &icon, nullptr, 1);
-        if (icons == 0)
+        if (icons == 0) {
+            result = iiNoIconApp;
             return result;
+        }
 
         result = createIconInfo(icon);
 

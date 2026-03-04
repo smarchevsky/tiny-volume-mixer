@@ -20,7 +20,7 @@ class IconManager {
     IconManager(const IconManager&) = delete;
 
     std::unordered_map<PID, IconInfo> cachedProcessIcons;
-    IconInfo iiMasterSpeaker, iiMasterHeadphones, iiSystemSounds;
+    IconInfo iiMasterSpeaker, iiMasterHeadphones, iiSystemSounds, iiNoIconApp;
 
 public:
     void uninit();
