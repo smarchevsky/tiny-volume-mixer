@@ -247,8 +247,9 @@ SelectInfo SliderManager::getSelectAtPosition(POINT mousePos)
 
 void SliderManager::recalculateSliderRects(const RECT& r)
 {
-    _sliderMaster._rect = { r.left, r.top, r.left + sliderWidth, r.bottom };
-    int offset = _sliderMaster._rect.right + 30;
+    int offset = r.left + 20;
+    _sliderMaster._rect = { offset, r.top, offset + sliderWidth, r.bottom };
+    offset += sliderWidth + 20;
     for (auto& slider : _slidersApps) {
         slider._rect = { offset, r.top, offset + sliderWidth, r.bottom };
         offset += sliderWidth;
