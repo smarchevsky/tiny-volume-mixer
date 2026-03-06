@@ -39,10 +39,10 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
         PostQuitMessage(0);
         return 0;
     case WM_DWMCOMPOSITIONCHANGED:
-        app.handle_compositionchanged();
+        app.handleCompositionChanged();
         return 0;
     case WM_KEYDOWN:
-        if (app.handle_keydown(wParam))
+        if (app.handleKeydown(wParam))
             return 0;
         break;
     case WM_LBUTTONDOWN:
@@ -52,10 +52,10 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
     case WM_NCACTIVATE:
         return DefWindowProcW(hWnd, msg, wParam, -1);
     case WM_NCCALCSIZE:
-        app.handle_nccalcsize(wParam, lParam);
+        app.handleNCCalcSize(wParam, lParam);
         return 0;
     case WM_NCHITTEST:
-        return app.handle_nchittest(GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam));
+        return app.handleNCHitTest(GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam));
     case WM_NCPAINT:
         if (!app._compositionEnabled)
             return 0;
@@ -64,18 +64,18 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
     case WM_NCUAHDRAWFRAME: //   Block them to prevent drawing borders over the client area.
         return 0;
     case WM_PAINT:
-        app.handle_paint();
+        app.handlePaint();
         return 0;
     case WM_SETICON:
     case WM_SETTEXT:
         if (!app._compositionEnabled && !app._themeEnabled)
-            return app.handle_message_invisible(hWnd, msg, wParam, lParam);
+            return app.handleMessageInvisible(hWnd, msg, wParam, lParam);
         break;
     case WM_THEMECHANGED:
-        app.handle_themechanged();
+        app.handleThemeChanged();
         break;
     case WM_WINDOWPOSCHANGED:
-        app.handle_windowposchanged((WINDOWPOS*)lParam);
+        app.handleWindowPosChanged((WINDOWPOS*)lParam);
         return 0;
     }
 

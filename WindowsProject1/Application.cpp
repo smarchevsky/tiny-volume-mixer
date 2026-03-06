@@ -26,8 +26,8 @@ int Application::init(WNDPROC proc)
 
     SetLayeredWindowAttributes(_hWnd, RGB(255, 0, 255), 0, LWA_COLORKEY);
 
-    handle_compositionchanged();
-    handle_themechanged();
+    handleCompositionChanged();
+    handleThemeChanged();
     ShowWindow(_hWnd, SW_SHOWDEFAULT);
     UpdateWindow(_hWnd);
 
@@ -41,7 +41,7 @@ int Application::init(WNDPROC proc)
     return message.wParam;
 }
 
-void Application::update_region()
+void Application::updateRegion()
 {
     RECT old_rgn = _rgn;
 
@@ -71,24 +71,7 @@ void Application::update_region()
     }
 }
 
-void Application::handle_compositionchanged()
-{
-    BOOL enabled = FALSE;
-    DwmIsCompositionEnabled(&enabled);
-    _compositionEnabled = enabled;
-
-    if (enabled) {
-        static const MARGINS margins { 0, 0, 1, 0 };
-        static const DWORD pvAttribute = DWMNCRP_ENABLED;
-        DwmExtendFrameIntoClientArea(_hWnd, &margins);
-        DwmSetWindowAttribute(_hWnd, DWMWA_NCRENDERING_POLICY,
-            &pvAttribute, sizeof(DWORD));
-    }
-
-    update_region();
-}
-
-bool Application::handle_keydown(DWORD key)
+bool Application::handleKeydown(DWORD key)
 {
     switch (key) {
     case 'I': {
@@ -125,14 +108,80 @@ bool Application::handle_keydown(DWORD key)
     }
 }
 
-bool Application::has_autohide_appbar(UINT edge, RECT mon)
+bool Application::hasAutohideAppbar(UINT edge, RECT mon)
 {
     APPBARDATA tmp;
     tmp = { .cbSize = sizeof(APPBARDATA), .uEdge = edge, .rc = mon };
     return SHAppBarMessage(ABM_GETAUTOHIDEBAREX, &tmp);
 }
 
-void Application::handle_nccalcsize(WPARAM wparam, LPARAM lparam)
+void Application::handlePaint()
+{
+    PAINTSTRUCT ps;
+    HDC dc = BeginPaint(_hWnd, &ps);
+    HBRUSH bb = CreateSolidBrush(RGB(0, 255, 0));
+
+    RECT rc = { 0, 0, 1, _height };
+    FillRect(dc, &rc, bb);
+    rc = { 0, 0, _width, 1 };
+    FillRect(dc, &rc, bb);
+    rc = { _width - 1, 0, _width, _height };
+    FillRect(dc, &rc, bb);
+    rc = { 0, _height - 1, _width, _height };
+    FillRect(dc, &rc, bb);
+
+    DeleteObject(bb);
+    EndPaint(_hWnd, &ps);
+}
+
+void Application::handleThemeChanged()
+{
+    _themeEnabled = IsThemeActive();
+}
+
+void Application::handleWindowPosChanged(const WINDOWPOS* pos)
+{
+    RECT client;
+    GetClientRect(_hWnd, &client);
+    int old_width = _width;
+    int old_height = _height;
+    _width = client.right;
+    _height = client.bottom;
+    bool client_changed = _width != old_width || _height != old_height;
+
+    if (client_changed || (pos->flags & SWP_FRAMECHANGED))
+        updateRegion();
+
+    if (client_changed) {
+        RECT rc;
+        if (_width > old_width) {
+            rc = { old_width - 1, 0, old_width, old_height };
+            InvalidateRect(_hWnd, &rc, TRUE);
+        } else {
+            rc = { _width - 1, 0, _width, _height };
+            InvalidateRect(_hWnd, &rc, TRUE);
+        }
+        if (_height > old_height) {
+            rc = { 0, old_height - 1, old_width, old_height };
+            InvalidateRect(_hWnd, &rc, TRUE);
+        } else {
+            rc = { 0, _height - 1, _width, _height };
+            InvalidateRect(_hWnd, &rc, TRUE);
+        }
+    }
+}
+
+LRESULT Application::handleMessageInvisible(HWND hWnd, UINT msg, WPARAM wparam, LPARAM lparam)
+{
+    LONG_PTR old_style = GetWindowLongPtrW(hWnd, GWL_STYLE);
+    SetWindowLongPtrW(hWnd, GWL_STYLE, old_style & ~WS_VISIBLE);
+    LRESULT result = DefWindowProcW(hWnd, msg, wparam, lparam);
+    SetWindowLongPtrW(hWnd, GWL_STYLE, old_style);
+
+    return result;
+}
+
+void Application::handleNCCalcSize(WPARAM wparam, LPARAM lparam)
 {
     union {
         LPARAM lparam;
@@ -157,13 +206,13 @@ void Application::handle_nccalcsize(WPARAM wparam, LPARAM lparam)
         GetMonitorInfoW(mon, &mi);
 
         if (EqualRect(params.rect, &mi.rcMonitor)) {
-            if (has_autohide_appbar(ABE_BOTTOM, mi.rcMonitor))
+            if (hasAutohideAppbar(ABE_BOTTOM, mi.rcMonitor))
                 params.rect->bottom--;
-            else if (has_autohide_appbar(ABE_LEFT, mi.rcMonitor))
+            else if (hasAutohideAppbar(ABE_LEFT, mi.rcMonitor))
                 params.rect->left++;
-            else if (has_autohide_appbar(ABE_TOP, mi.rcMonitor))
+            else if (hasAutohideAppbar(ABE_TOP, mi.rcMonitor))
                 params.rect->top++;
-            else if (has_autohide_appbar(ABE_RIGHT, mi.rcMonitor))
+            else if (hasAutohideAppbar(ABE_RIGHT, mi.rcMonitor))
                 params.rect->right--;
         }
     } else {
@@ -171,7 +220,7 @@ void Application::handle_nccalcsize(WPARAM wparam, LPARAM lparam)
     }
 }
 
-LRESULT Application::handle_nchittest(int x, int y)
+LRESULT Application::handleNCHitTest(int x, int y)
 {
     if (IsMaximized(_hWnd))
         return HTCLIENT;
@@ -205,68 +254,19 @@ LRESULT Application::handle_nchittest(int x, int y)
     return HTCLIENT;
 }
 
-void Application::handle_paint()
+void Application::handleCompositionChanged()
 {
-    PAINTSTRUCT ps;
-    HDC dc = BeginPaint(_hWnd, &ps);
-    HBRUSH bb = CreateSolidBrush(RGB(0, 255, 0));
+    BOOL enabled = FALSE;
+    DwmIsCompositionEnabled(&enabled);
+    _compositionEnabled = enabled;
 
-    RECT rc = { 0, 0, 1, _height };
-    FillRect(dc, &rc, bb);
-    rc = { 0, 0, _width, 1 };
-    FillRect(dc, &rc, bb);
-    rc = { _width - 1, 0, _width, _height };
-    FillRect(dc, &rc, bb);
-    rc = { 0, _height - 1, _width, _height };
-    FillRect(dc, &rc, bb);
-
-    DeleteObject(bb);
-    EndPaint(_hWnd, &ps);
-}
-
-void Application::handle_themechanged()
-{
-    _themeEnabled = IsThemeActive();
-}
-
-void Application::handle_windowposchanged(const WINDOWPOS* pos)
-{
-    RECT client;
-    GetClientRect(_hWnd, &client);
-    int old_width = _width;
-    int old_height = _height;
-    _width = client.right;
-    _height = client.bottom;
-    bool client_changed = _width != old_width || _height != old_height;
-
-    if (client_changed || (pos->flags & SWP_FRAMECHANGED))
-        update_region();
-
-    if (client_changed) {
-        RECT rc;
-        if (_width > old_width) {
-            rc = { old_width - 1, 0, old_width, old_height };
-            InvalidateRect(_hWnd, &rc, TRUE);
-        } else {
-            rc = { _width - 1, 0, _width, _height };
-            InvalidateRect(_hWnd, &rc, TRUE);
-        }
-        if (_height > old_height) {
-            rc = { 0, old_height - 1, old_width, old_height };
-            InvalidateRect(_hWnd, &rc, TRUE);
-        } else {
-            rc = { 0, _height - 1, _width, _height };
-            InvalidateRect(_hWnd, &rc, TRUE);
-        }
+    if (enabled) {
+        static const MARGINS margins { 0, 0, 1, 0 };
+        static const DWORD pvAttribute = DWMNCRP_ENABLED;
+        DwmExtendFrameIntoClientArea(_hWnd, &margins);
+        DwmSetWindowAttribute(_hWnd, DWMWA_NCRENDERING_POLICY,
+            &pvAttribute, sizeof(DWORD));
     }
-}
 
-LRESULT Application::handle_message_invisible(HWND hWnd, UINT msg, WPARAM wparam, LPARAM lparam)
-{
-    LONG_PTR old_style = GetWindowLongPtrW(hWnd, GWL_STYLE);
-    SetWindowLongPtrW(hWnd, GWL_STYLE, old_style & ~WS_VISIBLE);
-    LRESULT result = DefWindowProcW(hWnd, msg, wparam, lparam);
-    SetWindowLongPtrW(hWnd, GWL_STYLE, old_style);
-
-    return result;
+    updateRegion();
 }

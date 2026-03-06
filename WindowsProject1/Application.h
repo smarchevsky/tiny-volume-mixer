@@ -21,27 +21,16 @@ public:
     bool _themeEnabled, _compositionEnabled;
 
     int init(WNDPROC proc);
+    void updateRegion();
+    bool handleKeydown(DWORD key);
+    bool hasAutohideAppbar(UINT edge, RECT mon);
+    void handlePaint();
+    void handleThemeChanged();
+    void handleWindowPosChanged(const WINDOWPOS* pos);
+    LRESULT handleMessageInvisible(HWND hWnd, UINT msg, WPARAM wparam, LPARAM lparam);
 
-    void update_region();
-
-    void handle_nccreate(HWND _hWnd, CREATESTRUCTW* cs) { SetWindowLongPtrW(_hWnd, GWLP_USERDATA, (LONG_PTR)cs->lpCreateParams); }
-
-    void handle_compositionchanged();
-
-    bool handle_keydown(DWORD key);
-
-    bool has_autohide_appbar(UINT edge, RECT mon);
-
-    void handle_nccalcsize(WPARAM wparam, LPARAM lparam);
-
-    LRESULT handle_nchittest(int x, int y);
-
-    void handle_paint();
-
-    void handle_themechanged();
-
-    void handle_windowposchanged(const WINDOWPOS* pos);
-
-    LRESULT handle_message_invisible(HWND hWnd, UINT msg, WPARAM wparam,
-        LPARAM lparam);
+    void handleNCCalcSize(WPARAM wparam, LPARAM lparam);
+    void handleNCCreate(HWND _hWnd, CREATESTRUCTW* cs) { SetWindowLongPtrW(_hWnd, GWLP_USERDATA, (LONG_PTR)cs->lpCreateParams); }
+    LRESULT handleNCHitTest(int x, int y);
+    void handleCompositionChanged();
 };
