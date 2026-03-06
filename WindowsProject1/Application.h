@@ -19,10 +19,10 @@ extern "C" IMAGE_DOS_HEADER __ImageBase;
 
 class Application {
 public:
-    HWND window;
-    int width, height;
-    RECT rgn;
-    bool theme_enabled, composition_enabled;
+    HWND _hWnd;
+    int _width, _height;
+    RECT _rgn;
+    bool _themeEnabled, _compositionEnabled;
 
     int init(WNDPROC proc)
     {
@@ -36,7 +36,7 @@ public:
         };
         ATOM cls = RegisterClassExW(&winParam);
 
-        window = CreateWindowExW(
+        _hWnd = CreateWindowExW(
             WS_EX_APPWINDOW | WS_EX_LAYERED,
             (LPWSTR)MAKEINTATOM(cls),
             L"Borderless Window",
@@ -44,16 +44,12 @@ public:
             CW_USEDEFAULT, CW_USEDEFAULT, 200, 200,
             NULL, NULL, HINST_THISCOMPONENT, NULL);
 
-        /* Make the window a layered window so the legacy GDI API can be used to
-           draw to it without messing up the area on top of the DWM frame. Note:
-           This is not necessary if other drawing APIs are used, eg. GDI+, OpenGL,
-           Direct2D, Direct3D, DirectComposition, etc. */
-        SetLayeredWindowAttributes(window, RGB(255, 0, 255), 0, LWA_COLORKEY);
+        SetLayeredWindowAttributes(_hWnd, RGB(255, 0, 255), 0, LWA_COLORKEY);
 
         handle_compositionchanged();
         handle_themechanged();
-        ShowWindow(window, SW_SHOWDEFAULT);
-        UpdateWindow(window);
+        ShowWindow(_hWnd, SW_SHOWDEFAULT);
+        UpdateWindow(_hWnd);
 
         MSG message;
         while (GetMessageW(&message, NULL, 0, 0)) {
@@ -67,67 +63,47 @@ public:
 
     void update_region()
     {
-        RECT old_rgn = rgn;
+        RECT old_rgn = _rgn;
 
-        if (IsMaximized(window)) {
+        if (IsMaximized(_hWnd)) {
             WINDOWINFO wi = { .cbSize = sizeof wi };
-            GetWindowInfo(window, &wi);
-
-            /* For maximized windows, a region is needed to cut off the non-client
-               borders that hang over the edge of the screen */
-            rgn = {
+            GetWindowInfo(_hWnd, &wi);
+            _rgn = {
                 .left = wi.rcClient.left - wi.rcWindow.left,
                 .top = wi.rcClient.top - wi.rcWindow.top,
                 .right = wi.rcClient.right - wi.rcWindow.left,
                 .bottom = wi.rcClient.bottom - wi.rcWindow.top,
             };
-        } else if (!composition_enabled) {
-            /* For ordinary themed windows when composition is disabled, a region
-               is needed to remove the rounded top corners. Make it as large as
-               possible to avoid having to change it when the hWnd is resized. */
-            rgn = {
-                .left = 0,
-                .top = 0,
-                .right = 32767,
-                .bottom = 32767,
-            };
+        } else if (!_compositionEnabled) {
+            _rgn = { .left = 0, .top = 0, .right = 32767, .bottom = 32767 };
         } else {
-            /* Don't mess with the region when composition is enabled and the
-               hWnd is not maximized, otherwise it will lose its shadow */
-            rgn = {};
+            _rgn = {};
         }
 
-        /* Avoid unnecessarily updating the region to avoid unnecessary redraws */
-        if (EqualRect(&rgn, &old_rgn))
+        if (EqualRect(&_rgn, &old_rgn))
             return;
-        /* Treat empty regions as NULL regions */
+
         static const RECT zeroRect = {};
-        if (EqualRect(&rgn, &zeroRect))
-            SetWindowRgn(window, NULL, TRUE);
-        else
-            SetWindowRgn(window, CreateRectRgnIndirect(&rgn), TRUE);
+        if (EqualRect(&_rgn, &zeroRect)) {
+            SetWindowRgn(_hWnd, NULL, TRUE);
+        } else {
+            SetWindowRgn(_hWnd, CreateRectRgnIndirect(&_rgn), TRUE);
+        }
     }
 
-    void handle_nccreate(HWND window, CREATESTRUCTW* cs)
-    {
-        auto data = cs->lpCreateParams;
-        SetWindowLongPtrW(window, GWLP_USERDATA, (LONG_PTR)data);
-    }
+    void handle_nccreate(HWND _hWnd, CREATESTRUCTW* cs) { SetWindowLongPtrW(_hWnd, GWLP_USERDATA, (LONG_PTR)cs->lpCreateParams); }
 
     void handle_compositionchanged()
     {
         BOOL enabled = FALSE;
         DwmIsCompositionEnabled(&enabled);
-        composition_enabled = enabled;
+        _compositionEnabled = enabled;
 
         if (enabled) {
-            /* The hWnd needs a frame to show a shadow, so give it the smallest
-               amount of frame possible */
-
             static const MARGINS margins { 0, 0, 1, 0 };
             static const DWORD pvAttribute = DWMNCRP_ENABLED;
-            DwmExtendFrameIntoClientArea(window, &margins);
-            DwmSetWindowAttribute(window, DWMWA_NCRENDERING_POLICY,
+            DwmExtendFrameIntoClientArea(_hWnd, &margins);
+            DwmSetWindowAttribute(_hWnd, DWMWA_NCRENDERING_POLICY,
                 &pvAttribute, sizeof(DWORD));
         }
 
@@ -136,98 +112,28 @@ public:
 
     bool handle_keydown(DWORD key)
     {
-        /* Handle various commands that are useful for testing */
         switch (key) {
-        case 'H': {
-            HDC dc = GetDC(window);
-
-            WINDOWINFO wi = { .cbSize = sizeof wi };
-            GetWindowInfo(window, &wi);
-
-            int width = wi.rcWindow.right - wi.rcWindow.left;
-            int height = wi.rcWindow.bottom - wi.rcWindow.top;
-            int cwidth = wi.rcClient.right - wi.rcClient.left;
-            int cheight = wi.rcClient.bottom - wi.rcClient.top;
-            int diffx = width - cwidth;
-            int diffy = height - cheight;
-
-            /* Visualize the NCHITTEST values in the client area */
-            for (int y = 0, posy = 0; y < height; y++, posy++) {
-                /* Compress the hWnd rectangle into the client rectangle by
-                   skipping pixels in the middle */
-                if (y == cheight / 2)
-                    y += diffy;
-                for (int x = 0, posx = 0; x < width; x++, posx++) {
-                    if (x == cwidth / 2)
-                        x += diffx;
-
-                    LRESULT ht = SendMessageW(window, WM_NCHITTEST, 0,
-                        MAKELPARAM(x + wi.rcWindow.left,
-                            y + wi.rcWindow.top));
-                    switch (ht) {
-                    case HTLEFT:
-                    case HTTOP:
-                    case HTRIGHT:
-                    case HTBOTTOM:
-                        SetPixel(dc, posx, posy, RGB(255, 0, 0));
-                        break;
-                    case HTTOPLEFT:
-                    case HTTOPRIGHT:
-                    case HTBOTTOMLEFT:
-                    case HTBOTTOMRIGHT:
-                        SetPixel(dc, posx, posy, RGB(0, 255, 0));
-                        break;
-                    default:
-                        SetPixel(dc, posx, posy, RGB(0, 0, 255));
-                        break;
-                    }
-                }
-            }
-
-            ReleaseDC(window, dc);
-            return true;
-        }
-
         case 'I': {
             static bool icon_toggle;
-            HICON icon;
-
-            if (icon_toggle)
-                icon = LoadIcon(NULL, IDI_ERROR);
-            else
-                icon = LoadIcon(NULL, IDI_EXCLAMATION);
+            static HICON iconError = LoadIcon(NULL, IDI_ERROR);
+            static HICON iconExclam = LoadIcon(NULL, IDI_EXCLAMATION);
             icon_toggle = !icon_toggle;
-
-            /* This should make DefWindowProc try to redraw the icon on the hWnd
-               border. The redraw can be blocked by blocking WM_NCUAHDRAWCAPTION
-               when themes are enabled or unsetting WS_VISIBLE while WM_SETICON is
-               processed. */
-            SendMessageW(window, WM_SETICON, ICON_BIG, (LPARAM)icon);
+            SendMessageW(_hWnd, WM_SETICON, ICON_BIG, (LPARAM)(icon_toggle ? iconError : iconExclam));
             return true;
         }
         case 'T': {
             static bool text_toggle;
-
-            /* This should make DefWindowProc try to redraw the title on the hWnd
-               border. As above, the redraw can be blocked by blocking
-               WM_NCUAHDRAWCAPTION or unsetting WS_VISIBLE while WM_SETTEXT is
-               processed. */
             if (text_toggle)
-                SetWindowTextW(window, L"window text");
+                SetWindowTextW(_hWnd, L"window text");
             else
-                SetWindowTextW(window, L"txet wodniw");
+                SetWindowTextW(_hWnd, L"txet wodniw");
             text_toggle = !text_toggle;
 
             return true;
         }
         case 'M': {
             static bool menu_toggle;
-            HMENU menu = GetSystemMenu(window, FALSE);
-
-            /* This should make DefWindowProc try to redraw the hWnd controls.
-               This redraw can be blocked by blocking WM_NCUAHDRAWCAPTION when
-               themes are enabled or unsetting WS_VISIBLE during the EnableMenuItem
-               call (not done here for testing purposes.) */
+            HMENU menu = GetSystemMenu(_hWnd, FALSE);
             if (menu_toggle)
                 EnableMenuItem(menu, SC_CLOSE, MF_BYCOMMAND | MF_ENABLED);
             else
@@ -255,37 +161,23 @@ public:
             RECT* rect;
         } params = { .lparam = lparam };
 
-        /* DefWindowProc must be called in both the maximized and non-maximized
-           cases, otherwise tile/cascade windows won't work */
+        if (params.rect == nullptr)
+            return;
+
         RECT nonclient = *params.rect;
-        DefWindowProcW(window, WM_NCCALCSIZE, wparam, params.lparam);
+        DefWindowProcW(_hWnd, WM_NCCALCSIZE, wparam, params.lparam);
         RECT client = *params.rect;
 
-        if (IsMaximized(window)) {
+        if (IsMaximized(_hWnd)) {
             WINDOWINFO wi = { .cbSize = sizeof wi };
-            GetWindowInfo(window, &wi);
+            GetWindowInfo(_hWnd, &wi);
 
-            /* Maximized windows always have a non-client border that hangs over
-               the edge of the screen, so the size proposed by WM_NCCALCSIZE is
-               fine. Just adjust the top border to remove the hWnd title. */
-            *params.rect = {
-                .left = client.left,
-                .top = nonclient.top + (int)wi.cyWindowBorders,
-                .right = client.right,
-                .bottom = client.bottom,
-            };
+            *params.rect = { .left = client.left, .top = nonclient.top + (int)wi.cyWindowBorders, .right = client.right, .bottom = client.bottom };
 
-            HMONITOR mon = MonitorFromWindow(window, MONITOR_DEFAULTTOPRIMARY);
+            HMONITOR mon = MonitorFromWindow(_hWnd, MONITOR_DEFAULTTOPRIMARY);
             MONITORINFO mi = { .cbSize = sizeof mi };
             GetMonitorInfoW(mon, &mi);
 
-            /* If the client rectangle is the same as the monitor's rectangle,
-               the shell assumes that the hWnd has gone fullscreen, so it removes
-               the topmost attribute from any auto-hide appbars, making them
-               inaccessible. To avoid this, reduce the size of the client area by
-               one pixel on a certain edge. The edge is chosen based on which side
-               of the monitor is likely to contain an auto-hide appbar, so the
-               missing client area is covered by it. */
             if (EqualRect(params.rect, &mi.rcMonitor)) {
                 if (has_autohide_appbar(ABE_BOTTOM, mi.rcMonitor))
                     params.rect->bottom--;
@@ -297,46 +189,40 @@ public:
                     params.rect->right--;
             }
         } else {
-            /* For the non-maximized case, set the output RECT to what it was
-               before WM_NCCALCSIZE modified it. This will make the client size the
-               same as the non-client size. */
             *params.rect = nonclient;
         }
     }
 
     LRESULT handle_nchittest(int x, int y)
     {
-        if (IsMaximized(window))
+        if (IsMaximized(_hWnd))
             return HTCLIENT;
 
         POINT mouse = { x, y };
-        ScreenToClient(window, &mouse);
+        ScreenToClient(_hWnd, &mouse);
 
-        /* The horizontal frame should be the same size as the vertical frame,
-           since the NONCLIENTMETRICS structure does not distinguish between them */
         int frame_size = GetSystemMetrics(SM_CXFRAME) + GetSystemMetrics(SM_CXPADDEDBORDER);
-        /* The diagonal size handles are wider than the frame */
         int diagonal_width = frame_size * 2 + GetSystemMetrics(SM_CXBORDER);
 
         if (mouse.y < frame_size) {
             if (mouse.x < diagonal_width)
                 return HTTOPLEFT;
-            if (mouse.x >= width - diagonal_width)
+            if (mouse.x >= _width - diagonal_width)
                 return HTTOPRIGHT;
             return HTTOP;
         }
 
-        if (mouse.y >= height - frame_size) {
+        if (mouse.y >= _height - frame_size) {
             if (mouse.x < diagonal_width)
                 return HTBOTTOMLEFT;
-            if (mouse.x >= width - diagonal_width)
+            if (mouse.x >= _width - diagonal_width)
                 return HTBOTTOMRIGHT;
             return HTBOTTOM;
         }
 
         if (mouse.x < frame_size)
             return HTLEFT;
-        if (mouse.x >= width - frame_size)
+        if (mouse.x >= _width - frame_size)
             return HTRIGHT;
         return HTCLIENT;
     }
@@ -344,57 +230,55 @@ public:
     void handle_paint()
     {
         PAINTSTRUCT ps;
-        HDC dc = BeginPaint(window, &ps);
+        HDC dc = BeginPaint(_hWnd, &ps);
         HBRUSH bb = CreateSolidBrush(RGB(0, 255, 0));
 
-        /* Draw a rectangle on the border of the client area for testing */
-        RECT rc = { 0, 0, 1, height };
+        RECT rc = { 0, 0, 1, _height };
         FillRect(dc, &rc, bb);
-        rc = { 0, 0, width, 1 };
+        rc = { 0, 0, _width, 1 };
         FillRect(dc, &rc, bb);
-        rc = { width - 1, 0, width, height };
+        rc = { _width - 1, 0, _width, _height };
         FillRect(dc, &rc, bb);
-        rc = { 0, height - 1, width, height };
+        rc = { 0, _height - 1, _width, _height };
         FillRect(dc, &rc, bb);
 
         DeleteObject(bb);
-        EndPaint(window, &ps);
+        EndPaint(_hWnd, &ps);
     }
 
     void handle_themechanged()
     {
-        theme_enabled = IsThemeActive();
+        _themeEnabled = IsThemeActive();
     }
 
     void handle_windowposchanged(const WINDOWPOS* pos)
     {
         RECT client;
-        GetClientRect(window, &client);
-        int old_width = width;
-        int old_height = height;
-        width = client.right;
-        height = client.bottom;
-        bool client_changed = width != old_width || height != old_height;
+        GetClientRect(_hWnd, &client);
+        int old_width = _width;
+        int old_height = _height;
+        _width = client.right;
+        _height = client.bottom;
+        bool client_changed = _width != old_width || _height != old_height;
 
         if (client_changed || (pos->flags & SWP_FRAMECHANGED))
             update_region();
 
         if (client_changed) {
-            /* Invalidate the changed parts of the rectangle drawn in WM_PAINT */
             RECT rc;
-            if (width > old_width) {
+            if (_width > old_width) {
                 rc = { old_width - 1, 0, old_width, old_height };
-                InvalidateRect(window, &rc, TRUE);
+                InvalidateRect(_hWnd, &rc, TRUE);
             } else {
-                rc = { width - 1, 0, width, height };
-                InvalidateRect(window, &rc, TRUE);
+                rc = { _width - 1, 0, _width, _height };
+                InvalidateRect(_hWnd, &rc, TRUE);
             }
-            if (height > old_height) {
+            if (_height > old_height) {
                 rc = { 0, old_height - 1, old_width, old_height };
-                InvalidateRect(window, &rc, TRUE);
+                InvalidateRect(_hWnd, &rc, TRUE);
             } else {
-                rc = { 0, height - 1, width, height };
-                InvalidateRect(window, &rc, TRUE);
+                rc = { 0, _height - 1, _width, _height };
+                InvalidateRect(_hWnd, &rc, TRUE);
             }
         }
     }
@@ -403,10 +287,6 @@ public:
         LPARAM lparam)
     {
         LONG_PTR old_style = GetWindowLongPtrW(hWnd, GWL_STYLE);
-
-        /* Prevent Windows from drawing the default title bar by temporarily
-           toggling the WS_VISIBLE style. This is recommended in:
-           https://blogs.msdn.microsoft.com/wpfsdk/2008/09/08/custom-hWnd-chrome-in-wpf/ */
         SetWindowLongPtrW(hWnd, GWL_STYLE, old_style & ~WS_VISIBLE);
         LRESULT result = DefWindowProcW(hWnd, msg, wparam, lparam);
         SetWindowLongPtrW(hWnd, GWL_STYLE, old_style);
