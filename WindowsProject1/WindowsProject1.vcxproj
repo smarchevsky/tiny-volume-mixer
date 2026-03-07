@@ -125,7 +125,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClInclude Include="Application.h" />
+    <ClInclude Include="App.h" />
     <ClInclude Include="AudioUtils.h" />
     <ClInclude Include="Common.h" />
     <ClInclude Include="framework.h" />
@@ -136,7 +136,7 @@
     <ClInclude Include="WindowsProject1.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="Application.cpp" />
+    <ClCompile Include="App.cpp" />
     <ClCompile Include="AudioUtils.cpp" />
     <ClCompile Include="Utils.cpp" />
     <ClCompile Include="VolumeApp.cpp" />

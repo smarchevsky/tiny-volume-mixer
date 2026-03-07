@@ -1,8 +1,8 @@
 #pragma once
 
-#include "Application.h"
+#include "App.h"
 
-class VolumeApp : public Application {
+class VolumeApp : public App {
     bool fMouseTracking;
 
 public:

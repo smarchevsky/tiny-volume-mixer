@@ -13,7 +13,7 @@ extern "C" IMAGE_DOS_HEADER __ImageBase;
 #define WM_NCUAHDRAWFRAME (0x00AF)
 #endif
 
-class Application {
+class App {
 protected:
     HWND _hWnd;
     ATOM _cls;

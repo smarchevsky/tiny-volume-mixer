@@ -1,10 +1,10 @@
-#include "Application.h"
+#include "App.h"
 
 #include <dwmapi.h>
 #include <shellapi.h>
 #include <uxtheme.h>
 
-void Application::initWindow(const WNDCLASSEXW& winParam, RECT winRect)
+void App::initWindow(const WNDCLASSEXW& winParam, RECT winRect)
 {
     _cls = RegisterClassExW(&winParam);
 
@@ -24,12 +24,12 @@ void Application::initWindow(const WNDCLASSEXW& winParam, RECT winRect)
     UpdateWindow(_hWnd);
 }
 
-void Application::handleAfterLoop()
+void App::handleAfterLoop()
 {
     UnregisterClassW((LPWSTR)MAKEINTATOM(_cls), HINST_THISCOMPONENT);
 }
 
-void Application::updateRegion()
+void App::updateRegion()
 {
     RECT old_rgn = _rgn;
     if (IsMaximized(_hWnd)) {
@@ -58,7 +58,7 @@ void Application::updateRegion()
     }
 }
 
-bool Application::handleKeydown(DWORD key)
+bool App::handleKeydown(DWORD key)
 {
     switch (key) {
     case 'I': {
@@ -95,14 +95,14 @@ bool Application::handleKeydown(DWORD key)
     }
 }
 
-bool Application::hasAutohideAppbar(UINT edge, RECT mon)
+bool App::hasAutohideAppbar(UINT edge, RECT mon)
 {
     APPBARDATA tmp;
     tmp = { .cbSize = sizeof(APPBARDATA), .uEdge = edge, .rc = mon };
     return SHAppBarMessage(ABM_GETAUTOHIDEBAREX, &tmp);
 }
 
-void Application::handlePaint()
+void App::handlePaint()
 {
     PAINTSTRUCT ps;
     HDC dc = BeginPaint(_hWnd, &ps);
@@ -121,12 +121,12 @@ void Application::handlePaint()
     EndPaint(_hWnd, &ps);
 }
 
-void Application::handleThemeChanged()
+void App::handleThemeChanged()
 {
     _themeEnabled = IsThemeActive();
 }
 
-void Application::handleWindowPosChanged(const WINDOWPOS* pos)
+void App::handleWindowPosChanged(const WINDOWPOS* pos)
 {
     RECT client;
     GetClientRect(_hWnd, &client);
@@ -158,7 +158,7 @@ void Application::handleWindowPosChanged(const WINDOWPOS* pos)
     }
 }
 
-LRESULT Application::handleMessageInvisible(HWND hWnd, UINT msg, WPARAM wparam, LPARAM lparam)
+LRESULT App::handleMessageInvisible(HWND hWnd, UINT msg, WPARAM wparam, LPARAM lparam)
 {
     LONG_PTR old_style = GetWindowLongPtrW(hWnd, GWL_STYLE);
     SetWindowLongPtrW(hWnd, GWL_STYLE, old_style & ~WS_VISIBLE);
@@ -167,7 +167,7 @@ LRESULT Application::handleMessageInvisible(HWND hWnd, UINT msg, WPARAM wparam, 
     return result;
 }
 
-void Application::handleNCCalcSize(WPARAM wparam, LPARAM lparam)
+void App::handleNCCalcSize(WPARAM wparam, LPARAM lparam)
 {
     union {
         LPARAM lparam;
@@ -206,7 +206,7 @@ void Application::handleNCCalcSize(WPARAM wparam, LPARAM lparam)
     }
 }
 
-LRESULT Application::handleNCHitTest(int x, int y)
+LRESULT App::handleNCHitTest(int x, int y)
 {
     if (IsMaximized(_hWnd))
         return HTCLIENT;
@@ -240,7 +240,7 @@ LRESULT Application::handleNCHitTest(int x, int y)
     return HTCLIENT;
 }
 
-void Application::handleCompositionChanged()
+void App::handleCompositionChanged()
 {
     BOOL enabled = FALSE;
     DwmIsCompositionEnabled(&enabled);

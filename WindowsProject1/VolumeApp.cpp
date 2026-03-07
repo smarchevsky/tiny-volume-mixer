@@ -17,7 +17,7 @@ void VolumeApp::handlePreLoop(WNDPROC winProc)
 
     RECT winRect;
     FileManager::get().loadWindowRect(winRect);
-    Application::initWindow(winParam, winRect);
+    App::initWindow(winParam, winRect);
 
     setWindowSemiTransparent(true);
 }
