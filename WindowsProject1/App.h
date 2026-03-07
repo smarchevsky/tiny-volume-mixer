@@ -27,6 +27,8 @@ private:
 protected:
     virtual void onMouseLeave() { }
     virtual void onMouseMove(POINT screenPos, bool justEntered) { }
+    virtual void onPaint(HDC hdc) { }
+    virtual void onResize(RECT newRect) { }
 
 public:
     bool compositionEnabled() const { return _compositionEnabled; }

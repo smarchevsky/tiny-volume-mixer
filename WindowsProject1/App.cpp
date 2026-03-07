@@ -133,8 +133,8 @@ bool App::hasAutohideAppbar(UINT edge, RECT mon)
 void App::handlePaint()
 {
     PAINTSTRUCT ps;
-    HDC dc = BeginPaint(_hWnd, &ps);
-
+    HDC hdc = BeginPaint(_hWnd, &ps);
+    onPaint(hdc);
     EndPaint(_hWnd, &ps);
 }
 
@@ -221,6 +221,9 @@ void App::handleNCCalcSize(WPARAM wparam, LPARAM lparam)
     } else {
         *params.rect = nonclient;
     }
+
+    RECT r = *params.rect;
+    onResize({ 0, 0, r.right - r.left, r.bottom - r.top });
 }
 
 LRESULT App::handleNCHitTest(int x, int y)
