@@ -16,10 +16,17 @@ extern "C" IMAGE_DOS_HEADER __ImageBase;
 class App {
 protected:
     HWND _hWnd;
+
+private:
     ATOM _cls;
     int _width, _height;
     RECT _rgn;
     bool _themeEnabled, _compositionEnabled;
+    bool _mouseTracking;
+
+protected:
+    virtual void onMouseLeave() { }
+    virtual void onMouseEnter() { }
 
 public:
     bool compositionEnabled() const { return _compositionEnabled; }
@@ -28,6 +35,9 @@ public:
     void handleAfterLoop();
     void updateRegion();
     bool handleKeydown(DWORD key);
+    void handleMouseMove(POINT cursorScreenPos);
+    void handleMouseLeave();
+
     bool hasAutohideAppbar(UINT edge, RECT mon);
     void handlePaint();
     void handleThemeChanged();

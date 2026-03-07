@@ -99,6 +99,26 @@ bool App::handleKeydown(DWORD key)
     }
 }
 
+void App::handleMouseLeave()
+{
+    _mouseTracking = false;
+    onMouseLeave();
+}
+
+void App::handleMouseMove(POINT cursorScreenPos)
+{
+    if (!_mouseTracking) {
+        TRACKMOUSEEVENT tme;
+        tme.cbSize = sizeof(TRACKMOUSEEVENT);
+        tme.dwFlags = TME_LEAVE;
+        tme.hwndTrack = _hWnd;
+        if (TrackMouseEvent(&tme)) {
+            _mouseTracking = true;
+            onMouseEnter();
+        }
+    }
+}
+
 bool App::hasAutohideAppbar(UINT edge, RECT mon)
 {
     APPBARDATA tmp;

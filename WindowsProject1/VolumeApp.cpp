@@ -35,31 +35,14 @@ void VolumeApp::shutDown(HWND hWnd)
     DestroyWindow(hWnd);
 }
 
-void VolumeApp::handleMouseMove(POINT cursorScreenPos)
+void VolumeApp::setWindowSemiTransparent(bool semiTransparent)
 {
-    if (!fMouseTracking) {
-        TRACKMOUSEEVENT tme;
-        tme.cbSize = sizeof(TRACKMOUSEEVENT);
-        tme.dwFlags = TME_LEAVE;
-        tme.hwndTrack = _hWnd;
-        if (TrackMouseEvent(&tme)) {
-            fMouseTracking = true;
-            setWindowSemiTransparent(false); // MOUSE ENTER
-
-            POINT cursorClientPos = cursorScreenPos;
-            ScreenToClient(_hWnd, &cursorClientPos);
-            // auto newHoverInfo = sliderManager.getSelectAtPosition(cursorClientPos);
-            // if (auto pSlider = sliderManager.getSliderFromSelect(newHoverInfo)) {
-            //     pSlider->_focused = true;
-            //     InvalidateRect(_hWnd, NULL, FALSE);
-            // }
-        }
-    }
+    setWindowAlpha(semiTransparent ? 200 : 245);
+    printf("set window %s\n", semiTransparent ? "transparent" : "opaque");
 }
 
-void VolumeApp::handleMouseLeave()
+void VolumeApp::onMouseLeave()
 {
-    fMouseTracking = false;
     setWindowSemiTransparent(true);
     // if (auto pSlider = sliderManager.getSliderFromSelect(sliderInfoHovered)) {
     //     pSlider->_focused = false;
@@ -67,8 +50,15 @@ void VolumeApp::handleMouseLeave()
     // }
 }
 
-void VolumeApp::setWindowSemiTransparent(bool semiTransparent)
+void VolumeApp::onMouseEnter()
 {
-    setWindowAlpha(semiTransparent ? 200 : 245);
-    // printf("set window %s\n", semiTransparent ? "transparent" : "opaque");
+    setWindowSemiTransparent(false); // MOUSE ENTER
+
+    // POINT cursorClientPos = cursorScreenPos;
+    // ScreenToClient(_hWnd, &cursorClientPos);
+    // auto newHoverInfo = sliderManager.getSelectAtPosition(cursorClientPos);
+    // if (auto pSlider = sliderManager.getSliderFromSelect(newHoverInfo)) {
+    //     pSlider->_focused = true;
+    //     InvalidateRect(_hWnd, NULL, FALSE);
+    // }
 }
