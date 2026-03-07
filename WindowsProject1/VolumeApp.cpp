@@ -66,8 +66,6 @@ void VolumeApp::handleMouseLeave()
 
 void VolumeApp::setWindowSemiTransparent(bool semiTransparent)
 {
-    // LONG_PTR exStyle = GetWindowLongPtr(_hWnd, GWL_EXSTYLE);
-    // SetWindowLongPtr(_hWnd, GWL_EXSTYLE, exStyle | WS_EX_LAYERED); // no need, if already layered
-    SetLayeredWindowAttributes(_hWnd, 0, semiTransparent ? 200 : 255, LWA_ALPHA);
-    printf("set window %s\n", semiTransparent ? "transparent" : "opaque");
+    setWindowAlpha(semiTransparent ? 200 : 255);
+    // printf("set window %s\n", semiTransparent ? "transparent" : "opaque");
 }

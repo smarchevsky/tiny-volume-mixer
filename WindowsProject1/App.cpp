@@ -256,3 +256,12 @@ void App::handleCompositionChanged()
 
     updateRegion();
 }
+
+void App::setWindowAlpha(BYTE alpha)
+{
+    // LONG_PTR exStyle = GetWindowLongPtr(_hWnd, GWL_EXSTYLE);
+    // SetWindowLongPtr(_hWnd, GWL_EXSTYLE, exStyle | WS_EX_LAYERED); // no need, if already layered
+
+    SetLayeredWindowAttributes(_hWnd, RGB(255, 0, 255), alpha, LWA_COLORKEY | LWA_ALPHA); // get rid of white line at the top
+    // SetLayeredWindowAttributes(_hWnd, 0, alpha, LWA_ALPHA);
+}

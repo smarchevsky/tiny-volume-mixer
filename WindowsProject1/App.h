@@ -38,4 +38,5 @@ public:
     void handleNCCreate(HWND _hWnd, CREATESTRUCTW* cs) { SetWindowLongPtrW(_hWnd, GWLP_USERDATA, (LONG_PTR)cs->lpCreateParams); }
     LRESULT handleNCHitTest(int x, int y);
     void handleCompositionChanged();
+    void setWindowAlpha(BYTE alpha);
 };
