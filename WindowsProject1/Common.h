@@ -11,7 +11,6 @@ enum {
     WM_REFRESH_VOL,
     WM_APP_REGISTERED,
     WM_APP_UNREGISTERED,
-    IDT_TIMER_1,
 };
 
 enum class VolumeType : uint8_t {
