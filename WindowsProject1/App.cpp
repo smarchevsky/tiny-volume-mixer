@@ -120,27 +120,40 @@ void App::handleResize(WPARAM wParam, LPARAM lParam)
     onResize(rc);
 }
 
-// clang-format off
-const int BORDER = 8;
 LRESULT App::handleNCAHitTest(HWND hWnd, LPARAM lParam)
 {
-    if(hWnd == _hWnd) {
+    if (hWnd == _hWnd) {
         POINT pt = { GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam) };
+        ScreenToClient(_hWnd, &pt);
         RECT rc;
         GetWindowRect(_hWnd, &rc);
-        bool left = pt.x < rc.left + BORDER;
-        bool right = pt.x >= rc.right - BORDER;
-        bool top = pt.y < rc.top + BORDER;
-        bool bottom = pt.y >= rc.bottom - BORDER;
-        if (top && left)     return HTTOPLEFT;
-        if (top && right)    return HTTOPRIGHT;
-        if (bottom && left)  return HTBOTTOMLEFT;
-        if (bottom && right) return HTBOTTOMRIGHT;
-        if (top)             return HTTOP;
-        if (bottom)          return HTBOTTOM;
-        if (left)            return HTLEFT;
-        if (right)           return HTRIGHT;
-        return HTCLIENT; // drag to move anywhere else
+
+        const int _width = rc.right - rc.left, _height = rc.bottom - rc.top;
+        const int frame_size = GetSystemMetrics(SM_CXFRAME) + GetSystemMetrics(SM_CXPADDEDBORDER);
+        const int diagonal_width = frame_size * 2 + GetSystemMetrics(SM_CXBORDER);
+
+        if (pt.y < frame_size) {
+            if (pt.x < diagonal_width)
+                return HTTOPLEFT;
+            if (pt.x >= _width - diagonal_width)
+                return HTTOPRIGHT;
+            return HTTOP;
+        }
+
+        if (pt.y >= _height - frame_size) {
+            if (pt.x < diagonal_width)
+                return HTBOTTOMLEFT;
+            if (pt.x >= _width - diagonal_width)
+                return HTBOTTOMRIGHT;
+            return HTBOTTOM;
+        }
+
+        if (pt.x < frame_size)
+            return HTLEFT;
+        if (pt.x >= _width - frame_size)
+            return HTRIGHT;
+        return HTCLIENT;
     }
+
     return HTCAPTION;
 }
