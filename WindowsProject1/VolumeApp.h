@@ -17,6 +17,8 @@ class VolumeApp : public App {
     virtual void onMouseMove(POINT cursorClientPos, bool justEntered) override;
     virtual void onMouseScroll(POINT cursorClientPos, float delta) override;
 
+    void setWindowSemiTransparent(bool enabled);
+
 public:
     void handleMMAppRegistered(WPARAM wParam, LPARAM lParam);
     void handleMMAppUnegistered(WPARAM wParam, LPARAM lParam);

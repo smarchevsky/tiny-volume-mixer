@@ -8,7 +8,7 @@ void VolumeApp::construct(HINSTANCE instance, WNDPROC wndProc)
     FileManager::get().loadWindowRect(rc);
 
     initWindow(instance, wndProc, rc);
-    setWindowAlpha(200);
+    setWindowSemiTransparent(true);
 
     _audioAppListerner.init(_hWnd);
 }
@@ -93,9 +93,14 @@ void VolumeApp::onMouseScroll(POINT cursorClientPos, float delta)
     }
 }
 
+void VolumeApp::setWindowSemiTransparent(bool enabled)
+{
+    setWindowAlpha(enabled ? 220 : 245);
+}
+
 void VolumeApp::onMouseLeave()
 {
-    setWindowAlpha(200);
+    setWindowSemiTransparent(true);
     if (auto pSlider = sliderManager.getSliderFromSelect(sliderInfoHovered)) {
         pSlider->_focused = false;
         InvalidateRect(_hWnd, NULL, FALSE);
@@ -106,7 +111,7 @@ void VolumeApp::onMouseLeave()
 void VolumeApp::onMouseMove(POINT cursorClientPos, bool justEntered)
 {
     if (justEntered)
-        setWindowAlpha(255);
+        setWindowSemiTransparent(false);
 
     SelectInfo newHoverInfo = sliderManager.getSelectAtPosition(cursorClientPos);
     if (newHoverInfo != sliderInfoHovered) {
