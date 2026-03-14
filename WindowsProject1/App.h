@@ -37,6 +37,8 @@ public:
     void handleMouseMove(WPARAM wParam, LPARAM lParam);
     void handleMouseLeave();
     void handleMouseScroll(WPARAM wParam, LPARAM lParam);
+    void handleLMB(WPARAM wParam, LPARAM lParam, bool down);
+    void handleRMB(WPARAM wParam, LPARAM lParam, bool down);
 
     void handlePaint();
 

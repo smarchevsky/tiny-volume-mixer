@@ -64,6 +64,18 @@ void App::handleMouseScroll(WPARAM wParam, LPARAM lParam)
     onMouseScroll(cursorScreenPos, wheelSteps);
 }
 
+void App::handleLMB(WPARAM wParam, LPARAM lParam, bool down)
+{
+    ReleaseCapture();
+    SendMessage(_hWnd, WM_NCLBUTTONDOWN, HTCAPTION, 0); // handle window drag on LMB
+}
+
+void App::handleRMB(WPARAM wParam, LPARAM lParam, bool down)
+{
+    ReleaseCapture();
+    SendMessage(_hWnd, WM_CLOSE, 0, 0);
+}
+
 void App::handleMouseMove(WPARAM wParam, LPARAM lParam)
 {
     bool justEntered = false;
@@ -97,7 +109,7 @@ void App::setWindowAlpha(BYTE alpha)
     // SetWindowLongPtr(_hWnd, GWL_EXSTYLE, exStyle | WS_EX_LAYERED); // no need, if already layered
 
     // SetLayeredWindowAttributes(_hWnd, RGB(255, 0, 255), alpha, LWA_COLORKEY | LWA_ALPHA); // get rid of white line at the top
-     SetLayeredWindowAttributes(_hWnd, 0, alpha, LWA_ALPHA);
+    SetLayeredWindowAttributes(_hWnd, 0, alpha, LWA_ALPHA);
 }
 
 // INHERIT BELOW

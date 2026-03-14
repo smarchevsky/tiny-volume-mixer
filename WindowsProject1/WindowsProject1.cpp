@@ -63,10 +63,14 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         app.destroyWindow(hWnd);
     } break;
 
-    case WM_LBUTTONDOWN: // handle window drag on LMB
-        ReleaseCapture();
-        SendMessage(hWnd, WM_NCLBUTTONDOWN, HTCAPTION, 0);
+    case WM_LBUTTONDOWN: {
+        app.handleLMB(wParam, lParam, true);
         return 0;
+    }
+    case WM_RBUTTONUP: {
+        app.handleRMB(wParam, lParam, false);
+        return 0;
+    }
 
     case WM_MOUSEMOVE: {
         static LPARAM prevLParam;
