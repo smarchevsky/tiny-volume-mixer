@@ -196,8 +196,9 @@ void Slider::draw(HDC hdc, bool isSystem) const
 
     if (iconInfo.hLarge)
         DrawIconEx(hdc,
-            _rect.left + sliderWidth / 2 - iconInfo.width / 2,
-            drawRect.bottom - sliderWidth / 2 - iconInfo.width / 4,
+            (_rect.left + _rect.right) / 2 - iconInfo.width / 2,
+            // (_rect.top + _rect.bottom) / 2 - iconInfo.width / 2,
+            _rect.bottom - 30 - iconInfo.width / 2,
             iconInfo.hLarge, 0, 0, 0, NULL, DI_NORMAL);
 }
 
@@ -247,12 +248,11 @@ SelectInfo SliderManager::getSelectAtPosition(POINT mousePos)
 
 void SliderManager::recalculateSliderRects(const RECT& r)
 {
-    int offset = r.left + 20;
-    _sliderMaster._rect = { offset, r.top, offset + sliderWidth, r.bottom };
-    offset += sliderWidth + 20;
+    int offset = r.left + margin;
+    _sliderMaster._rect = { offset, r.top, offset += sliderWidth + 20, r.bottom };
+
     for (auto& slider : _slidersApps) {
-        slider._rect = { offset, r.top, offset + sliderWidth, r.bottom };
-        offset += sliderWidth;
+        slider._rect = { offset, r.top, offset += sliderWidth, r.bottom };
     }
 }
 
