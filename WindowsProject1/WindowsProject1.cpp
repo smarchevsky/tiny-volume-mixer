@@ -9,6 +9,8 @@
 #include "AudioUtils.h"
 #include "Utils.h"
 
+#include "Timer.h"
+
 App app;
 
 LRESULT CALLBACK WndProc(HWND, UINT, WPARAM, LPARAM);
@@ -36,7 +38,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
     CoinitializeWrapper coinitializeRAII;
 
     app.initWindow(hInstance, WndProc, nCmdShow);
-
+    TIMEPOINT("init window");
     HACCEL hAccelTable = LoadAccelerators(hInstance, MAKEINTRESOURCE(IDC_WINDOWSPROJECT1));
     MSG msg;
     while (GetMessage(&msg, nullptr, 0, 0)) {
@@ -53,7 +55,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
     switch (message) {
     case WM_CREATE: {
-        // AudioUpdateListener::get().init(hWnd);
+        TIMEPOINT("WM_CREATE");
     } break;
 
     case WM_MOUSEMOVE: {
@@ -90,6 +92,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
     } break;
 
     case WM_PAINT: {
+        TIMEPOINT("WM_PAINT");
         app.handlePaint();
     } break;
 

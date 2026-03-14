@@ -41,23 +41,25 @@ void App::initWindow(HINSTANCE instance, WNDPROC wndProc, int nCmdShow)
     RECT rc;
     FileManager::get().loadWindowRect(rc);
 
-    _hWnd = CreateWindowExW(WS_EX_TOPMOST | WS_EX_LAYERED, szWindowClass, szTitle, WS_OVERLAPPEDWINDOW,
+    _hWnd = CreateWindowExW(
+        WS_EX_TOPMOST | WS_EX_LAYERED,
+        szWindowClass, szTitle,
+        WS_POPUP | WS_VISIBLE,
         rc.left, rc.top, rc.right - rc.left, rc.bottom - rc.top,
         nullptr, nullptr, _hInstance, nullptr);
 
-    setWindowAlpha(200);
-
     _audioAppListerner.init(_hWnd);
 
-    // ShowWindow(_hWnd, SW_SHOWDEFAULT);
-    ShowWindow(_hWnd, nCmdShow);
-    UpdateWindow(_hWnd);
+    setWindowAlpha(200);
+    // ShowWindow(_hWnd, nCmdShow); // or SW_SHOWDEFAULT, not necessary when WS_VISIBLE
+    // UpdateWindow(_hWnd);
 }
 
 void App::handleDestroy(HWND hWnd)
 {
     if (_hWnd) {
         _audioAppListerner.uninit();
+
         assert(hWnd == _hWnd);
         RECT winRect;
         if (GetWindowRect(_hWnd, &winRect))
