@@ -31,13 +31,6 @@ void App::initWindow(HINSTANCE instance, WNDPROC wndProc, RECT rc)
     wcex.hIconSm = LoadIcon(wcex.hInstance, MAKEINTRESOURCE(IDI_SMALL));
     RegisterClassExW(&wcex);
 
-    // WS_POPUP: Removes the title bar
-    // WS_THICKFRAME: Adds the invisible resizing borders
-    // WS_SYSMENU: Keeps it on the taskbar/system integration
-    // was WS_OVERLAPPEDWINDOW
-
-    // DWORD dwStyle = WS_POPUP | WS_THICKFRAME | WS_SYSMENU;
-
     _hWnd = CreateWindowExW(
         WS_EX_TOPMOST | WS_EX_LAYERED,
         szWindowClass, szTitle,
@@ -46,8 +39,6 @@ void App::initWindow(HINSTANCE instance, WNDPROC wndProc, RECT rc)
         nullptr, nullptr, _hInstance, nullptr);
 
     setWindowAlpha(200);
-    // ShowWindow(_hWnd, nCmdShow); // or SW_SHOWDEFAULT, not necessary when WS_VISIBLE
-    // UpdateWindow(_hWnd);
 }
 
 void App::destroyWindow(HWND hWnd)
