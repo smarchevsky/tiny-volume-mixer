@@ -12,6 +12,7 @@ WCHAR szWindowClass[MAX_LOADSTRING]; // main window class name
 
 void App::initWindow(HINSTANCE instance, WNDPROC wndProc, int nCmdShow)
 {
+    _hInstance = instance;
     SetProcessDpiAwarenessContext(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2);
 
     LoadStringW(_hInstance, IDS_APP_TITLE, szTitle, MAX_LOADSTRING);
@@ -19,7 +20,6 @@ void App::initWindow(HINSTANCE instance, WNDPROC wndProc, int nCmdShow)
 
     WNDCLASSEXW wcex {};
     wcex.cbSize = sizeof(WNDCLASSEX);
-    wcex.style = CS_HREDRAW | CS_VREDRAW;
     wcex.lpfnWndProc = wndProc;
     wcex.hInstance = _hInstance;
     wcex.hIcon = LoadIcon(_hInstance, MAKEINTRESOURCE(IDI_WINDOWSPROJECT1));
