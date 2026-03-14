@@ -37,8 +37,6 @@ void App::initWindow(HINSTANCE instance, WNDPROC wndProc, RECT rc)
         WS_POPUP | WS_VISIBLE,
         rc.left, rc.top, rc.right - rc.left, rc.bottom - rc.top,
         nullptr, nullptr, _hInstance, nullptr);
-
-    setWindowAlpha(200);
 }
 
 void App::destroyWindow(HWND hWnd)

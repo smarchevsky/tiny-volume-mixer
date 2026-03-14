@@ -8,6 +8,7 @@ void VolumeApp::construct(HINSTANCE instance, WNDPROC wndProc)
     FileManager::get().loadWindowRect(rc);
 
     initWindow(instance, wndProc, rc);
+    setWindowAlpha(200);
 
     _audioAppListerner.init(_hWnd);
 }
