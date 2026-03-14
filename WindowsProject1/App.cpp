@@ -206,3 +206,26 @@ void App::handleMMRefreshVol(WPARAM wParam, LPARAM lParam)
         slider->_val = info._vol;
     InvalidateRect(_hWnd, NULL, FALSE); // UpdateWindow(hWnd); // works without it
 }
+
+// clang-format off
+const int BORDER = 8;
+LRESULT App::handleNCAHitTest(HWND hWnd, LPARAM lParam)
+{
+    assert(hWnd == _hWnd);
+    POINT pt = { GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam) };
+    RECT rc;
+    GetWindowRect(_hWnd, &rc);
+    bool left = pt.x < rc.left + BORDER;
+    bool right = pt.x >= rc.right - BORDER;
+    bool top = pt.y < rc.top + BORDER;
+    bool bottom = pt.y >= rc.bottom - BORDER;
+    if (top && left)     return HTTOPLEFT;
+    if (top && right)    return HTTOPRIGHT;
+    if (bottom && left)  return HTBOTTOMLEFT;
+    if (bottom && right) return HTBOTTOMRIGHT;
+    if (top)             return HTTOP;
+    if (bottom)          return HTBOTTOM;
+    if (left)            return HTLEFT;
+    if (right)           return HTRIGHT;
+    return HTCAPTION; // drag to move anywhere else
+}

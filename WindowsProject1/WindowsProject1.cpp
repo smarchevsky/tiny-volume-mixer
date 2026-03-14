@@ -100,6 +100,14 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         return 1; // no redraw bkg
     }
 
+    case WM_NCCALCSIZE: {
+        return 0;
+    }
+
+    case WM_NCHITTEST: {
+        return app.handleNCAHitTest(hWnd, lParam);
+    }
+
     case WM_COMMAND: {
         int wmId = LOWORD(wParam);
         switch (wmId) {

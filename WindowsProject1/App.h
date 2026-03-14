@@ -51,7 +51,6 @@ public:
     virtual void initWindow(HINSTANCE instance, WNDPROC wndProc);
 
     virtual void handleResize(WPARAM wParam, LPARAM lParam);
-    //virtual void handleClose(HWND hWnd);
     virtual void handleDestroy(HWND hWnd);
 
     void handleMouseMove(WPARAM wParam, LPARAM lParam);
@@ -66,4 +65,6 @@ public: // INHERIT THIS
     void handleMMAppRegistered(WPARAM wParam, LPARAM lParam);
     void handleMMAppUnegistered(WPARAM wParam, LPARAM lParam);
     void handleMMRefreshVol(WPARAM wParam, LPARAM lParam);
+
+    LRESULT handleNCAHitTest(HWND hWnd, LPARAM lParam);
 };
