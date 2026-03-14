@@ -33,7 +33,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
     _In_ LPWSTR lpCmdLine,
     _In_ int nCmdShow)
 {
-    createConsole();
+    // createConsole();
 
     CoinitializeWrapper coinitializeRAII;
 
@@ -128,11 +128,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
     }
 
     case WM_GETMINMAXINFO: {
-        MINMAXINFO* mmi = (MINMAXINFO*)lParam;
-        mmi->ptMinTrackSize.x = 300;
-        mmi->ptMinTrackSize.y = 200;
-        mmi->ptMaxTrackSize.x = 1280;
-        mmi->ptMaxTrackSize.y = 600;
+        app.handleMinMaxInfo(wParam, lParam);
         return 0;
     }
 

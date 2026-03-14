@@ -157,3 +157,12 @@ LRESULT App::handleNCAHitTest(HWND hWnd, LPARAM lParam)
 
     return HTCAPTION;
 }
+
+void App::handleMinMaxInfo(WPARAM wParam, LPARAM lParam)
+{
+    MINMAXINFO* mmi = (MINMAXINFO*)lParam;
+    mmi->ptMinTrackSize.x = 300;
+    mmi->ptMinTrackSize.y = 200;
+    mmi->ptMaxTrackSize.x = 1280;
+    mmi->ptMaxTrackSize.y = 600;
+}

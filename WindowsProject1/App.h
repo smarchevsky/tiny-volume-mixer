@@ -40,10 +40,11 @@ public:
     void handleLMB(WPARAM wParam, LPARAM lParam, bool down);
     void handleRMB(WPARAM wParam, LPARAM lParam, bool down);
 
+    LRESULT handleNCAHitTest(HWND hWnd, LPARAM lParam);
+    void handleMinMaxInfo(WPARAM wParam, LPARAM lParam);
+
     void handlePaint();
 
     void setWindowAlpha(BYTE alpha);
 
-public: // INHERIT THIS
-    LRESULT handleNCAHitTest(HWND hWnd, LPARAM lParam);
 };
