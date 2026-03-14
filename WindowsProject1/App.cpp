@@ -10,7 +10,7 @@ HCURSOR cursorHand = LoadCursor(nullptr, IDC_HAND);
 WCHAR szTitle[MAX_LOADSTRING]; // title bar text
 WCHAR szWindowClass[MAX_LOADSTRING]; // main window class name
 
-void App::initWindow(HINSTANCE instance, WNDPROC wndProc, int nCmdShow)
+void App::initWindow(HINSTANCE instance, WNDPROC wndProc)
 {
     _hInstance = instance;
     SetProcessDpiAwarenessContext(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2);

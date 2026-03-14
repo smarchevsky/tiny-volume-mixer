@@ -48,7 +48,7 @@ protected:
 public:
     HINSTANCE getInstance() { return _hInstance; }
 
-    virtual void initWindow(HINSTANCE instance, WNDPROC wndProc, int nCmdShow);
+    virtual void initWindow(HINSTANCE instance, WNDPROC wndProc);
 
     virtual void handleResize(WPARAM wParam, LPARAM lParam);
     //virtual void handleClose(HWND hWnd);

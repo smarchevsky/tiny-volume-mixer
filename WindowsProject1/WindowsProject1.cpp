@@ -37,7 +37,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 
     CoinitializeWrapper coinitializeRAII;
 
-    app.initWindow(hInstance, WndProc, nCmdShow);
+    app.initWindow(hInstance, WndProc);
     TIMEPOINT("init window");
     HACCEL hAccelTable = LoadAccelerators(hInstance, MAKEINTRESOURCE(IDC_WINDOWSPROJECT1));
     MSG msg;
