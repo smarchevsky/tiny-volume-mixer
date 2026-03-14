@@ -15,16 +15,17 @@ void VolumeApp::construct(HINSTANCE instance, WNDPROC wndProc)
 void VolumeApp::destroyWindow(HWND hWnd)
 {
     if (_hWnd == hWnd) {
-        RECT winRect;
-        if (GetWindowRect(_hWnd, &winRect))
-            FileManager::get().saveWindowRect(winRect);
+        _audioAppListerner.uninit();
+
+        RECT rc;
+        if (GetWindowRect(_hWnd, &rc)) {
+            FileManager::get().saveWindowRect(rc);
+        }
 
         DestroyWindow(_hWnd);
         _hWnd = nullptr;
     }
 }
-
-void VolumeApp::cleanup() { _audioAppListerner.uninit(); }
 
 void VolumeApp::handleMMAppRegistered(WPARAM wParam, LPARAM lParam)
 {

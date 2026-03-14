@@ -24,5 +24,4 @@ public:
 
     virtual void construct(HINSTANCE instance, WNDPROC wndProc);
     virtual void destroyWindow(HWND hWnd) override;
-    virtual void cleanup();
 };

@@ -49,7 +49,6 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
         }
     }
 
-    app.cleanup();
     return (int)msg.wParam;
 }
 
