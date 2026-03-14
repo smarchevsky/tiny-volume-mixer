@@ -18,17 +18,18 @@ void App::initWindow(HINSTANCE instance, WNDPROC wndProc, RECT rc)
     LoadStringW(_hInstance, IDS_APP_TITLE, szTitle, MAX_LOADSTRING);
     LoadStringW(_hInstance, IDC_WINDOWSPROJECT1, szWindowClass, MAX_LOADSTRING);
 
+    auto icon = LoadIcon(_hInstance, MAKEINTRESOURCE(IDI_ICON_MULTIRES));
     WNDCLASSEXW wcex {};
     wcex.cbSize = sizeof(WNDCLASSEX);
     wcex.lpfnWndProc = wndProc;
     wcex.hInstance = _hInstance;
-    wcex.hIcon = LoadIcon(_hInstance, MAKEINTRESOURCE(IDI_WINDOWSPROJECT1));
+    wcex.hIcon = icon;
     wcex.hCursor = cursorDefault;
     // wcex.hbrBackground = hBrushBackground;
     wcex.lpszMenuName = MAKEINTRESOURCEW(IDC_WINDOWSPROJECT1);
     wcex.lpszMenuName = NULL;
     wcex.lpszClassName = szWindowClass;
-    wcex.hIconSm = LoadIcon(wcex.hInstance, MAKEINTRESOURCE(IDI_SMALL));
+    wcex.hIconSm = icon;
     RegisterClassExW(&wcex);
 
     _hWnd = CreateWindowExW(

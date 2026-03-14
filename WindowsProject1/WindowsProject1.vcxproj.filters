@@ -69,10 +69,7 @@
     </ResourceCompile>
   </ItemGroup>
   <ItemGroup>
-    <Image Include="small.ico">
-      <Filter>Resource Files</Filter>
-    </Image>
-    <Image Include="WindowsProject1.ico">
+    <Image Include="IconMultires.ico">
       <Filter>Resource Files</Filter>
     </Image>
   </ItemGroup>

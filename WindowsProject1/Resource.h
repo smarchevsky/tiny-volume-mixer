@@ -8,8 +8,7 @@
 #define IDD_ABOUTBOX                    103
 #define IDM_ABOUT                       104
 #define IDM_EXIT                        105
-#define IDI_WINDOWSPROJECT1             107
-#define IDI_SMALL                       108
+#define IDI_ICON_MULTIRES               107
 #define IDC_WINDOWSPROJECT1             109
 #define IDR_MAINFRAME                   128
 #define IDC_STATIC                      -1
