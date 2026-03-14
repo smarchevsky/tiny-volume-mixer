@@ -143,4 +143,5 @@ LRESULT App::handleNCAHitTest(HWND hWnd, LPARAM lParam)
         if (right)           return HTRIGHT;
         return HTCLIENT; // drag to move anywhere else
     }
+    return HTCAPTION;
 }
