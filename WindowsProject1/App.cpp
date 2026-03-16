@@ -116,13 +116,14 @@ void App::handlePaint()
     BITMAPINFO bi = {};
     bi.bmiHeader = bih;
 
-    void* pvBits = nullptr;
-    HBITMAP hbm = CreateDIBSection(hdcScreen, &bi, DIB_RGB_COLORS, &pvBits, NULL, 0);
+    DWORD* pixels = nullptr;
+    HBITMAP hbm = CreateDIBSection(hdcScreen, &bi, DIB_RGB_COLORS, (void**)&pixels, NULL, 0);
     HBITMAP hOld = (HBITMAP)SelectObject(hdcMem, hbm);
 
-    Canvas canvas { (DWORD*)pvBits, width, height };
+    Canvas canvas { (DWORD*)pixels, width, height };
 
-    onPaint(hdcMem, canvas);
+    if (pixels)
+        onPaint(hdcMem, canvas);
 
     BLENDFUNCTION blend = {};
     blend.BlendOp = AC_SRC_OVER;
