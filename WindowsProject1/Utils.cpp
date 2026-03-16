@@ -47,9 +47,9 @@ COLORREF getIconColor(BITMAP bmp, ICONINFO iconInfo)
         BYTE avgR = BYTE(totalR / opaquePixels);
         BYTE avgG = BYTE(totalG / opaquePixels);
         BYTE avgB = BYTE(totalB / opaquePixels);
-        return RGB(avgR, avgG, avgB);
+        return ARGB(0, avgR, avgG, avgB);
     }
-    return RGB(160, 160, 160);
+    return ARGB(0, 160, 160, 160);
 }
 
 IconInfo createIconInfo(HICON icon)
@@ -64,7 +64,7 @@ IconInfo createIconInfo(HICON icon)
     GetObject(iconInfo.hbmColor, sizeof(BITMAP), &bmp);
 
     IconInfo info {};
-    info.hBrush = CreateSolidBrush(getIconColor(bmp, iconInfo));
+    info.RGB = getIconColor(bmp, iconInfo);
     info.hLarge = icon;
     info.width = bmp.bmWidth;
     return info;
@@ -191,13 +191,41 @@ void Slider::draw(HDC hdc, bool isSystem) const
         iconInfo = im.getIconFromProcess(_pid);
     }
 
-    if (drawRect.right > drawRect.left && drawRect.bottom > drawRect.top)
-        FillRect(hdc, &drawRect, iconInfo.hBrush);
+    // if (drawRect.right > drawRect.left && drawRect.bottom > drawRect.top)
+    //     FillRect(hdc, &drawRect, iconInfo.hBrush);
 
     if (iconInfo.hLarge)
         DrawIconEx(hdc,
             (_rect.left + _rect.right) / 2 - iconInfo.width / 2,
             // (_rect.top + _rect.bottom) / 2 - iconInfo.width / 2,
+            _rect.bottom - 30 - iconInfo.width / 2,
+            iconInfo.hLarge, 0, 0, 0, NULL, DI_NORMAL);
+}
+
+void Slider::draw(HDC hdc, Canvas canvas, bool isSystem) const
+{
+    float drawHeight = (_rect.bottom - _rect.top) * (1.f - _val);
+
+    RECT drawRect {
+        _rect.left + margin, _rect.top + LONG(drawHeight),
+        _rect.right - margin, _rect.bottom
+    };
+
+    auto& im = IconManager::get();
+    IconInfo iconInfo {};
+    if (isSystem) {
+        iconInfo = im.getIconMasterVol();
+    } else {
+        iconInfo = im.getIconFromProcess(_pid);
+    }
+
+    DWORD border = _focused ? 0xFF000000 : 0xAA000000;
+    drawBorderedRect(canvas, drawRect, 8, 3,
+        0xAA000000 | iconInfo.RGB, border | iconInfo.RGB);
+
+    if (iconInfo.hLarge)
+        DrawIconEx(hdc,
+            (_rect.left + _rect.right) / 2 - iconInfo.width / 2,
             _rect.bottom - 30 - iconInfo.width / 2,
             iconInfo.hLarge, 0, 0, 0, NULL, DI_NORMAL);
 }
@@ -248,11 +276,13 @@ SelectInfo SliderManager::getSelectAtPosition(POINT mousePos)
 
 void SliderManager::recalculateSliderRects(const RECT& r)
 {
-    int offset = r.left + margin;
-    _sliderMaster._rect = { offset, r.top, offset += sliderWidth + 20, r.bottom };
+    int offset = r.left + margin + 3;
+    auto top = r.top + margin * 2 + 3;
+    auto bottom = r.bottom - margin * 2 - 3;
+    _sliderMaster._rect = { offset, top, offset += sliderWidth + 20, bottom };
 
     for (auto& slider : _slidersApps) {
-        slider._rect = { offset, r.top, offset += sliderWidth, r.bottom };
+        slider._rect = { offset, top, offset += sliderWidth, bottom };
     }
 }
 

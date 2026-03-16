@@ -62,13 +62,14 @@ void VolumeApp::handleMMRefreshVol(WPARAM wParam, LPARAM lParam)
     InvalidateRect(_hWnd, NULL, FALSE); // UpdateWindow(hWnd); // works without it
 }
 
-void VolumeApp::onPaint(HDC hdc)
+void VolumeApp::onPaint(HDC hdc, Canvas canvas)
 {
-    RECT windowRect;
-    GetClientRect(_hWnd, &windowRect);
+    RECT windowRect { 0, 0, canvas.w, canvas.h };
+    drawBorderedRect(canvas, windowRect, borderR, 3, 0x88333333, 0x88AAAAAA);
 
-    FillRect(hdc, &windowRect, hBrushBackground);
-    sliderManager.drawSliders(hdc);
+    sliderManager._sliderMaster.draw(hdc, canvas, true);
+    for (auto& slider : sliderManager._slidersApps)
+        slider.draw(hdc, canvas);
 }
 
 void VolumeApp::onResize(RECT rc)

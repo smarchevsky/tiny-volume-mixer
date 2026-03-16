@@ -23,12 +23,9 @@ void App::initWindow(HINSTANCE instance, WNDPROC wndProc, RECT rc)
     wcex.cbSize = sizeof(WNDCLASSEX);
     wcex.lpfnWndProc = wndProc;
     wcex.hInstance = _hInstance;
-    wcex.hIcon = icon;
-    wcex.hCursor = cursorDefault;
-    // wcex.hbrBackground = hBrushBackground;
-    wcex.lpszMenuName = MAKEINTRESOURCEW(IDC_WINDOWSPROJECT1);
-    wcex.lpszMenuName = NULL;
     wcex.lpszClassName = szWindowClass;
+    wcex.hCursor = cursorDefault;
+    wcex.hIcon = icon;
     wcex.hIconSm = icon;
     RegisterClassExW(&wcex);
 
@@ -97,8 +94,54 @@ void App::handleMouseMove(WPARAM wParam, LPARAM lParam)
 void App::handlePaint()
 {
     PAINTSTRUCT ps;
-    HDC hdc = BeginPaint(_hWnd, &ps);
-    onPaint(hdc);
+    HDC hdcScreen = BeginPaint(_hWnd, &ps);
+
+    RECT wndRect;
+    GetWindowRect(_hWnd, &wndRect);
+    auto width = wndRect.right - wndRect.left;
+    auto height = wndRect.bottom - wndRect.top;
+
+    // HDC hdcScreen = GetDC(NULL);
+    HDC hdcMem = CreateCompatibleDC(hdcScreen);
+
+    // Create a 32-bit DIB (ARGB)
+    BITMAPINFOHEADER bih = {};
+    bih.biSize = sizeof(bih);
+    bih.biWidth = width;
+    bih.biHeight = -height; // top-down
+    bih.biPlanes = 1;
+    bih.biBitCount = 32;
+    bih.biCompression = BI_RGB;
+
+    BITMAPINFO bi = {};
+    bi.bmiHeader = bih;
+
+    void* pvBits = nullptr;
+    HBITMAP hbm = CreateDIBSection(hdcScreen, &bi, DIB_RGB_COLORS, &pvBits, NULL, 0);
+    HBITMAP hOld = (HBITMAP)SelectObject(hdcMem, hbm);
+
+    Canvas canvas { (DWORD*)pvBits, width, height };
+
+    onPaint(hdcMem, canvas);
+
+    BLENDFUNCTION blend = {};
+    blend.BlendOp = AC_SRC_OVER;
+    blend.SourceConstantAlpha = 255;
+    blend.AlphaFormat = AC_SRC_ALPHA;
+
+    POINT ptDst = { wndRect.left, wndRect.top };
+    POINT ptSrc = { 0, 0 };
+    SIZE szWnd = { width, height };
+
+    UpdateLayeredWindow(_hWnd, hdcScreen, &ptDst, &szWnd,
+        hdcMem, &ptSrc, 0, &blend, ULW_ALPHA);
+
+    // Cleanup
+    SelectObject(hdcMem, hOld);
+    DeleteObject(hbm);
+    DeleteDC(hdcMem);
+    ReleaseDC(NULL, hdcScreen);
+
     EndPaint(_hWnd, &ps);
 }
 
@@ -108,7 +151,7 @@ void App::setWindowAlpha(BYTE alpha)
     // SetWindowLongPtr(_hWnd, GWL_EXSTYLE, exStyle | WS_EX_LAYERED); // no need, if already layered
 
     // SetLayeredWindowAttributes(_hWnd, RGB(255, 0, 255), alpha, LWA_COLORKEY | LWA_ALPHA); // get rid of white line at the top
-    SetLayeredWindowAttributes(_hWnd, 0, alpha, LWA_ALPHA);
+    // SetLayeredWindowAttributes(_hWnd, 0, alpha, LWA_ALPHA);
 }
 
 // INHERIT BELOW

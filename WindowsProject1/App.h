@@ -3,6 +3,8 @@
 #include <Windows.h>
 #include <windowsx.h>
 
+#include "Draw.h"
+
 #include <algorithm>
 
 #define HEX_TO_RGB(hex) RGB((hex >> 16) & 0xFF, (hex >> 8) & 0xFF, hex & 0xFF)
@@ -23,7 +25,7 @@ protected:
     virtual void onMouseMove(POINT cursorClientPos, bool justEntered) = 0;
     virtual void onMouseScroll(POINT cursorClientPos, float delta) = 0;
 
-    virtual void onPaint(HDC hdc) = 0;
+    virtual void onPaint(HDC hdc, Canvas canvas) = 0;
     virtual void onResize(RECT newRect) = 0;
 
 public:
@@ -46,5 +48,4 @@ public:
     void handlePaint();
 
     void setWindowAlpha(BYTE alpha);
-
 };

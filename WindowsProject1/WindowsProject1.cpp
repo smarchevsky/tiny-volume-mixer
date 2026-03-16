@@ -9,6 +9,7 @@
 #include "AudioUtils.h"
 #include "Utils.h"
 
+#define LOG_NEABLED 0
 #include "Timer.h"
 
 VolumeApp app;

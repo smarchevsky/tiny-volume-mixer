@@ -2,6 +2,8 @@
 
 #include "Common.h"
 
+#include "Draw.h"
+
 #include <string>
 #include <unordered_map>
 
@@ -10,7 +12,8 @@
 //
 
 struct IconInfo {
-    HBRUSH hBrush;
+    // HBRUSH hBrush;
+    DWORD RGB;
     HICON hLarge;
     int width;
 };
@@ -41,7 +44,7 @@ public:
 static bool isValidRect(const RECT& rect) { return rect.right > rect.left && rect.bottom > rect.top; }
 
 static constexpr int sliderWidth = 80;
-static constexpr int margin = 10;
+static constexpr int margin = 4;
 
 class Slider {
     PID _pid;
@@ -58,6 +61,7 @@ public:
     float getHeight() const { return float(_rect.bottom - _rect.top); }
     bool intersects(POINT pos) const { return isValidRect(_rect) ? PtInRect(&_rect, pos) : false; }
     void draw(HDC hdc, bool isSystem = false) const;
+    void draw(HDC hdc, Canvas canvas, bool isSystem = false) const;
 };
 
 //
@@ -65,6 +69,7 @@ public:
 //
 
 class SliderManager {
+public:
     Slider _sliderMaster {};
     std::vector<Slider> _slidersApps;
 

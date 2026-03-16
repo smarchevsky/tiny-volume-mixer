@@ -74,7 +74,12 @@ public:
 #define TIMEPOINT_DURATION_MS (Logger::get().getDuration() * 1000.0)
 #define TIMEPOINT_DURATION_AFTER(format, ...) Logger::get().log(format "\t %.3f ms\n", ##__VA_ARGS__, TIMEPOINT_DURATION_MS) TIMEPOINT_RESET_OPTION;
 #define TIMEPOINT_DURATION_BEFORE(format, ...) Logger::get().log("%.3f ms \t" format "\n", TIMEPOINT_DURATION_MS, ##__VA_ARGS__) TIMEPOINT_RESET_OPTION;
+
+#if LOG_NEABLED == 1
 #define TIMEPOINT TIMEPOINT_DURATION_BEFORE
+#else
+#define TIMEPOINT
+#endif
 };
 
 class ScopeTimer {
