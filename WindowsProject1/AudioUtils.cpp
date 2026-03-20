@@ -165,25 +165,30 @@ public:
     }
 };
 
+std::wstring guid2str(REFGUID guid)
+{
+    WCHAR szGuid[40];
+    if (StringFromGUID2(guid, szGuid, ARRAYSIZE(szGuid)) != 0)
+        return szGuid;
+    return {};
+}
+
 static void addSessionImpl(IAudioSessionControl* pCtrl, HWND hWnd, const wchar_t* dbgActionName)
 {
     IAudioSessionControl2* pCtrl2 = nullptr;
     pCtrl->QueryInterface(__uuidof(IAudioSessionControl2), (void**)&pCtrl2);
 
+    wchar_t *displayName {}, *iconPath {};
+    AudioSessionState audioSessionState {};
     PID pid = 0;
-    AudioSessionState state;
     if (pCtrl2) {
         pCtrl2->GetProcessId(&pid);
-        pCtrl2->GetState(&state);
+        pCtrl2->GetState(&audioSessionState);
+        pCtrl2->GetDisplayName(&displayName);
+        pCtrl2->GetIconPath(&iconPath);
+
         pCtrl2->Release();
     }
-
-    // wchar_t* iconPathPtr {},* displayNamePtr{};
-    // pCtrl->GetIconPath(&iconPathPtr);
-    // pCtrl->GetDisplayName(&displayNamePtr);
-    // wprintf(L"Name: %s, Icon Path: %s\n", displayNamePtr, iconPathPtr);
-    // CoTaskMemFree(displayNamePtr);
-    // CoTaskMemFree(iconPathPtr);
 
     ISimpleAudioVolume* pVol = NULL;
     if (SUCCEEDED(pCtrl->QueryInterface(__uuidof(ISimpleAudioVolume), (void**)&pVol))) {
@@ -191,9 +196,16 @@ static void addSessionImpl(IAudioSessionControl* pCtrl, HWND hWnd, const wchar_t
         float vol;
         pVol->GetMasterVolume(&vol);
         pVol->GetMute(&bMute);
-        AudioUpdateInfo info(VolumeType::App, pid, vol, bMute);
-        PostMessage(hWnd, WM_APP_REGISTERED, info._wp, info._lp);
-        wprintf(L"%s [PID %u], vol: %d\n", dbgActionName, pid, (int)(info._vol * 100));
+
+        auto audioSessionInitInfo = new AudioSessionInitInfo(VolumeType::App, pid, vol, bMute);
+        audioSessionInitInfo->audioSessionState = audioSessionState;
+        audioSessionInitInfo->displayName = displayName;
+        audioSessionInitInfo->iconPath = iconPath;
+
+        wprintf(L"%s [PID %u], displayName %s, iconPath %s, vol: %d\n", dbgActionName, pid,
+            displayName, iconPath, int(vol * 100));
+
+        PostMessage(hWnd, WM_APP_REGISTERED, (WPARAM)audioSessionInitInfo, 0);
         pVol->Release();
     }
 

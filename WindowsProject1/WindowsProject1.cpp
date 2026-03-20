@@ -34,7 +34,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
     _In_ LPWSTR lpCmdLine,
     _In_ int nCmdShow)
 {
-    // createConsole();
+    createConsole();
 
     CoinitializeWrapper coinitializeRAII;
 
@@ -91,7 +91,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
     } break;
 
     case WM_APP_REGISTERED: {
-        app.handleMMAppRegistered(wParam, lParam);
+        app.handleMMAppRegistered((AudioSessionInitInfo*)wParam);
     } break;
 
     case WM_APP_UNREGISTERED: {

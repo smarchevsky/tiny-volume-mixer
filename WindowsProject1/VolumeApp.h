@@ -18,7 +18,7 @@ class VolumeApp : public App {
     virtual void onMouseScroll(POINT cursorClientPos, float delta) override;
 
 public:
-    void handleMMAppRegistered(WPARAM wParam, LPARAM lParam);
+    void handleMMAppRegistered(AudioSessionInitInfo* sessionInitInfo);
     void handleMMAppUnegistered(WPARAM wParam, LPARAM lParam);
     void handleMMRefreshVol(WPARAM wParam, LPARAM lParam);
 

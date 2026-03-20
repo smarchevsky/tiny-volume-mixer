@@ -2,6 +2,10 @@
 
 #include "Common.h"
 
+#include <AudioSessionTypes.h>
+#include <combaseapi.h>
+#include <utility> // std::forward
+
 struct AudioUpdateInfo {
 
     union {
@@ -22,7 +26,24 @@ struct AudioUpdateInfo {
 
 static_assert(sizeof(WPARAM) == 8);
 static_assert(sizeof(LPARAM) == 8);
-static_assert(sizeof(AudioUpdateInfo) <= 16);
+static_assert(sizeof(AudioUpdateInfo) == 16);
+
+struct AudioSessionInitInfo {
+    AudioUpdateInfo updateInfo;
+    AudioSessionState audioSessionState {};
+    WCHAR *displayName {}, *iconPath {};
+
+    template <typename... Args>
+    AudioSessionInitInfo(Args&&... args)
+        : updateInfo(std::forward<Args>(args)...)
+    {
+    }
+    ~AudioSessionInitInfo()
+    {
+        CoTaskMemFree(iconPath);
+        CoTaskMemFree(displayName);
+    }
+};
 
 class CoinitializeWrapper {
 public:
