@@ -74,11 +74,3 @@ public:
     void cleanupExpiredSessions();
     void setVol(SelectInfo selectInfo, float vol);
 };
-
-//
-// NON AUDIO
-//
-
-//
-// ICON
-//

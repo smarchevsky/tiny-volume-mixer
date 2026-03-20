@@ -2,14 +2,10 @@
 //
 
 #include "WindowsProject1.h"
-#include "framework.h"
 
 #include "VolumeApp.h"
 
-#include "AudioUtils.h"
-#include "Utils.h"
-
-#define LOG_NEABLED 0
+#define LOG_ENABLED 0
 #include "Timer.h"
 
 VolumeApp app;
