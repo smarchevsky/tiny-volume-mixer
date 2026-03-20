@@ -93,6 +93,9 @@ void App::handleMouseMove(WPARAM wParam, LPARAM lParam)
 
 void App::handlePaint()
 {
+    RECT r;
+    GetUpdateRect(_hWnd, &r, FALSE);
+
     PAINTSTRUCT ps;
     HDC hdcScreen = BeginPaint(_hWnd, &ps);
 
@@ -101,8 +104,6 @@ void App::handlePaint()
     auto width = wndRect.right - wndRect.left;
     auto height = wndRect.bottom - wndRect.top;
 
-    // HDC hdcScreen = GetDC(NULL);
-
     HBITMAP hOld = (HBITMAP)SelectObject(_hdcMem, _hbm);
 
     DIBSECTION ds;
@@ -110,9 +111,13 @@ void App::handlePaint()
         DWORD* pixels = (DWORD*)ds.dsBm.bmBits;
 
         memset(pixels, 0, width * height * sizeof(*pixels));
-        Canvas canvas { pixels, width, height };
-
+        Canvas canvas { pixels, width, height, r };
         onPaint(_hdcMem, canvas);
+
+        // for (int y = 0; y < height; ++y)
+        //     for (int x = 0; x < width; ++x)
+        //         if ((y * width + x) % 20 == rand() % 16)
+        //             pixels[y * width + x] = (rand() << 16) + rand();
 
         BLENDFUNCTION blend = {};
         blend.BlendOp = AC_SRC_OVER;
@@ -123,7 +128,19 @@ void App::handlePaint()
         POINT ptSrc = { 0, 0 };
         SIZE szWnd = { width, height };
 
-        UpdateLayeredWindow(_hWnd, hdcScreen, &ptDst, &szWnd, _hdcMem, &ptSrc, 0, &blend, ULW_ALPHA);
+        UPDATELAYEREDWINDOWINFO info = {};
+        info.cbSize = sizeof(info);
+        info.hdcSrc = _hdcMem;
+        info.pptSrc = &ptSrc;
+        info.hdcDst = hdcScreen;
+        info.pptDst = &ptDst;
+        info.psize = &szWnd;
+        info.pblend = &blend;
+        info.dwFlags = ULW_ALPHA;
+        info.prcDirty = &r;
+
+        UpdateLayeredWindowIndirect(_hWnd, &info);
+        // UpdateLayeredWindow(_hWnd, hdcScreen, &ptDst, &szWnd, _hdcMem, &ptSrc, 0, &blend, ULW_ALPHA);
     }
     SelectObject(_hdcMem, hOld);
 
