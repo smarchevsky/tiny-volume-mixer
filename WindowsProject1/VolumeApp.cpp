@@ -57,9 +57,10 @@ void VolumeApp::handleMMRefreshVol(WPARAM wParam, LPARAM lParam)
 {
     AudioUpdateInfo info(wParam, lParam);
     SelectInfo si(info._type, info._pid);
-    if (auto slider = sliderManager.getSliderFromSelect(si))
+    if (auto slider = sliderManager.getSliderFromSelect(si)) {
         slider->_val = info._vol;
-    InvalidateRect(_hWnd, NULL, FALSE); // UpdateWindow(hWnd); // works without it
+        InvalidateRect(_hWnd, &slider->_rect, FALSE);
+    }
 }
 
 void VolumeApp::onPaint(HDC hdc, Canvas canvas)
@@ -88,9 +89,8 @@ void VolumeApp::onMouseScroll(POINT cursorClientPos, float delta)
         float newVal = std::clamp(oldVal + delta / 16, 0.f, 1.f);
         newVal = pow(newVal, 2.f);
 
-        if (newVal != oldVal) {
+        if (newVal != oldVal)
             _audioAppListerner.setVol(hoverInfo, newVal);
-        }
     }
 }
 
@@ -102,9 +102,9 @@ void VolumeApp::setWindowSemiTransparent(bool enabled)
 void VolumeApp::onMouseLeave()
 {
     setWindowSemiTransparent(true);
-    if (auto pSlider = sliderManager.getSliderFromSelect(sliderInfoHovered)) {
-        pSlider->_focused = false;
-        InvalidateRect(_hWnd, NULL, FALSE);
+    if (auto slider = sliderManager.getSliderFromSelect(sliderInfoHovered)) {
+        slider->_focused = false;
+        InvalidateRect(_hWnd, &slider->_rect, FALSE);
     }
     sliderInfoHovered = {};
 }
@@ -115,14 +115,16 @@ void VolumeApp::onMouseMove(POINT cursorClientPos, bool justEntered)
         setWindowSemiTransparent(false);
 
     SelectInfo newHoverInfo = sliderManager.getSelectAtPosition(cursorClientPos);
-    if (newHoverInfo != sliderInfoHovered) {
-        if (auto pSlider = sliderManager.getSliderFromSelect(newHoverInfo))
-            pSlider->_focused = true;
-        if (auto pSlider = sliderManager.getSliderFromSelect(sliderInfoHovered))
-            pSlider->_focused = false;
-        sliderInfoHovered = newHoverInfo;
 
-        InvalidateRect(_hWnd, NULL, FALSE);
-        // printf("changed from %d to %d\n", sliderInfoHovered._type, newHoverInfo._type);
+    if (newHoverInfo != sliderInfoHovered) {
+        if (auto slider = sliderManager.getSliderFromSelect(newHoverInfo)) {
+            slider->_focused = true;
+            InvalidateRect(_hWnd, &slider->_rect, FALSE);
+        }
+        if (auto slider = sliderManager.getSliderFromSelect(sliderInfoHovered)) {
+            slider->_focused = false;
+            InvalidateRect(_hWnd, &slider->_rect, FALSE);
+        }
+        sliderInfoHovered = newHoverInfo;
     }
 }
