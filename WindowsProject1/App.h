@@ -17,6 +17,9 @@ protected:
     HINSTANCE _hInstance;
     HWND _hWnd;
 
+    HBITMAP _hbm;
+    HDC _hdcMem;
+
 private:
     bool _mouseTracking;
 

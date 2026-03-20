@@ -102,7 +102,47 @@ void App::handlePaint()
     auto height = wndRect.bottom - wndRect.top;
 
     // HDC hdcScreen = GetDC(NULL);
-    HDC hdcMem = CreateCompatibleDC(hdcScreen);
+
+    HBITMAP hOld = (HBITMAP)SelectObject(_hdcMem, _hbm);
+
+    DIBSECTION ds;
+    if (GetObject(_hbm, sizeof(DIBSECTION), &ds)) {
+        DWORD* pixels = (DWORD*)ds.dsBm.bmBits;
+
+        memset(pixels, 0, width * height * sizeof(*pixels));
+        Canvas canvas { pixels, width, height };
+
+        onPaint(_hdcMem, canvas);
+
+        BLENDFUNCTION blend = {};
+        blend.BlendOp = AC_SRC_OVER;
+        blend.SourceConstantAlpha = 255;
+        blend.AlphaFormat = AC_SRC_ALPHA;
+
+        POINT ptDst = { wndRect.left, wndRect.top };
+        POINT ptSrc = { 0, 0 };
+        SIZE szWnd = { width, height };
+
+        UpdateLayeredWindow(_hWnd, hdcScreen, &ptDst, &szWnd, _hdcMem, &ptSrc, 0, &blend, ULW_ALPHA);
+    }
+    SelectObject(_hdcMem, hOld);
+
+    EndPaint(_hWnd, &ps);
+}
+
+// INHERIT BELOW
+
+void App::handleResize(WPARAM wParam, LPARAM lParam)
+{
+    int width = LOWORD(lParam);
+    int height = HIWORD(lParam);
+
+    DeleteObject(_hbm);
+    DeleteDC(_hdcMem);
+
+    HDC hdcScreen = GetDC(_hWnd);
+    _hdcMem = CreateCompatibleDC(hdcScreen);
+    ReleaseDC(_hWnd, hdcScreen);
 
     // Create a 32-bit DIB (ARGB)
     BITMAPINFOHEADER bih = {};
@@ -117,42 +157,9 @@ void App::handlePaint()
     bi.bmiHeader = bih;
 
     DWORD* pixels = nullptr;
-    HBITMAP hbm = CreateDIBSection(hdcScreen, &bi, DIB_RGB_COLORS, (void**)&pixels, NULL, 0);
-    HBITMAP hOld = (HBITMAP)SelectObject(hdcMem, hbm);
+    _hbm = CreateDIBSection(hdcScreen, &bi, DIB_RGB_COLORS, (void**)&pixels, NULL, 0);
 
-    Canvas canvas { (DWORD*)pixels, width, height };
-
-    if (pixels)
-        onPaint(hdcMem, canvas);
-
-    BLENDFUNCTION blend = {};
-    blend.BlendOp = AC_SRC_OVER;
-    blend.SourceConstantAlpha = 255;
-    blend.AlphaFormat = AC_SRC_ALPHA;
-
-    POINT ptDst = { wndRect.left, wndRect.top };
-    POINT ptSrc = { 0, 0 };
-    SIZE szWnd = { width, height };
-
-    UpdateLayeredWindow(_hWnd, hdcScreen, &ptDst, &szWnd,
-        hdcMem, &ptSrc, 0, &blend, ULW_ALPHA);
-
-    // Cleanup
-    SelectObject(hdcMem, hOld);
-    DeleteObject(hbm);
-    DeleteDC(hdcMem);
-    ReleaseDC(NULL, hdcScreen);
-
-    EndPaint(_hWnd, &ps);
-}
-
-// INHERIT BELOW
-
-void App::handleResize(WPARAM wParam, LPARAM lParam)
-{
-    RECT rc;
-    GetClientRect(_hWnd, &rc);
-    onResize(rc);
+    onResize({ 0, 0, width, height });
 }
 
 LRESULT App::handleNCAHitTest(HWND hWnd, LPARAM lParam)
