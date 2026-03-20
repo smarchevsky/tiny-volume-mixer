@@ -46,6 +46,4 @@ public:
     void handleMinMaxInfo(WPARAM wParam, LPARAM lParam);
 
     void handlePaint();
-
-    void setWindowAlpha(BYTE alpha);
 };
