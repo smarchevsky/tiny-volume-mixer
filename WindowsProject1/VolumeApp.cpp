@@ -34,11 +34,11 @@ void VolumeApp::handleMMAppRegistered(AudioSessionInitInfo* sessionInitInfo)
     GetClientRect(_hWnd, &rc);
 
     AudioUpdateInfo& info = sessionInitInfo->updateInfo;
-    sliderManager.appSliderAdd(info._pid, info._vol, info._isMuted);
+    sliderManager.appSliderAdd(info._pid, info._vol, info._isMuted, sessionInitInfo->iconPath);
     sliderManager.recalculateSliderRects(rc);
+    delete sessionInitInfo;
 
     InvalidateRect(_hWnd, NULL, FALSE);
-    delete sessionInitInfo;
 }
 
 void VolumeApp::handleMMAppUnegistered(WPARAM wParam, LPARAM lParam)

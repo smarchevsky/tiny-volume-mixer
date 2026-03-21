@@ -121,45 +121,45 @@ IconManager::IconManager()
     iiNoIconApp = loadIcon(L"\\imageres.dll", 11);
 }
 
-IconInfo IconManager::getIconFromProcess(PID pid)
+IconInfo IconManager::getIconFromPath(const std::wstring& path)
 {
-    IconInfo result = {};
+    if (path.empty())
+        return {};
 
-    auto foundIconIt = cachedProcessIcons.find(pid);
+    auto foundIconIt = cachedProcessIcons.find(path);
     if (foundIconIt == cachedProcessIcons.end()) {
-        HANDLE hProcess = OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, FALSE, pid);
-        if (!hProcess) {
-            result = iiSystemSounds;
-            return result;
+        const WCHAR* fullPath = path.c_str();
+        WCHAR cleanPathBuf[MAX_PATH];
+        WCHAR expandedPath[MAX_PATH];
+        int iconIndex = 0;
+
+        if (fullPath[0] == L'@') { // handle  @%SystemRoot%\System32\AudioSrv.Dll,-203
+            fullPath += 1;
+            wcscpy_s(cleanPathBuf, MAX_PATH, fullPath);
+
+            WCHAR* comma = wcsrchr(cleanPathBuf, L',');
+            if (comma) {
+                *comma = L'\0';
+                iconIndex = _wtoi(comma + 1);
+            }
+
+            ExpandEnvironmentStringsW(cleanPathBuf, expandedPath, MAX_PATH);
+            fullPath = expandedPath;
         }
-
-        wchar_t exePath[MAX_PATH];
-        DWORD size = MAX_PATH;
-
-        if (!QueryFullProcessImageNameW(hProcess, 0, exePath, &size)) {
-            CloseHandle(hProcess);
-            return result;
-        }
-
-        CloseHandle(hProcess);
 
         HICON icon;
-        UINT icons = ExtractIconExW(exePath, 0, &icon, nullptr, 1);
+        UINT icons = ExtractIconExW(fullPath, 0, &icon, nullptr, 1);
         if (icons == 0) {
-            result = iiNoIconApp;
-            return result;
+            // handle no icon
         }
 
-        result = createIconInfo(icon);
-
-        cachedProcessIcons[pid] = result;
-
-        wprintf(L"Stored new icon for: %s\n", exePath);
+        if (icon)
+            return cachedProcessIcons[path] = createIconInfo(icon);
     } else {
-        result = foundIconIt->second;
+        return foundIconIt->second;
     }
 
-    return result;
+    return {};
 }
 
 IconInfo IconManager::getIconMasterVol() { return iiMasterSpeaker; }
@@ -188,7 +188,7 @@ void Slider::draw(HDC hdc, bool isSystem) const
     if (isSystem) {
         iconInfo = im.getIconMasterVol();
     } else {
-        iconInfo = im.getIconFromProcess(_pid);
+        iconInfo = im.getIconFromPath(_iconPath);
     }
 
     // if (drawRect.right > drawRect.left && drawRect.bottom > drawRect.top)
@@ -216,7 +216,7 @@ void Slider::draw(HDC hdc, Canvas canvas, bool isSystem) const
     if (isSystem) {
         iconInfo = im.getIconMasterVol();
     } else {
-        iconInfo = im.getIconFromProcess(_pid);
+        iconInfo = im.getIconFromPath(_iconPath);
     }
 
     DWORD border = _focused ? 0xFF000000 : 0xAA000000;
@@ -248,10 +248,27 @@ Slider* SliderManager::getSliderFromSelect(SelectInfo info)
     return nullptr;
 }
 
-void SliderManager::appSliderAdd(PID pid, float vol, bool muted)
+void SliderManager::appSliderAdd(PID pid, float vol, bool muted, const WCHAR* iconPath)
 {
-    auto it = std::find_if(_slidersApps.begin(), _slidersApps.end(), [&](const Slider& s) { return s.getPID() == pid; });
-    _slidersApps.push_back(Slider(pid, vol));
+    std::wstring pathStr;
+
+    if (iconPath && wcslen(iconPath)) {
+        pathStr = iconPath;
+
+    } else {
+        if (HANDLE hProcess = OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, FALSE, pid)) {
+
+            wchar_t exePath[MAX_PATH];
+            DWORD size = MAX_PATH;
+
+            if (QueryFullProcessImageNameW(hProcess, 0, exePath, &size))
+                pathStr = exePath;
+
+            CloseHandle(hProcess);
+        }
+    }
+
+    _slidersApps.push_back(Slider(pid, vol, std::move(pathStr)));
 }
 
 void SliderManager::appSliderRemove(PID pid)

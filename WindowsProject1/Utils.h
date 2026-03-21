@@ -22,7 +22,7 @@ class IconManager {
     IconManager();
     IconManager(const IconManager&) = delete;
 
-    std::unordered_map<PID, IconInfo> cachedProcessIcons;
+    std::unordered_map<std::wstring, IconInfo> cachedProcessIcons;
     IconInfo iiMasterSpeaker, iiMasterHeadphones, iiSystemSounds, iiNoIconApp;
 
 public:
@@ -33,7 +33,7 @@ public:
         return instance;
     }
 
-    IconInfo getIconFromProcess(PID pid);
+    IconInfo getIconFromPath(const std::wstring& path);
     IconInfo getIconMasterVol();
 };
 
@@ -47,6 +47,7 @@ static constexpr int sliderWidth = 80;
 static constexpr int margin = 4;
 
 class Slider {
+    std::wstring _iconPath;
     PID _pid;
 
 public:
@@ -54,7 +55,11 @@ public:
     float _val;
     bool _focused;
 
-    Slider(PID pid, float value) { _pid = pid, _rect = { 0 }, _val = value, _focused = false; }
+    Slider(PID pid, float value, const std::wstring& iconPath)
+    {
+        _iconPath = iconPath;
+        _pid = pid, _rect = { 0 }, _val = value, _focused = false;
+    }
     Slider() = default;
 
     PID getPID() const { return _pid; }
@@ -74,7 +79,7 @@ public:
     std::vector<Slider> _slidersApps;
 
 public:
-    void appSliderAdd(PID pid, float vol, bool muted);
+    void appSliderAdd(PID pid, float vol, bool muted, const WCHAR* iconPath = nullptr);
     void appSliderRemove(PID pid);
 
     Slider* getSliderFromSelect(SelectInfo info);
