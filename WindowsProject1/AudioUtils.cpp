@@ -213,6 +213,7 @@ static void addSessionImpl(IAudioSessionControl* pCtrl, HWND hWnd, const wchar_t
     pCtrl->RegisterAudioSessionNotification(pEvents);
     pEvents->Release();
 
+    std::lock_guard<std::mutex> lock(g_mutex);
     g_trackedSessions.push_back({ pCtrl, pid });
 }
 
