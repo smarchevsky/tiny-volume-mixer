@@ -30,13 +30,33 @@ void VolumeApp::destroyWindow(HWND hWnd)
 
 void VolumeApp::handleMMAppRegistered(AudioSessionInitInfo* sessionInitInfo)
 {
+    AudioUpdateInfo& info = sessionInitInfo->updateInfo;
+
+    std::wstring pathStr;
+    const WCHAR* iconPath = sessionInitInfo->iconPath;
+    if (iconPath && wcslen(iconPath)) {
+        pathStr = iconPath;
+
+    } else {
+        if (HANDLE hProcess = OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, FALSE, info._pid)) {
+
+            wchar_t exePath[MAX_PATH];
+            DWORD size = MAX_PATH;
+
+            if (QueryFullProcessImageNameW(hProcess, 0, exePath, &size))
+                pathStr = exePath;
+
+            CloseHandle(hProcess);
+        }
+    }
+    IconInfo iconInfo = IconManager::get().getIconFromPath(std::move(pathStr));
+
+    sliderManager.appSliderAdd(info._pid, info._vol, info._isMuted, iconInfo);
+    delete sessionInitInfo;
+
     RECT rc;
     GetClientRect(_hWnd, &rc);
-
-    AudioUpdateInfo& info = sessionInitInfo->updateInfo;
-    sliderManager.appSliderAdd(info._pid, info._vol, info._isMuted, sessionInitInfo->iconPath);
     sliderManager.recalculateSliderRects(rc);
-    delete sessionInitInfo;
 
     InvalidateRect(_hWnd, NULL, FALSE);
 }
@@ -69,9 +89,7 @@ void VolumeApp::onPaint(HDC hdc, Canvas canvas)
     RECT windowRect { 0, 0, canvas.w, canvas.h };
     drawBorderedRect(canvas, windowRect, borderR, 3, 0x88333333, 0x88AAAAAA);
 
-    sliderManager._sliderMaster.draw(hdc, canvas, true);
-    for (auto& slider : sliderManager._slidersApps)
-        slider.draw(hdc, canvas);
+    sliderManager.drawSliders(hdc, canvas);
 }
 
 void VolumeApp::onResize(RECT rc)

@@ -12,9 +12,8 @@
 //
 
 struct IconInfo {
-    // HBRUSH hBrush;
-    DWORD RGB;
     HICON hLarge;
+    DWORD RGB;
     int width;
 };
 
@@ -47,25 +46,23 @@ static constexpr int sliderWidth = 80;
 static constexpr int margin = 4;
 
 class Slider {
-    std::wstring _iconPath;
     PID _pid;
 
 public:
+    IconInfo _iconInfo;
     RECT _rect;
     float _val;
     bool _focused;
 
-    Slider(PID pid, float value, const std::wstring& iconPath)
+    Slider(PID pid, float value, const IconInfo& iconInfo)
     {
-        _iconPath = iconPath;
-        _pid = pid, _rect = { 0 }, _val = value, _focused = false;
+        _pid = pid, _iconInfo = iconInfo, _rect = { 0 }, _val = value, _focused = false;
     }
     Slider() = default;
 
     PID getPID() const { return _pid; }
     float getHeight() const { return float(_rect.bottom - _rect.top); }
     bool intersects(POINT pos) const { return isValidRect(_rect) ? PtInRect(&_rect, pos) : false; }
-    void draw(HDC hdc, bool isSystem = false) const;
     void draw(HDC hdc, Canvas canvas, bool isSystem = false) const;
 };
 
@@ -74,19 +71,19 @@ public:
 //
 
 class SliderManager {
-public:
     Slider _sliderMaster {};
     std::vector<Slider> _slidersApps;
 
 public:
-    void appSliderAdd(PID pid, float vol, bool muted, const WCHAR* iconPath = nullptr);
+    SliderManager();
+    void appSliderAdd(PID pid, float vol, bool muted, const IconInfo& iconInfo);
     void appSliderRemove(PID pid);
 
     Slider* getSliderFromSelect(SelectInfo info);
     SelectInfo getSelectAtPosition(POINT mousePos);
 
     void recalculateSliderRects(const RECT& rect);
-    void drawSliders(HDC hdc);
+    void drawSliders(HDC hdc, Canvas canvas);
 };
 
 //

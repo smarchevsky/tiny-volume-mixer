@@ -174,34 +174,6 @@ IconInfo IconManager::getIconMasterVol() { return iiMasterSpeaker; }
 // #include <shellapi.h>
 //  #pragma comment(lib, "Shell32.lib")
 
-void Slider::draw(HDC hdc, bool isSystem) const
-{
-    float drawHeight = (_rect.bottom - _rect.top) * (1.f - _val);
-
-    RECT drawRect {
-        _rect.left + (_focused ? 0 : margin), _rect.top + LONG(drawHeight),
-        _rect.right - (_focused ? 0 : margin), _rect.bottom
-    };
-
-    auto& im = IconManager::get();
-    IconInfo iconInfo {};
-    if (isSystem) {
-        iconInfo = im.getIconMasterVol();
-    } else {
-        iconInfo = im.getIconFromPath(_iconPath);
-    }
-
-    // if (drawRect.right > drawRect.left && drawRect.bottom > drawRect.top)
-    //     FillRect(hdc, &drawRect, iconInfo.hBrush);
-
-    if (iconInfo.hLarge)
-        DrawIconEx(hdc,
-            (_rect.left + _rect.right) / 2 - iconInfo.width / 2,
-            // (_rect.top + _rect.bottom) / 2 - iconInfo.width / 2,
-            _rect.bottom - 30 - iconInfo.width / 2,
-            iconInfo.hLarge, 0, 0, 0, NULL, DI_NORMAL);
-}
-
 void Slider::draw(HDC hdc, Canvas canvas, bool isSystem) const
 {
     float drawHeight = (_rect.bottom - _rect.top) * (1.f - _val);
@@ -211,23 +183,15 @@ void Slider::draw(HDC hdc, Canvas canvas, bool isSystem) const
         _rect.right - margin, _rect.bottom
     };
 
-    auto& im = IconManager::get();
-    IconInfo iconInfo {};
-    if (isSystem) {
-        iconInfo = im.getIconMasterVol();
-    } else {
-        iconInfo = im.getIconFromPath(_iconPath);
-    }
-
     DWORD border = _focused ? 0xFF000000 : 0xAA000000;
     drawBorderedRect(canvas, drawRect, 8, 3,
-        0xAA000000 | iconInfo.RGB, border | iconInfo.RGB);
+        0xAA000000 | _iconInfo.RGB, border | _iconInfo.RGB);
 
-    if (iconInfo.hLarge)
+    if (_iconInfo.hLarge)
         DrawIconEx(hdc,
-            (_rect.left + _rect.right) / 2 - iconInfo.width / 2,
-            _rect.bottom - 30 - iconInfo.width / 2,
-            iconInfo.hLarge, 0, 0, 0, NULL, DI_NORMAL);
+            (_rect.left + _rect.right) / 2 - _iconInfo.width / 2,
+            _rect.bottom - 30 - _iconInfo.width / 2,
+            _iconInfo.hLarge, 0, 0, 0, NULL, DI_NORMAL);
 }
 
 //
@@ -248,27 +212,14 @@ Slider* SliderManager::getSliderFromSelect(SelectInfo info)
     return nullptr;
 }
 
-void SliderManager::appSliderAdd(PID pid, float vol, bool muted, const WCHAR* iconPath)
+SliderManager::SliderManager()
 {
-    std::wstring pathStr;
+    _sliderMaster._iconInfo = IconManager::get().getIconMasterVol();
+}
 
-    if (iconPath && wcslen(iconPath)) {
-        pathStr = iconPath;
-
-    } else {
-        if (HANDLE hProcess = OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, FALSE, pid)) {
-
-            wchar_t exePath[MAX_PATH];
-            DWORD size = MAX_PATH;
-
-            if (QueryFullProcessImageNameW(hProcess, 0, exePath, &size))
-                pathStr = exePath;
-
-            CloseHandle(hProcess);
-        }
-    }
-
-    _slidersApps.push_back(Slider(pid, vol, std::move(pathStr)));
+void SliderManager::appSliderAdd(PID pid, float vol, bool muted, const IconInfo& iconInfo)
+{
+    _slidersApps.push_back(Slider(pid, vol, iconInfo));
 }
 
 void SliderManager::appSliderRemove(PID pid)
@@ -303,11 +254,11 @@ void SliderManager::recalculateSliderRects(const RECT& r)
     }
 }
 
-void SliderManager::drawSliders(HDC hdc)
+void SliderManager::drawSliders(HDC hdc, Canvas canvas)
 {
-    _sliderMaster.draw(hdc, true);
+    _sliderMaster.draw(hdc, canvas, true);
     for (auto& slider : _slidersApps)
-        slider.draw(hdc);
+        slider.draw(hdc, canvas);
 }
 #pragma endregion
 
