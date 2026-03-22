@@ -33,6 +33,7 @@ public:
     }
 
     IconInfo getIconFromPath(const std::wstring& path);
+    IconInfo getIconFromPackageInstallPath(PID pid, const std::wstring& path);
     IconInfo getIconMasterVol();
 };
 

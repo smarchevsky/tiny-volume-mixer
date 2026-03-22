@@ -33,23 +33,24 @@ void VolumeApp::handleMMAppRegistered(AudioSessionInitInfo* sessionInitInfo)
     AudioUpdateInfo& info = sessionInitInfo->updateInfo;
 
     std::wstring pathStr;
-    const WCHAR* iconPath = sessionInitInfo->iconPath;
-    if (iconPath && wcslen(iconPath)) {
-        pathStr = iconPath;
+
+    if (sessionInitInfo->iconPath && wcslen(sessionInitInfo->iconPath)) {
+        pathStr = sessionInitInfo->iconPath;
 
     } else {
         if (HANDLE hProcess = OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, FALSE, info._pid)) {
-
             wchar_t exePath[MAX_PATH];
             DWORD size = MAX_PATH;
-
             if (QueryFullProcessImageNameW(hProcess, 0, exePath, &size))
                 pathStr = exePath;
-
             CloseHandle(hProcess);
         }
     }
     IconInfo iconInfo = IconManager::get().getIconFromPath(std::move(pathStr));
+    if (!iconInfo.hLarge)
+        iconInfo = IconManager::get().getIconFromPackageInstallPath(info._pid, pathStr);
+
+    // wprintf(L"PATH: %s\n", pathStr.c_str());
 
     sliderManager.appSliderAdd(info._pid, info._vol, info._isMuted, iconInfo);
     delete sessionInitInfo;

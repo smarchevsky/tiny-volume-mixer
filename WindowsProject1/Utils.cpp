@@ -3,6 +3,19 @@
 #include <psapi.h> // GetModuleBaseName
 #include <shlobj.h>
 
+#include <appmodel.h>
+#include <filesystem>
+#include <shlwapi.h>
+#include <string>
+#include <vector>
+#include <wincodec.h>
+#include <xmllite.h>
+
+#pragma comment(lib, "windowscodecs.lib")
+#pragma comment(lib, "xmllite.lib")
+#pragma comment(lib, "shlwapi.lib")
+
+namespace fs = std::filesystem;
 //
 // BOILERPLATE
 //
@@ -82,6 +95,186 @@ std::wstring getProcessName(PID pid)
     }
     return szName;
 };
+
+std::wstring GetPackageInstallPath(DWORD pid)
+{
+    HANDLE hProcess = OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, FALSE, pid);
+    if (!hProcess)
+        return {};
+
+    WCHAR packageFamilyName[PACKAGE_FAMILY_NAME_MAX_LENGTH] = {};
+    UINT32 len = PACKAGE_FAMILY_NAME_MAX_LENGTH;
+
+    // GetPackageFamilyName tells us if this is a packaged app
+    if (GetPackageFamilyName(hProcess, &len, packageFamilyName) != ERROR_SUCCESS) {
+        CloseHandle(hProcess);
+        return {}; // not a packaged app, fall back to normal icon extraction
+    }
+
+    WCHAR packageFullName[PACKAGE_FULL_NAME_MAX_LENGTH] = {};
+    len = PACKAGE_FULL_NAME_MAX_LENGTH;
+    GetPackageFullName(hProcess, &len, packageFullName);
+    CloseHandle(hProcess);
+
+    // Get install path from full name
+    UINT32 pathLen = MAX_PATH;
+    WCHAR installPath[MAX_PATH] = {};
+    GetPackagePathByFullName(packageFullName, &pathLen, installPath);
+
+    return installPath;
+}
+// Find the best scaled asset that actually exists on disk
+std::wstring ResolveBestAsset(const std::wstring& installPath, const std::wstring& rawLogoPath)
+{
+    fs::path base = fs::path(installPath) / rawLogoPath;
+    fs::path dir = base.parent_path();
+    std::wstring stem = base.stem().wstring(); // "Square44x44Logo"
+    std::wstring ext = base.extension().wstring(); // ".png"
+
+    // Preferred scale order (highest quality first)
+    std::vector<std::wstring> scaleVariants = {
+        // L".scale-400", L".scale-200", L".scale-150", L".scale-125", L".scale-100",
+        L".targetsize-48",
+        L".targetsize-64",
+        L".targetsize-96",
+        L".targetsize-256",
+        // L".targetsize-32"
+    };
+
+    for (auto& scale : scaleVariants) {
+        fs::path candidate = dir / (stem + scale + ext);
+        if (fs::exists(candidate))
+            return candidate.wstring();
+    }
+
+    // Try the raw path itself (some apps ship unscaled)
+    if (fs::exists(base))
+        return base.wstring();
+
+    return {}; // not found
+}
+
+// Parse AppxManifest.xml and return the logo PNG path
+std::wstring GetLogoPathFromManifest(const std::wstring& installPath)
+{
+    std::wstring manifestPath = (fs::path(installPath) / L"AppxManifest.xml").wstring();
+
+    // Open the manifest file
+    IStream* pStream = nullptr;
+    HRESULT hr = SHCreateStreamOnFileW(manifestPath.c_str(), STGM_READ, &pStream);
+    if (FAILED(hr))
+        return {};
+
+    // Create XML reader
+    IXmlReader* pReader = nullptr;
+    hr = CreateXmlReader(__uuidof(IXmlReader), (void**)&pReader, nullptr);
+    if (FAILED(hr)) {
+        pStream->Release();
+        return {};
+    }
+
+    pReader->SetInput(pStream);
+
+    std::wstring logoPath;
+    XmlNodeType nodeType;
+
+    while (S_OK == pReader->Read(&nodeType)) {
+        if (nodeType != XmlNodeType_Element)
+            continue;
+
+        // Get element name
+        const WCHAR* localName = nullptr;
+        pReader->GetLocalName(&localName, nullptr);
+
+        // Look for VisualElements (could be prefixed: uap:VisualElements)
+        if (localName && (wcscmp(localName, L"VisualElements") == 0 || wcscmp(localName, L"DefaultTile") == 0)) {
+            // Walk attributes
+            if (S_OK == pReader->MoveToFirstAttribute()) {
+                do {
+                    const WCHAR* attrName = nullptr;
+                    const WCHAR* attrValue = nullptr;
+                    pReader->GetLocalName(&attrName, nullptr);
+                    pReader->GetValue(&attrValue, nullptr);
+
+                    // Square44x44Logo is the taskbar/small icon
+                    if (attrName && wcscmp(attrName, L"Square44x44Logo") == 0) {
+                        logoPath = attrValue;
+                        break;
+                    }
+                } while (S_OK == pReader->MoveToNextAttribute());
+            }
+        }
+
+        if (!logoPath.empty())
+            break;
+    }
+
+    pReader->Release();
+    pStream->Release();
+
+    if (logoPath.empty())
+        return {};
+
+    return ResolveBestAsset(installPath, logoPath);
+}
+
+// Load the PNG as an HICON
+IconInfo LoadIconFromPng(const std::wstring& pngPath)
+{
+    // Use GDI+ or WIC to load PNG -> HBITMAP -> HICON
+    // Here using WIC (no extra dependencies):
+
+    IWICImagingFactory* pFactory = nullptr;
+    CoCreateInstance(CLSID_WICImagingFactory, nullptr,
+        CLSCTX_INPROC_SERVER, IID_PPV_ARGS(&pFactory));
+
+    IWICBitmapDecoder* pDecoder = nullptr;
+    pFactory->CreateDecoderFromFilename(pngPath.c_str(), nullptr,
+        GENERIC_READ, WICDecodeMetadataCacheOnLoad, &pDecoder);
+
+    IWICBitmapFrameDecode* pFrame = nullptr;
+    pDecoder->GetFrame(0, &pFrame);
+
+    IWICFormatConverter* pConverter = nullptr;
+    pFactory->CreateFormatConverter(&pConverter);
+    pConverter->Initialize(pFrame, GUID_WICPixelFormat32bppPBGRA,
+        WICBitmapDitherTypeNone, nullptr, 0.0,
+        WICBitmapPaletteTypeCustom);
+
+    UINT w = 0, h = 0;
+    pConverter->GetSize(&w, &h);
+
+    // Create DIB section
+    BITMAPINFO bmi = {};
+    bmi.bmiHeader.biSize = sizeof(BITMAPINFOHEADER);
+    bmi.bmiHeader.biWidth = (LONG)w;
+    bmi.bmiHeader.biHeight = -(LONG)h; // top-down
+    bmi.bmiHeader.biPlanes = 1;
+    bmi.bmiHeader.biBitCount = 32;
+    bmi.bmiHeader.biCompression = BI_RGB;
+
+    void* pBits = nullptr;
+    HDC hdc = GetDC(nullptr);
+    HBITMAP hBmp = CreateDIBSection(hdc, &bmi, DIB_RGB_COLORS, &pBits, nullptr, 0);
+    ReleaseDC(nullptr, hdc);
+
+    pConverter->CopyPixels(nullptr, w * 4, w * h * 4, (BYTE*)pBits);
+
+    // Build HICON from bitmap
+    HBITMAP hMask = CreateBitmap(w, h, 1, 1, nullptr);
+    ICONINFO ii = { TRUE, 0, 0, hMask, hBmp };
+    HICON hIcon = CreateIconIndirect(&ii);
+
+    // Cleanup
+    DeleteObject(hMask);
+    DeleteObject(hBmp);
+    pConverter->Release();
+    pFrame->Release();
+    pDecoder->Release();
+    pFactory->Release();
+
+    return createIconInfo(hIcon);
+}
 }
 
 //
@@ -150,18 +343,23 @@ IconInfo IconManager::getIconFromPath(const std::wstring& path)
         }
 
         HICON icon;
-        UINT icons = ExtractIconExW(fullPath, 0, &icon, nullptr, 1);
-        if (icons == 0) {
-            // handle no icon
-        }
-
-        if (icon)
+        if (ExtractIconExW(fullPath, 0, &icon, nullptr, 1))
             result = cachedProcessIcons[path] = createIconInfo(icon);
-        else
-            result = cachedProcessIcons[path] = iiNoIconApp;
+
     } else {
         result = foundIconIt->second;
     }
+    return result;
+}
+
+IconInfo IconManager::getIconFromPackageInstallPath(PID pid, const std::wstring& path)
+{
+    std::wstring installPath = GetPackageInstallPath(pid); // from earlier
+    std::wstring pngPath = GetLogoPathFromManifest(installPath);
+
+    IconInfo result {};
+    if (!pngPath.empty())
+        result = LoadIconFromPng(pngPath);
     return result;
 }
 
