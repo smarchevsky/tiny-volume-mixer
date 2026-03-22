@@ -19,6 +19,7 @@ protected:
 
     HBITMAP _hbm;
     HDC _hdcMem;
+    HRGN _clipRegion;
 
 private:
     bool _mouseTracking;
@@ -28,7 +29,7 @@ protected:
     virtual void onMouseMove(POINT cursorClientPos, bool justEntered) = 0;
     virtual void onMouseScroll(POINT cursorClientPos, float delta) = 0;
 
-    virtual void onPaint(HDC hdc, Canvas canvas) = 0;
+    virtual void onPaint(HDC hdc) = 0;
     virtual void onResize(RECT newRect) = 0;
 
 public:

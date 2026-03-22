@@ -10,7 +10,7 @@ class VolumeApp : public App {
     SliderManager sliderManager;
     SelectInfo sliderInfoHovered;
 
-    virtual void onPaint(HDC hdc, Canvas canvas) override;
+    virtual void onPaint(HDC hdc) override;
     virtual void onResize(RECT newRect) override;
 
     virtual void onMouseLeave() override;

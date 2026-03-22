@@ -375,7 +375,7 @@ IconInfo IconManager::getIconMasterVol() { return iiMasterSpeaker; }
 // #include <shellapi.h>
 //  #pragma comment(lib, "Shell32.lib")
 
-void Slider::draw(HDC hdc, Canvas canvas, bool isSystem) const
+void Slider::draw(HDC hdc, bool isSystem) const
 {
     float drawHeight = (_rect.bottom - _rect.top) * (1.f - _val);
 
@@ -384,9 +384,8 @@ void Slider::draw(HDC hdc, Canvas canvas, bool isSystem) const
         _rect.right - margin, _rect.bottom
     };
 
-    DWORD border = _focused ? 0xFF000000 : 0xAA000000;
-    drawBorderedRect(canvas, drawRect, 8, 3,
-        0xAA000000 | _iconInfo.RGB, border | _iconInfo.RGB);
+    const DWORD border = _focused ? 0xFF000000 : 0xAA000000;
+    drawBorderedRect(hdc, drawRect, 8, 3, 0xAA000000 | _iconInfo.RGB, border | _iconInfo.RGB);
 
     if (_iconInfo.hLarge)
         DrawIconEx(hdc,
@@ -455,11 +454,11 @@ void SliderManager::recalculateSliderRects(const RECT& r)
     }
 }
 
-void SliderManager::drawSliders(HDC hdc, Canvas canvas)
+void SliderManager::drawSliders(HDC hdc)
 {
-    _sliderMaster.draw(hdc, canvas, true);
+    _sliderMaster.draw(hdc, true);
     for (auto& slider : _slidersApps)
-        slider.draw(hdc, canvas);
+        slider.draw(hdc);
 }
 #pragma endregion
 

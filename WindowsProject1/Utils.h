@@ -64,7 +64,7 @@ public:
     PID getPID() const { return _pid; }
     float getHeight() const { return float(_rect.bottom - _rect.top); }
     bool intersects(POINT pos) const { return isValidRect(_rect) ? PtInRect(&_rect, pos) : false; }
-    void draw(HDC hdc, Canvas canvas, bool isSystem = false) const;
+    void draw(HDC hdc, bool isSystem = false) const;
 };
 
 //
@@ -84,7 +84,7 @@ public:
     SelectInfo getSelectAtPosition(POINT mousePos);
 
     void recalculateSliderRects(const RECT& rect);
-    void drawSliders(HDC hdc, Canvas canvas);
+    void drawSliders(HDC hdc);
 };
 
 //

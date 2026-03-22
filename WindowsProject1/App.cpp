@@ -35,6 +35,8 @@ void App::initWindow(HINSTANCE instance, WNDPROC wndProc, RECT rc)
         WS_POPUP | WS_VISIBLE,
         rc.left, rc.top, rc.right - rc.left, rc.bottom - rc.top,
         nullptr, nullptr, _hInstance, nullptr);
+
+    _clipRegion = CreateRectRgn(0, 0, 0, 0);
 }
 
 void App::destroyWindow(HWND hWnd)
@@ -110,9 +112,11 @@ void App::handlePaint()
     if (GetObject(_hbm, sizeof(DIBSECTION), &ds)) {
         DWORD* pixels = (DWORD*)ds.dsBm.bmBits;
 
+        SetRectRgn(_clipRegion, r.left, r.top, r.right, r.bottom);
+        SelectClipRgn(_hdcMem, _clipRegion);
+
         memset(pixels, 0, width * height * sizeof(*pixels));
-        Canvas canvas { pixels, width, height, r };
-        onPaint(_hdcMem, canvas);
+        onPaint(_hdcMem);
 
         // for (int y = 0; y < height; ++y)
         //     for (int x = 0; x < width; ++x)
