@@ -119,12 +119,14 @@ IconManager::IconManager()
     iiMasterHeadphones = loadIcon(L"\\mmres.dll", 2);
     iiSystemSounds = loadIcon(L"\\imageres.dll", 104);
     iiNoIconApp = loadIcon(L"\\imageres.dll", 11);
+    iiNoIconApp.RGB = 0x00AAAAAA;
 }
 
 IconInfo IconManager::getIconFromPath(const std::wstring& path)
 {
+    IconInfo result {};
     if (path.empty())
-        return {};
+        return result;
 
     auto foundIconIt = cachedProcessIcons.find(path);
     if (foundIconIt == cachedProcessIcons.end()) {
@@ -154,12 +156,13 @@ IconInfo IconManager::getIconFromPath(const std::wstring& path)
         }
 
         if (icon)
-            return cachedProcessIcons[path] = createIconInfo(icon);
+            result = cachedProcessIcons[path] = createIconInfo(icon);
+        else
+            result = cachedProcessIcons[path] = iiNoIconApp;
     } else {
-        return foundIconIt->second;
+        result = foundIconIt->second;
     }
-
-    return {};
+    return result;
 }
 
 IconInfo IconManager::getIconMasterVol() { return iiMasterSpeaker; }
