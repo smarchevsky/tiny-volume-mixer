@@ -21,6 +21,65 @@ namespace fs = std::filesystem;
 //
 
 namespace {
+class PNGLoader {
+    IWICImagingFactory* pFactory = nullptr;
+
+    PNGLoader() { CoCreateInstance(CLSID_WICImagingFactory, nullptr, CLSCTX_INPROC_SERVER, IID_PPV_ARGS(&pFactory)); }
+    ~PNGLoader() { pFactory->Release(); }
+
+public:
+    HBITMAP getBitmapFromPng(const std::wstring& pngPath)
+    {
+
+        IWICBitmapDecoder* pDecoder = nullptr;
+        pFactory->CreateDecoderFromFilename(pngPath.c_str(), nullptr,
+            GENERIC_READ, WICDecodeMetadataCacheOnLoad, &pDecoder);
+
+        IWICBitmapFrameDecode* pFrame = nullptr;
+        pDecoder->GetFrame(0, &pFrame);
+
+        IWICFormatConverter* pConverter = nullptr;
+        pFactory->CreateFormatConverter(&pConverter);
+
+        WICPixelFormatGUID srcFormat;
+        pFrame->GetPixelFormat(&srcFormat);
+
+        pConverter->Initialize(pFrame, GUID_WICPixelFormat32bppPBGRA,
+            WICBitmapDitherTypeNone, nullptr, 0.0,
+            WICBitmapPaletteTypeCustom);
+
+        UINT w = 0, h = 0;
+        pConverter->GetSize(&w, &h);
+
+        // Create DIB section
+        BITMAPINFO bmi = {};
+        bmi.bmiHeader.biSize = sizeof(BITMAPINFOHEADER);
+        bmi.bmiHeader.biWidth = (LONG)w;
+        bmi.bmiHeader.biHeight = -(LONG)h; // top-down
+        bmi.bmiHeader.biPlanes = 1;
+        bmi.bmiHeader.biBitCount = 32;
+        bmi.bmiHeader.biCompression = BI_RGB;
+
+        void* pBits = nullptr;
+        HDC hdc = GetDC(nullptr);
+        HBITMAP hBmp = CreateDIBSection(hdc, &bmi, DIB_RGB_COLORS, &pBits, nullptr, 0);
+        ReleaseDC(nullptr, hdc);
+
+        pConverter->CopyPixels(nullptr, w * 4, w * h * 4, (BYTE*)pBits);
+
+        pConverter->Release();
+        pFrame->Release();
+        pDecoder->Release();
+        return hBmp;
+    }
+
+    static PNGLoader& get()
+    {
+        static PNGLoader instance;
+        return instance;
+    }
+};
+
 COLORREF getIconColor(BITMAP bmp, ICONINFO iconInfo)
 {
     // 1. Setup the bitmap info header
@@ -221,57 +280,16 @@ std::wstring GetLogoPathFromManifest(const std::wstring& installPath)
 // Load the PNG as an HICON
 IconInfo LoadIconFromPng(const std::wstring& pngPath)
 {
-    // Use GDI+ or WIC to load PNG -> HBITMAP -> HICON
-    // Here using WIC (no extra dependencies):
+    HBITMAP hBmp = PNGLoader::get().getBitmapFromPng(pngPath);
 
-    IWICImagingFactory* pFactory = nullptr;
-    CoCreateInstance(CLSID_WICImagingFactory, nullptr,
-        CLSCTX_INPROC_SERVER, IID_PPV_ARGS(&pFactory));
+    DWORD* pixels;
+    int width, height;
+    getBitmapData(hBmp, width, height, pixels);
 
-    IWICBitmapDecoder* pDecoder = nullptr;
-    pFactory->CreateDecoderFromFilename(pngPath.c_str(), nullptr,
-        GENERIC_READ, WICDecodeMetadataCacheOnLoad, &pDecoder);
-
-    IWICBitmapFrameDecode* pFrame = nullptr;
-    pDecoder->GetFrame(0, &pFrame);
-
-    IWICFormatConverter* pConverter = nullptr;
-    pFactory->CreateFormatConverter(&pConverter);
-    pConverter->Initialize(pFrame, GUID_WICPixelFormat32bppPBGRA,
-        WICBitmapDitherTypeNone, nullptr, 0.0,
-        WICBitmapPaletteTypeCustom);
-
-    UINT w = 0, h = 0;
-    pConverter->GetSize(&w, &h);
-
-    // Create DIB section
-    BITMAPINFO bmi = {};
-    bmi.bmiHeader.biSize = sizeof(BITMAPINFOHEADER);
-    bmi.bmiHeader.biWidth = (LONG)w;
-    bmi.bmiHeader.biHeight = -(LONG)h; // top-down
-    bmi.bmiHeader.biPlanes = 1;
-    bmi.bmiHeader.biBitCount = 32;
-    bmi.bmiHeader.biCompression = BI_RGB;
-
-    void* pBits = nullptr;
-    HDC hdc = GetDC(nullptr);
-    HBITMAP hBmp = CreateDIBSection(hdc, &bmi, DIB_RGB_COLORS, &pBits, nullptr, 0);
-    ReleaseDC(nullptr, hdc);
-
-    pConverter->CopyPixels(nullptr, w * 4, w * h * 4, (BYTE*)pBits);
-
-    // Build HICON from bitmap
-    HBITMAP hMask = CreateBitmap(w, h, 1, 1, nullptr);
+    HBITMAP hMask = CreateBitmap(width, height, 1, 1, nullptr);
     ICONINFO ii = { TRUE, 0, 0, hMask, hBmp };
     HICON hIcon = CreateIconIndirect(&ii);
-
-    // Cleanup
-    DeleteObject(hMask);
     DeleteObject(hBmp);
-    pConverter->Release();
-    pFrame->Release();
-    pDecoder->Release();
-    pFactory->Release();
 
     return createIconInfo(hIcon);
 }

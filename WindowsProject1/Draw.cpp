@@ -1,5 +1,7 @@
 #include "Draw.h"
 
+#include "Common.h"
+
 #include <algorithm>
 #include <math.h>
 
@@ -30,22 +32,12 @@ inline void CompositeAlpha(DWORD& back, DWORD front)
 }
 }
 
-DWORD* extractBMP(HDC hdc, int& width, int& height)
-{
-    HBITMAP hbm = (HBITMAP)GetCurrentObject(hdc, OBJ_BITMAP);
-    if (!hbm)
-        return nullptr;
-    DIBSECTION ds;
-    GetObject(hbm, sizeof(DIBSECTION), &ds);
-    width = ds.dsBm.bmWidth;
-    height = ds.dsBm.bmHeight;
-    return (DWORD*)ds.dsBm.bmBits;
-}
-
 void drawBorderedRect(HDC hdc, const RECT rc, int radius, int bw, DWORD bg_col, DWORD bo_col)
 {
+    DWORD* pixels;
     int canvasWidth, canvasHeight;
-    DWORD* pixels = extractBMP(hdc, canvasWidth, canvasHeight);
+    getBitmapData(getBitmapFromHDC(hdc), canvasWidth, canvasHeight, pixels);
+
     if (!pixels)
         return;
 
