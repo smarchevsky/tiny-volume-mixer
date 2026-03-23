@@ -121,33 +121,49 @@ void drawBorderedRect(HDC hdc, const RECT rc, int radius, int bw, DWORD bg_col, 
     const int rcb_end = std::min(rcb, cb);
     const int rcr_end = std::min(rcr, cr);
 
-    for (int y = rct_start; y < rct_bwy_end; y++) // top border
-        for (int x = rcl_minrx_start; x < rcr_minrx_end; x++)
-            CompositeAlpha(pixels[y * canvasWidth + x], bo_col);
+    if (rcl_minrx_start < rcr_minrx_end) {
+        if (bg_col & 0xFF000000) {
+            for (int y = rct_bwy_start; y < rct_minry_end; y++) // top section
+                for (int x = rcl_minrx_start; x < rcr_minrx_end; x++)
+                    CompositeAlpha(pixels[y * canvasWidth + x], bg_col);
 
-    for (int y = rct_bwy_start; y < rct_minry_end; y++) // top section
-        for (int x = rcl_minrx_start; x < rcr_minrx_end; x++)
-            CompositeAlpha(pixels[y * canvasWidth + x], bg_col);
+            for (int y = rcb_minry_start; y < rcb_bw_end; y++) // bottom section
+                for (int x = rcl_minrx_start; x < rcr_minrx_end; x++)
+                    CompositeAlpha(pixels[y * canvasWidth + x], bg_col);
+        }
 
-    for (int y = rct_minry_start; y < rcb_minry_end; y++) // mid section
-        for (int x = rcl_bwx_start; x < rcr_bw_end; x++)
-            CompositeAlpha(pixels[y * canvasWidth + x], bg_col);
+        if (bo_col & 0xFF000000) {
+            for (int y = rct_start; y < rct_bwy_end; y++) // top border
+                for (int x = rcl_minrx_start; x < rcr_minrx_end; x++)
+                    CompositeAlpha(pixels[y * canvasWidth + x], bo_col);
 
-    for (int y = rcb_minry_start; y < rcb_bw_end; y++) // bottom section
-        for (int x = rcl_minrx_start; x < rcr_minrx_end; x++)
-            CompositeAlpha(pixels[y * canvasWidth + x], bg_col);
+            for (int y = rcb_bw_start; y < rcb_end; y++) // bottom border
+                for (int x = rcl_minrx_start; x < rcr_minrx_end; x++)
+                    CompositeAlpha(pixels[y * canvasWidth + x], bo_col);
+        }
+    }
 
-    for (int y = rcb_bw_start; y < rcb_end; y++) // bottom border
-        for (int x = rcl_minrx_start; x < rcr_minrx_end; x++)
-            CompositeAlpha(pixels[y * canvasWidth + x], bo_col);
+    if (bg_col & 0xFF000000) {
+        if (rcl_bwx_start < rcr_bw_end) {
+            for (int y = rct_minry_start; y < rcb_minry_end; y++) // mid section
+                for (int x = rcl_bwx_start; x < rcr_bw_end; x++)
+                    CompositeAlpha(pixels[y * canvasWidth + x], bg_col);
+        }
+    }
 
-    for (int y = rct_minry_start; y < rcb_minry_end; y++) // left border
-        for (int x = rcl_start; x < rcl_bwx_end; x++)
-            CompositeAlpha(pixels[y * canvasWidth + x], bo_col);
+    if (bo_col & 0xFF000000) {
+        if (rcl_start < rcl_bwx_end) {
+            for (int y = rct_minry_start; y < rcb_minry_end; y++) // left border
+                for (int x = rcl_start; x < rcl_bwx_end; x++)
+                    CompositeAlpha(pixels[y * canvasWidth + x], bo_col);
+        }
 
-    for (int y = rct_minry_start; y < rcb_minry_end; y++) // right border
-        for (int x = rcr_bw_start; x < rcr_end; x++)
-            CompositeAlpha(pixels[y * canvasWidth + x], bo_col);
+        if (rcr_bw_start < rcr_end) {
+            for (int y = rct_minry_start; y < rcb_minry_end; y++) // right border
+                for (int x = rcr_bw_start; x < rcr_end; x++)
+                    CompositeAlpha(pixels[y * canvasWidth + x], bo_col);
+        }
+    }
 
     // corners
     auto makeDist = [](int x, int y, int r) {
@@ -170,27 +186,31 @@ void drawBorderedRect(HDC hdc, const RECT rc, int radius, int bw, DWORD bg_col, 
         return bkg;
     };
 
-    for (int y = rct_start; y < rct_minry_end; y++) // top left
-        for (int x = rcl_start; x < rcl_minrx_end; x++) {
-            float dist = makeDist(x - rcl, y - rct, radius);
-            CompositeRadius(pixels[y * canvasWidth + x], dist);
-        }
+    if (rcl_start < rcl_minrx_end) {
+        for (int y = rct_start; y < rct_minry_end; y++) // top left
+            for (int x = rcl_start; x < rcl_minrx_end; x++) {
+                float dist = makeDist(x - rcl, y - rct, radius);
+                CompositeRadius(pixels[y * canvasWidth + x], dist);
+            }
 
-    for (int y = rct_start; y < rct_minry_end; y++) // top right
-        for (int x = rcr_minrx_start; x < rcr_end; x++) {
-            float dist = makeDist(rcw - x - 1 + rcl, y - rct, radius);
-            CompositeRadius(pixels[y * canvasWidth + x], dist);
-        }
+        for (int y = rcb_minry_start; y < rcb_end; y++) // bottom left
+            for (int x = rcl_start; x < rcl_minrx_end; x++) {
+                float dist = makeDist(x - rcl, rch - y - 1 + rct, radius);
+                CompositeRadius(pixels[y * canvasWidth + x], dist);
+            }
+    }
 
-    for (int y = rcb_minry_start; y < rcb_end; y++) // bottom left
-        for (int x = rcl_start; x < rcl_minrx_end; x++) {
-            float dist = makeDist(x - rcl, rch - y - 1 + rct, radius);
-            CompositeRadius(pixels[y * canvasWidth + x], dist);
-        }
+    if (rcr_minrx_start < rcr_end) {
+        for (int y = rct_start; y < rct_minry_end; y++) // top right
+            for (int x = rcr_minrx_start; x < rcr_end; x++) {
+                float dist = makeDist(rcw - x - 1 + rcl, y - rct, radius);
+                CompositeRadius(pixels[y * canvasWidth + x], dist);
+            }
 
-    for (int y = rcb_minry_start; y < rcb_end; y++) // bottom right
-        for (int x = rcr_minrx_start; x < rcr_end; x++) {
-            float dist = makeDist(rcw - x - 1 + rcl, rch - y - 1 + rct, radius);
-            CompositeRadius(pixels[y * canvasWidth + x], dist);
-        }
+        for (int y = rcb_minry_start; y < rcb_end; y++) // bottom right
+            for (int x = rcr_minrx_start; x < rcr_end; x++) {
+                float dist = makeDist(rcw - x - 1 + rcl, rch - y - 1 + rct, radius);
+                CompositeRadius(pixels[y * canvasWidth + x], dist);
+            }
+    }
 }
