@@ -5,7 +5,11 @@
 
 #include "VolumeApp.h"
 
+#if defined(_DEBUG)
+#define LOG_ENABLED 1
+#else
 #define LOG_ENABLED 0
+#endif
 #include "Timer.h"
 
 VolumeApp app;
@@ -30,7 +34,9 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
     _In_ LPWSTR lpCmdLine,
     _In_ int nCmdShow)
 {
+#if defined(_DEBUG)
     createConsole();
+#endif
 
     CoinitializeWrapper coinitializeRAII;
 
