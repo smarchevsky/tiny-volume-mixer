@@ -14,6 +14,7 @@
 #pragma comment(lib, "windowscodecs.lib")
 #pragma comment(lib, "xmllite.lib")
 #pragma comment(lib, "shlwapi.lib")
+#pragma comment(lib, "Version.lib") // GetFileVersionInfoW, VerQueryValueW
 
 namespace fs = std::filesystem;
 constexpr DWORD defaultColor = 0x00AAAAAA;
@@ -317,6 +318,38 @@ IconInfo createIconInfo(HICON icon, bool calculateIconColor = true)
 // ICON
 //
 
+// #pragma comment(lib, "Version.lib")
+
+void printFileName(const WCHAR* path)
+{
+    DWORD dummy;
+    DWORD size = GetFileVersionInfoSizeW(path, &dummy);
+    if (size > 0) {
+        std::vector<BYTE> data(size);
+        if (GetFileVersionInfoW(path, 0, size, data.data())) {
+            LPWSTR description = nullptr;
+            UINT descLen = 0;
+            if (VerQueryValueW(data.data(), L"\\StringFileInfo\\040904b0\\FileDescription",
+                    (LPVOID*)&description, &descLen)) {
+                wprintf(L"DESCRIPTION: %s\n", description);
+                return;
+            }
+        }
+    }
+
+    wchar_t exePath[MAX_PATH];
+    if (SUCCEEDED(SHLoadIndirectString(path, exePath, MAX_PATH, NULL))) {
+        if (WCHAR* fileName = PathFindFileNameW(exePath)) {
+            if (fileName[0] >= L'a' && fileName[0] <= L'z')
+                fileName[0] += L'A' - L'a';
+            // if (WCHAR* extension = wcsrchr(fileName, L'.'))
+            if (WCHAR* extension = StrStrW(fileName, L".exe"))
+                *extension = '\0';
+            wprintf(L"FILE NAME: %s\n", fileName);
+        }
+    }
+}
+
 #pragma region ICON
 IconInfo IconManager::tryRetrieveIcon(WCHAR* iconPath, PID pid)
 {
@@ -338,6 +371,9 @@ IconInfo IconManager::tryRetrieveIcon(WCHAR* iconPath, PID pid)
     HICON icon = getIconFromPath(pathStr);
     if (!icon)
         icon = getIconFromPackageInstallPath(pid, pathStr);
+
+    printFileName(pathStr.c_str());
+
     if (icon)
         return createIconInfo(icon);
     return iiNoIconApp;
