@@ -6,29 +6,32 @@
 #include <math.h>
 
 namespace {
-inline void CompositeAlpha(DWORD& back, float fa, float fr, float fg, float fb)
-{
-    ARGBf(b, back);
-
-    if (fa == 255) {
-        back = ARGB(fa, fr, fg, fb);
-        return;
-    }
-    if (fa == 0)
-        return;
-
-    float inv_af = 255.f - fa;
-    back = ARGB(
-        fa + (ba * inv_af) / 255.f,
-        (fr * fa + br * inv_af) / 255.f,
-        (fg * fa + bg * inv_af) / 255.f,
-        (fb * fa + bb * inv_af) / 255.f);
-}
-
 inline void CompositeAlpha(DWORD& back, DWORD front)
 {
-    ARGBf(f, front);
-    CompositeAlpha(back, fa, fr, fg, fb);
+    BYTE fa = (front >> 24) & 0xFF;
+    if (fa == 255) {
+        back = front;
+        return;
+    }
+    if (fa == 0) {
+        return;
+    }
+
+    BYTE fr = (front >> 16) & 0xFF;
+    BYTE fg = (front >> 8) & 0xFF;
+    BYTE fb = front & 0xFF;
+
+    BYTE ba = (back >> 24) & 0xFF;
+    BYTE br = (back >> 16) & 0xFF;
+    BYTE bg = (back >> 8) & 0xFF;
+    BYTE bb = back & 0xFF;
+
+    BYTE inv_a = 255 - fa;
+    back = ARGB(
+        fa + (ba * inv_a) / 255,
+        (fr * fa + br * inv_a) / 255,
+        (fg * fa + bg * inv_a) / 255,
+        (fb * fa + bb * inv_a) / 255);
 }
 }
 
@@ -174,8 +177,7 @@ void drawBorderedRect(HDC hdc, const RECT rc, int radius, int bw, DWORD bg_col, 
         float g = (ag + t * (bg - ag));
         float b = (ab + t * (bb - ab));
 
-        CompositeAlpha(bkg, a, r, g, b);
-        return bkg;
+        CompositeAlpha(bkg, ARGB(a, r, g, b));
     };
 
     if (rcl_start < rcl_minrx_end) {
