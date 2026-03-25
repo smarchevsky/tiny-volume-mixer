@@ -4,8 +4,6 @@
 #include <windows.h>
 #include <windowsx.h>
 
-#include <optional>
-
 constexpr int borderR = 16;
 #define RGBA(r, g, b, a) DWORD(((b) | (DWORD(g) << 8)) | ((DWORD(r)) << 16) | ((DWORD(a)) << 24))
 #define ARGB(a, r, g, b) ((DWORD(a) << 24) | (DWORD(r) << 16) | (DWORD(g) << 8) | DWORD(b))
