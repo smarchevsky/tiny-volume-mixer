@@ -17,6 +17,7 @@
 
 namespace fs = std::filesystem;
 constexpr DWORD defaultColor = 0x00AAAAAA;
+static uint8_t iconSize = 48;
 
 namespace {
 class PNGLoader {
@@ -127,22 +128,13 @@ std::wstring ResolveBestAsset(const std::wstring& installPath, const std::wstrin
     std::wstring ext = base.extension().wstring(); // ".png"
 
     // Preferred scale order (highest quality first)
-    std::vector<std::wstring> scaleVariants = {
-        // L".scale-400", L".scale-200", L".scale-150", L".scale-125", L".scale-100",
-        L".targetsize-48",
-        L".targetsize-64",
-        L".targetsize-96",
-        L".targetsize-256",
-        // L".targetsize-32"
-    };
 
-    for (auto& scale : scaleVariants) {
-        fs::path candidate = dir / (stem + scale + ext);
-        if (fs::exists(candidate))
-            return candidate.wstring();
-    }
+    std::wstring scaleVariant = L".targetsize-" + std::to_wstring((int)iconSize);
+    fs::path candidate = dir / (stem + scaleVariant + ext);
 
-    // Try the raw path itself (some apps ship unscaled)
+    if (fs::exists(candidate))
+        return candidate.wstring();
+
     if (fs::exists(base))
         return base.wstring();
 
@@ -278,9 +270,10 @@ HICON getIconFromPath(std::wstring& path)
         fullPath = expandedPath;
     }
 
-    HICON icon;
-    if (ExtractIconExW(fullPath, iconIndex, &icon, nullptr, 1))
-        return icon;
+    HICON icon {};
+    SHDefExtractIconW(fullPath, iconIndex, 0, &icon, NULL, MAKELONG(iconSize, 0));
+    return icon;
+
     return {};
 }
 
@@ -370,7 +363,7 @@ IconManager::IconManager()
         wcscat_s(dllPath, path);
 
         HICON icon {};
-        ExtractIconExW(dllPath, iconIndex, &icon, nullptr, 1);
+        SHDefExtractIconW(dllPath, iconIndex, 0, &icon, NULL, MAKELONG(iconSize, 0));
         return createIconInfo(icon);
     };
 
