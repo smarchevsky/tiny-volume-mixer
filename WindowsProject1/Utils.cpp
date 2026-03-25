@@ -17,7 +17,7 @@
 
 namespace fs = std::filesystem;
 constexpr DWORD defaultColor = 0x00AAAAAA;
-static uint8_t iconSize = 48;
+static uint8_t iconSize = 64;
 
 namespace {
 class PNGLoader {
@@ -407,6 +407,52 @@ void Slider::draw(HDC hdc, bool isSystem) const
 //
 // SLIDER MANAGER
 //
+
+#if defined(_DEBUG)
+// Callback function that Windows calls for every resource found
+BOOL CALLBACK EnumResNameProc(HMODULE hModule, LPCWSTR lpszType, LPWSTR lpszName, LONG_PTR lParam)
+{
+    auto* ids = reinterpret_cast<std::vector<int>*>(lParam);
+
+    if (IS_INTRESOURCE(lpszName))
+        ids->push_back((int)lpszName);
+    else
+        wprintf(L"Named Resource Found: %s\n", lpszName);
+    return TRUE; // Continue enumeration
+}
+
+static std::vector<int> iconIDs;
+static int currentIndex;
+void ListIconIDs(const std::wstring& dllPath)
+{
+    HMODULE hMod = LoadLibraryExW(dllPath.c_str(), NULL, LOAD_LIBRARY_AS_DATAFILE);
+    if (!hMod) {
+        wprintf(L"Failed to load: %s\n", dllPath.c_str());
+        return;
+    }
+    wprintf(L"Listing Icon IDs for: %s\n", dllPath.c_str());
+    EnumResourceNamesW(hMod, RT_GROUP_ICON, EnumResNameProc, reinterpret_cast<LONG_PTR>(&iconIDs));
+    for (int id : iconIDs)
+        wprintf(L"Found ID: %d\n", id);
+    FreeLibrary(hMod);
+}
+
+void Slider::debugUpdateIcon()
+{
+    auto path = L"C:\\Windows\\System32\\mmres.dll";
+    if (iconIDs.empty())
+        ListIconIDs(path);
+
+    if (iconIDs.size()) {
+        HICON icon {};
+        int iconIndex = iconIDs[currentIndex];
+        SHDefExtractIconW(path, -iconIndex, 0, &icon, NULL, MAKELONG(iconSize, 0));
+        _iconInfo.hLarge = icon;
+        wprintf(L"iconIndex: %d\n", iconIndex);
+        currentIndex = (currentIndex + 1) % iconIDs.size();
+    }
+}
+#endif
 
 Slider* SliderManager::getSliderFromSelect(SelectInfo info)
 {

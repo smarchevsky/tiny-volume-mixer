@@ -79,6 +79,10 @@ public:
     float getHeight() const { return float(_rect.bottom - _rect.top); }
     bool intersects(POINT pos) const { return isValidRect(_rect) ? PtInRect(&_rect, pos) : false; }
     void draw(HDC hdc, bool isSystem = false) const;
+
+#if defined(_DEBUG)
+    void debugUpdateIcon();
+#endif
 };
 
 //
