@@ -361,16 +361,17 @@ void IconManager::uninit()
 
 IconManager::IconManager()
 {
-    HICON hIcon = nullptr;
     wchar_t dllPathSource[MAX_PATH];
     GetSystemDirectoryW(dllPathSource, MAX_PATH);
 
-    auto loadIcon = [&](const wchar_t* path, int index) -> IconInfo {
+    auto loadIcon = [&dllPathSource](const wchar_t* path, int iconIndex) -> IconInfo {
         wchar_t dllPath[MAX_PATH];
         wcscpy_s(dllPath, MAX_PATH, dllPathSource);
         wcscat_s(dllPath, path);
-        ExtractIconExW(dllPath, index, &hIcon, nullptr, 1);
-        return createIconInfo(hIcon);
+
+        HICON icon {};
+        ExtractIconExW(dllPath, iconIndex, &icon, nullptr, 1);
+        return createIconInfo(icon);
     };
 
     iiMasterSpeaker = loadIcon(L"\\mmres.dll", 0);
