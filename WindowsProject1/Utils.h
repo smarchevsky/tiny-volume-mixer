@@ -7,13 +7,26 @@
 #include <string>
 #include <unordered_map>
 
+inline HBITMAP getBitmapFromHDC(HDC hdc) { return (HBITMAP)GetCurrentObject(hdc, OBJ_BITMAP); }
+inline void getBitmapData(HBITMAP hBmp, int& width, int& height, DWORD*& bits)
+{
+    bits = nullptr;
+    if (hBmp) {
+        DIBSECTION ds;
+        GetObject(hBmp, sizeof(DIBSECTION), &ds);
+        width = ds.dsBm.bmWidth;
+        height = ds.dsBm.bmHeight;
+        bits = (DWORD*)ds.dsBm.bmBits;
+    }
+}
+
 //
 // ICON
 //
 
 struct IconInfo {
     HICON hLarge;
-    DWORD RGB;
+    DWORD ARGB;
     int width;
 };
 

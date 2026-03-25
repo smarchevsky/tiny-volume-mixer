@@ -16,9 +16,7 @@
 #pragma comment(lib, "shlwapi.lib")
 
 namespace fs = std::filesystem;
-//
-// BOILERPLATE
-//
+constexpr DWORD defaultColor = 0x00AAAAAA;
 
 namespace {
 class PNGLoader {
@@ -80,66 +78,53 @@ public:
     }
 };
 
-COLORREF getIconColor(BITMAP bmp, ICONINFO iconInfo)
+COLORREF getAvgColorARGB(int width, int height, DWORD* pixels)
 {
-    // 1. Setup the bitmap info header
-    BITMAPINFOHEADER bi = { 0 };
-    bi.biSize = sizeof(BITMAPINFOHEADER);
-    bi.biWidth = bmp.bmWidth;
-    bi.biHeight = -bmp.bmHeight; // Negative for top-down
-    bi.biPlanes = 1;
-    bi.biBitCount = 32;
-    bi.biCompression = BI_RGB;
-
-    // 2. Allocate memory for pixels
-    int pixelCount = bmp.bmWidth * bmp.bmHeight;
-    std::vector<DWORD> pixels(pixelCount);
-
-    // 3. Get the raw bits
-    HDC hdc = GetDC(NULL);
-    GetDIBits(hdc, iconInfo.hbmColor, 0, bmp.bmHeight, &pixels[0], (BITMAPINFO*)&bi, DIB_RGB_COLORS);
-    ReleaseDC(NULL, hdc);
-
-    // 4. Calculate Average
-    long long totalR = 0, totalG = 0, totalB = 0;
+    uint64_t totalR = 0, totalG = 0, totalB = 0;
     int opaquePixels = 0;
 
+    const int pixelCount = width * height;
     for (int i = 0; i < pixelCount; i++) {
-        BYTE a = (pixels[i] >> 24) & 0xFF;
-        BYTE r = (pixels[i] >> 16) & 0xFF;
-        BYTE g = (pixels[i] >> 8) & 0xFF;
-        BYTE b = pixels[i] & 0xFF;
-
-        if (a > 127) {
+        BYTE a = (pixels[i] >> 24) & 0xFF, r = (pixels[i] >> 16) & 0xFF, g = (pixels[i] >> 8) & 0xFF, b = pixels[i] & 0xFF;
+        if (a > 127)
             totalR += r, totalG += g, totalB += b, opaquePixels++;
-        }
     }
 
-    if (opaquePixels > 0) {
-        BYTE avgR = BYTE(totalR / opaquePixels);
-        BYTE avgG = BYTE(totalG / opaquePixels);
-        BYTE avgB = BYTE(totalB / opaquePixels);
-        return ARGB(0, avgR, avgG, avgB);
-    }
-    return ARGB(0, 160, 160, 160);
+    if (opaquePixels > 0)
+        return ARGB(0, BYTE(totalR / opaquePixels), BYTE(totalG / opaquePixels), BYTE(totalB / opaquePixels));
+
+    return defaultColor;
 }
 
 IconInfo createIconInfo(HICON icon)
 {
-    if (!icon)
-        return {};
-
+    // calc avg color
     ICONINFO iconInfo;
     GetIconInfo(icon, &iconInfo);
 
     BITMAP bmp;
     GetObject(iconInfo.hbmColor, sizeof(BITMAP), &bmp);
 
-    IconInfo info {};
-    info.RGB = getIconColor(bmp, iconInfo);
-    info.hLarge = icon;
-    info.width = bmp.bmWidth;
-    return info;
+    BITMAPINFOHEADER bi = { 0 };
+    bi.biSize = sizeof(BITMAPINFOHEADER);
+    bi.biWidth = bmp.bmWidth;
+    bi.biHeight = -bmp.bmHeight;
+    bi.biPlanes = 1;
+    bi.biBitCount = 32;
+    bi.biCompression = BI_RGB;
+
+    int pixelCount = bmp.bmWidth * bmp.bmHeight;
+    std::vector<DWORD> pixels(pixelCount);
+    HDC hdc = GetDC(NULL);
+    GetDIBits(hdc, iconInfo.hbmColor, 0, bmp.bmHeight, &pixels[0], (BITMAPINFO*)&bi, DIB_RGB_COLORS);
+    ReleaseDC(NULL, hdc);
+
+    // make icon info
+    IconInfo ii {};
+    ii.hLarge = icon;
+    ii.width = bmp.bmWidth;
+    ii.ARGB = getAvgColorARGB(bmp.bmWidth, bmp.bmHeight, &pixels[0]);
+    return ii;
 }
 
 std::wstring getProcessName(PID pid)
@@ -293,7 +278,8 @@ IconInfo LoadIconFromPng(const std::wstring& pngPath)
 
     return createIconInfo(hIcon);
 }
-}
+} // namespace
+
 
 //
 // ICON
@@ -330,7 +316,7 @@ IconManager::IconManager()
     iiMasterHeadphones = loadIcon(L"\\mmres.dll", 2);
     iiSystemSounds = loadIcon(L"\\imageres.dll", 104);
     iiNoIconApp = loadIcon(L"\\imageres.dll", 11);
-    iiNoIconApp.RGB = 0x00AAAAAA;
+    iiNoIconApp.ARGB = 0x00AAAAAA;
 }
 
 IconInfo IconManager::getIconFromPath(const std::wstring& path)
@@ -403,7 +389,7 @@ void Slider::draw(HDC hdc, bool isSystem) const
     };
 
     const DWORD border = _focused ? 0xFF000000 : 0xAA000000;
-    drawBorderedRect(hdc, drawRect, 8, 3, 0xAA000000 | _iconInfo.RGB, border | _iconInfo.RGB);
+    drawBorderedRect(hdc, drawRect, 8, 3, 0xAA000000 | _iconInfo.ARGB, border | _iconInfo.ARGB);
 
     if (_iconInfo.hLarge)
         DrawIconEx(hdc,
