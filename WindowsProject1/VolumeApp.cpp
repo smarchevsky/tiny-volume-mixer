@@ -87,10 +87,9 @@ void VolumeApp::onMouseScroll(POINT cursorClientPos, float delta)
     if (auto slider = sliderManager.getSliderFromSelect(hoverInfo)) {
         float sliderHeight = slider->getHeight();
 
-        float oldVal = pow(slider->_val, .5f);
+        float oldVal = powf(slider->_val, .5f);
         float newVal = std::clamp(oldVal + delta / 16, 0.f, 1.f);
-        newVal = pow(newVal, 2.f);
-
+        newVal = powf(newVal, 2.f);
         if (newVal != oldVal)
             _audioAppListerner.setVol(hoverInfo, newVal);
     }
