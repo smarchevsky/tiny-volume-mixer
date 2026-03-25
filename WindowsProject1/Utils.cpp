@@ -17,7 +17,7 @@
 
 namespace fs = std::filesystem;
 constexpr DWORD defaultColor = 0x00AAAAAA;
-static uint8_t iconSize = 64;
+static uint8_t iconSize = 48;
 
 namespace {
 class PNGLoader {
@@ -277,7 +277,7 @@ HICON getIconFromPath(std::wstring& path)
     return {};
 }
 
-IconInfo createIconInfo(HICON icon)
+IconInfo createIconInfo(HICON icon, bool calculateIconColor = true)
 {
     // calc avg color
     ICONINFO iconInfo;
@@ -295,6 +295,9 @@ IconInfo createIconInfo(HICON icon)
     bi.biCompression = BI_RGB;
 
     int pixelCount = bmp.bmWidth * bmp.bmHeight;
+    if (pixelCount > 256 * 256)
+        return {};
+
     std::vector<DWORD> pixels(pixelCount);
     HDC hdc = GetDC(NULL);
     GetDIBits(hdc, iconInfo.hbmColor, 0, bmp.bmHeight, &pixels[0], (BITMAPINFO*)&bi, DIB_RGB_COLORS);
@@ -305,7 +308,7 @@ IconInfo createIconInfo(HICON icon)
 
     ii.hLarge = icon;
     ii.width = bmp.bmWidth;
-    ii.ARGB = getAvgColorARGB(bmp.bmWidth, bmp.bmHeight, &pixels[0]);
+    ii.ARGB = calculateIconColor ? getAvgColorARGB(bmp.bmWidth, bmp.bmHeight, &pixels[0]) : defaultColor;
     return ii;
 }
 } // namespace
@@ -349,7 +352,7 @@ void IconManager::uninit()
     // }
     DestroyIcon(iiMasterSpeaker.hLarge);
     DestroyIcon(iiMasterHeadphones.hLarge);
-    DestroyIcon(iiSystemSounds.hLarge);
+    DestroyIcon(iiNoIconApp.hLarge);
 }
 
 IconManager::IconManager()
@@ -364,14 +367,12 @@ IconManager::IconManager()
 
         HICON icon {};
         SHDefExtractIconW(dllPath, iconIndex, 0, &icon, NULL, MAKELONG(iconSize, 0));
-        return createIconInfo(icon);
+        return createIconInfo(icon, false);
     };
 
-    iiMasterSpeaker = loadIcon(L"\\mmres.dll", 0);
-    iiMasterHeadphones = loadIcon(L"\\mmres.dll", 2);
-    iiSystemSounds = loadIcon(L"\\imageres.dll", 104);
-    iiNoIconApp = loadIcon(L"\\imageres.dll", 11);
-    iiNoIconApp.ARGB = defaultColor;
+    iiMasterSpeaker = loadIcon(L"\\mmres.dll", -3004);
+    iiMasterHeadphones = loadIcon(L"\\mmres.dll", -3015);
+    iiNoIconApp = loadIcon(L"\\imageres.dll", -15);
 }
 
 #pragma endregion

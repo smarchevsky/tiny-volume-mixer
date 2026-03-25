@@ -36,7 +36,7 @@ class IconManager {
     IconManager(const IconManager&) = delete;
 
     // std::unordered_map<std::wstring, IconInfo> cachedProcessIcons;
-    IconInfo iiMasterSpeaker, iiMasterHeadphones, iiSystemSounds, iiNoIconApp;
+    IconInfo iiMasterSpeaker, iiMasterHeadphones, iiNoIconApp;
 
 public:
     auto getIconMasterVol() { return iiMasterSpeaker; }
