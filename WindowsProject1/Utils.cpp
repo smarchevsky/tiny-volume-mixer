@@ -28,7 +28,6 @@ class PNGLoader {
 public:
     HBITMAP getBitmapFromPng(const std::wstring& pngPath)
     {
-
         IWICBitmapDecoder* pDecoder = nullptr;
         pFactory->CreateDecoderFromFilename(pngPath.c_str(), nullptr,
             GENERIC_READ, WICDecodeMetadataCacheOnLoad, &pDecoder);
@@ -78,55 +77,6 @@ public:
     }
 };
 
-COLORREF getAvgColorARGB(int width, int height, DWORD* pixels)
-{
-    uint64_t totalR = 0, totalG = 0, totalB = 0;
-    int opaquePixels = 0;
-
-    const int pixelCount = width * height;
-    for (int i = 0; i < pixelCount; i++) {
-        BYTE a = (pixels[i] >> 24) & 0xFF, r = (pixels[i] >> 16) & 0xFF, g = (pixels[i] >> 8) & 0xFF, b = pixels[i] & 0xFF;
-        if (a > 127)
-            totalR += r, totalG += g, totalB += b, opaquePixels++;
-    }
-
-    if (opaquePixels > 0)
-        return ARGB(0, BYTE(totalR / opaquePixels), BYTE(totalG / opaquePixels), BYTE(totalB / opaquePixels));
-
-    return defaultColor;
-}
-
-IconInfo createIconInfo(HICON icon)
-{
-    // calc avg color
-    ICONINFO iconInfo;
-    GetIconInfo(icon, &iconInfo);
-
-    BITMAP bmp;
-    GetObject(iconInfo.hbmColor, sizeof(BITMAP), &bmp);
-
-    BITMAPINFOHEADER bi = { 0 };
-    bi.biSize = sizeof(BITMAPINFOHEADER);
-    bi.biWidth = bmp.bmWidth;
-    bi.biHeight = -bmp.bmHeight;
-    bi.biPlanes = 1;
-    bi.biBitCount = 32;
-    bi.biCompression = BI_RGB;
-
-    int pixelCount = bmp.bmWidth * bmp.bmHeight;
-    std::vector<DWORD> pixels(pixelCount);
-    HDC hdc = GetDC(NULL);
-    GetDIBits(hdc, iconInfo.hbmColor, 0, bmp.bmHeight, &pixels[0], (BITMAPINFO*)&bi, DIB_RGB_COLORS);
-    ReleaseDC(NULL, hdc);
-
-    // make icon info
-    IconInfo ii {};
-    ii.hLarge = icon;
-    ii.width = bmp.bmWidth;
-    ii.ARGB = getAvgColorARGB(bmp.bmWidth, bmp.bmHeight, &pixels[0]);
-    return ii;
-}
-
 std::wstring getProcessName(PID pid)
 {
     if (pid == 0)
@@ -167,6 +117,7 @@ std::wstring GetPackageInstallPath(DWORD pid)
 
     return installPath;
 }
+
 // Find the best scaled asset that actually exists on disk
 std::wstring ResolveBestAsset(const std::wstring& installPath, const std::wstring& rawLogoPath)
 {
@@ -262,37 +213,147 @@ std::wstring GetLogoPathFromManifest(const std::wstring& installPath)
     return ResolveBestAsset(installPath, logoPath);
 }
 
-// Load the PNG as an HICON
-IconInfo LoadIconFromPng(const std::wstring& pngPath)
+COLORREF getAvgColorARGB(int width, int height, DWORD* pixels)
+{
+    uint64_t totalR = 0, totalG = 0, totalB = 0;
+    int opaquePixels = 0;
+
+    const int pixelCount = width * height;
+    for (int i = 0; i < pixelCount; i++) {
+        BYTE a = (pixels[i] >> 24) & 0xFF, r = (pixels[i] >> 16) & 0xFF, g = (pixels[i] >> 8) & 0xFF, b = pixels[i] & 0xFF;
+        if (a > 127)
+            totalR += r, totalG += g, totalB += b, opaquePixels++;
+    }
+
+    if (opaquePixels > 0)
+        return ARGB(0, BYTE(totalR / opaquePixels), BYTE(totalG / opaquePixels), BYTE(totalB / opaquePixels));
+
+    return defaultColor;
+}
+
+HICON loadIconFromPng(const std::wstring& pngPath)
 {
     HBITMAP hBmp = PNGLoader::get().getBitmapFromPng(pngPath);
-
     DWORD* pixels;
     int width, height;
     getBitmapData(hBmp, width, height, pixels);
-
     HBITMAP hMask = CreateBitmap(width, height, 1, 1, nullptr);
     ICONINFO ii = { TRUE, 0, 0, hMask, hBmp };
     HICON hIcon = CreateIconIndirect(&ii);
     DeleteObject(hBmp);
+    return hIcon;
+}
 
-    return createIconInfo(hIcon);
+HICON getIconFromPackageInstallPath(PID pid, const std::wstring& path)
+{
+    std::wstring installPath = GetPackageInstallPath(pid); // from earlier
+    std::wstring pngPath = GetLogoPathFromManifest(installPath);
+
+    if (!pngPath.empty())
+        return loadIconFromPng(pngPath);
+    return {};
+}
+
+HICON getIconFromPath(std::wstring& path)
+{
+    if (path.empty())
+        return {};
+
+    const WCHAR* fullPath = path.c_str();
+    WCHAR cleanPathBuf[MAX_PATH];
+    WCHAR expandedPath[MAX_PATH];
+    int iconIndex = 0;
+
+    if (fullPath[0] == L'@') { // handle  @%SystemRoot%\System32\AudioSrv.Dll,-203
+        fullPath += 1;
+        wcscpy_s(cleanPathBuf, MAX_PATH, fullPath);
+
+        WCHAR* comma = wcsrchr(cleanPathBuf, L',');
+        if (comma) {
+            *comma = L'\0';
+            iconIndex = _wtoi(comma + 1);
+        }
+
+        ExpandEnvironmentStringsW(cleanPathBuf, expandedPath, MAX_PATH);
+        fullPath = expandedPath;
+    }
+
+    HICON icon;
+    if (ExtractIconExW(fullPath, iconIndex, &icon, nullptr, 1))
+        return icon;
+    return {};
+}
+
+IconInfo createIconInfo(HICON icon)
+{
+    // calc avg color
+    ICONINFO iconInfo;
+    GetIconInfo(icon, &iconInfo);
+
+    BITMAP bmp;
+    GetObject(iconInfo.hbmColor, sizeof(BITMAP), &bmp);
+
+    BITMAPINFOHEADER bi = { 0 };
+    bi.biSize = sizeof(BITMAPINFOHEADER);
+    bi.biWidth = bmp.bmWidth;
+    bi.biHeight = -bmp.bmHeight;
+    bi.biPlanes = 1;
+    bi.biBitCount = 32;
+    bi.biCompression = BI_RGB;
+
+    int pixelCount = bmp.bmWidth * bmp.bmHeight;
+    std::vector<DWORD> pixels(pixelCount);
+    HDC hdc = GetDC(NULL);
+    GetDIBits(hdc, iconInfo.hbmColor, 0, bmp.bmHeight, &pixels[0], (BITMAPINFO*)&bi, DIB_RGB_COLORS);
+    ReleaseDC(NULL, hdc);
+
+    // make icon info
+    IconInfo ii {};
+
+    ii.hLarge = icon;
+    ii.width = bmp.bmWidth;
+    ii.ARGB = getAvgColorARGB(bmp.bmWidth, bmp.bmHeight, &pixels[0]);
+    return ii;
 }
 } // namespace
-
 
 //
 // ICON
 //
 
 #pragma region ICON
+IconInfo IconManager::tryRetrieveIcon(WCHAR* iconPath, PID pid)
+{
+    std::wstring pathStr;
+
+    if (iconPath && wcslen(iconPath)) { // retrieve from AudioSessionInfo
+        pathStr = iconPath;
+
+    } else { // retrieve from PID
+        if (HANDLE hProcess = OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, FALSE, pid)) {
+            wchar_t exePath[MAX_PATH];
+            DWORD size = MAX_PATH;
+            if (QueryFullProcessImageNameW(hProcess, 0, exePath, &size))
+                pathStr = exePath;
+            CloseHandle(hProcess);
+        }
+    }
+
+    HICON icon = getIconFromPath(pathStr);
+    if (!icon)
+        icon = getIconFromPackageInstallPath(pid, pathStr);
+    if (icon)
+        return createIconInfo(icon);
+    return iiNoIconApp;
+}
+
 void IconManager::uninit()
 {
-    for (auto& pair : cachedProcessIcons) {
-        auto& iconInfo = pair.second;
-        if (iconInfo.hLarge)
-            DestroyIcon(iconInfo.hLarge);
-    }
+    // for (auto& pair : cachedProcessIcons) {
+    //     auto& iconInfo = pair.second;
+    //     if (iconInfo.hLarge)
+    //         DestroyIcon(iconInfo.hLarge);
+    // }
     DestroyIcon(iiMasterSpeaker.hLarge);
     DestroyIcon(iiMasterHeadphones.hLarge);
     DestroyIcon(iiSystemSounds.hLarge);
@@ -316,58 +377,9 @@ IconManager::IconManager()
     iiMasterHeadphones = loadIcon(L"\\mmres.dll", 2);
     iiSystemSounds = loadIcon(L"\\imageres.dll", 104);
     iiNoIconApp = loadIcon(L"\\imageres.dll", 11);
-    iiNoIconApp.ARGB = 0x00AAAAAA;
+    iiNoIconApp.ARGB = defaultColor;
 }
 
-IconInfo IconManager::getIconFromPath(const std::wstring& path)
-{
-    IconInfo result {};
-    if (path.empty())
-        return result;
-
-    auto foundIconIt = cachedProcessIcons.find(path);
-    if (foundIconIt == cachedProcessIcons.end()) {
-        const WCHAR* fullPath = path.c_str();
-        WCHAR cleanPathBuf[MAX_PATH];
-        WCHAR expandedPath[MAX_PATH];
-        int iconIndex = 0;
-
-        if (fullPath[0] == L'@') { // handle  @%SystemRoot%\System32\AudioSrv.Dll,-203
-            fullPath += 1;
-            wcscpy_s(cleanPathBuf, MAX_PATH, fullPath);
-
-            WCHAR* comma = wcsrchr(cleanPathBuf, L',');
-            if (comma) {
-                *comma = L'\0';
-                iconIndex = _wtoi(comma + 1);
-            }
-
-            ExpandEnvironmentStringsW(cleanPathBuf, expandedPath, MAX_PATH);
-            fullPath = expandedPath;
-        }
-
-        HICON icon;
-        if (ExtractIconExW(fullPath, 0, &icon, nullptr, 1))
-            result = cachedProcessIcons[path] = createIconInfo(icon);
-
-    } else {
-        result = foundIconIt->second;
-    }
-    return result;
-}
-
-IconInfo IconManager::getIconFromPackageInstallPath(PID pid, const std::wstring& path)
-{
-    std::wstring installPath = GetPackageInstallPath(pid); // from earlier
-    std::wstring pngPath = GetLogoPathFromManifest(installPath);
-
-    IconInfo result {};
-    if (!pngPath.empty())
-        result = LoadIconFromPng(pngPath);
-    return result;
-}
-
-IconInfo IconManager::getIconMasterVol() { return iiMasterSpeaker; }
 #pragma endregion
 
 //

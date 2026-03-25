@@ -5,7 +5,8 @@
 #include "Draw.h"
 
 #include <string>
-#include <unordered_map>
+#include <vector>
+// #include <unordered_map>
 
 inline HBITMAP getBitmapFromHDC(HDC hdc) { return (HBITMAP)GetCurrentObject(hdc, OBJ_BITMAP); }
 inline void getBitmapData(HBITMAP hBmp, int& width, int& height, DWORD*& bits)
@@ -34,20 +35,20 @@ class IconManager {
     IconManager();
     IconManager(const IconManager&) = delete;
 
-    std::unordered_map<std::wstring, IconInfo> cachedProcessIcons;
+    // std::unordered_map<std::wstring, IconInfo> cachedProcessIcons;
     IconInfo iiMasterSpeaker, iiMasterHeadphones, iiSystemSounds, iiNoIconApp;
 
 public:
+    auto getIconMasterVol() { return iiMasterSpeaker; }
+
+    IconInfo tryRetrieveIcon(WCHAR* iconPath, PID pid);
+
     void uninit();
     static IconManager& get()
     {
         static IconManager instance;
         return instance;
     }
-
-    IconInfo getIconFromPath(const std::wstring& path);
-    IconInfo getIconFromPackageInstallPath(PID pid, const std::wstring& path);
-    IconInfo getIconMasterVol();
 };
 
 //
