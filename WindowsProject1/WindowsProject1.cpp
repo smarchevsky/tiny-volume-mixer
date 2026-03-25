@@ -38,7 +38,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
     createConsole();
 #endif
 
-    CoinitializeWrapper coinitializeRAII;
+    static CoinitializeWrapper coinitializeRAII;
 
     app.construct(hInstance, WndProc);
 
