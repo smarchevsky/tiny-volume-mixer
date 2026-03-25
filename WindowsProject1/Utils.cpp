@@ -414,9 +414,8 @@ void Slider::draw(HDC hdc, bool isSystem) const
 BOOL CALLBACK EnumResNameProc(HMODULE hModule, LPCWSTR lpszType, LPWSTR lpszName, LONG_PTR lParam)
 {
     auto* ids = reinterpret_cast<std::vector<int>*>(lParam);
-
     if (IS_INTRESOURCE(lpszName))
-        ids->push_back((int)lpszName);
+        ids->push_back((int)(size_t)lpszName);
     else
         wprintf(L"Named Resource Found: %s\n", lpszName);
     return TRUE; // Continue enumeration
