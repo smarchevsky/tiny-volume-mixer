@@ -422,7 +422,7 @@ IconManager::IconManager()
 // #include <shellapi.h>
 //  #pragma comment(lib, "Shell32.lib")
 
-void Slider::draw(HDC hdc, bool isSystem) const
+void Slider::draw(HDC hdc) const
 {
     float drawHeight = (_rect.bottom - _rect.top) * (1.f - _val);
 
@@ -548,7 +548,7 @@ void SliderManager::recalculateSliderRects(const RECT& r)
 
 void SliderManager::drawSliders(HDC hdc)
 {
-    _sliderMaster.draw(hdc, true);
+    _sliderMaster.draw(hdc);
     for (auto& slider : _slidersApps)
         slider.draw(hdc);
 }

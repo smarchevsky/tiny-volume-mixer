@@ -78,7 +78,7 @@ public:
     PID getPID() const { return _pid; }
     float getHeight() const { return float(_rect.bottom - _rect.top); }
     bool intersects(POINT pos) const { return isValidRect(_rect) ? PtInRect(&_rect, pos) : false; }
-    void draw(HDC hdc, bool isSystem = false) const;
+    void draw(HDC hdc) const;
 
 #if defined(_DEBUG)
     void debugUpdateIcon();
