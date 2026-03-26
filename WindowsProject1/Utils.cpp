@@ -425,14 +425,15 @@ IconManager::IconManager()
 void Slider::draw(HDC hdc) const
 {
     float drawHeight = (_rect.bottom - _rect.top) * (1.f - _val);
-
     RECT drawRect {
-        _rect.left + margin, _rect.top + LONG(drawHeight),
-        _rect.right - margin, _rect.bottom
+        _rect.left + uiScale.getSliderOffsetL(), _rect.top + LONG(drawHeight),
+        _rect.right - uiScale.getSliderOffsetR(), _rect.bottom
     };
 
     const DWORD border = _focused ? 0xFF000000 : 0xAA000000;
-    drawBorderedRect(hdc, drawRect, 8, 3, 0xAA000000 | _iconInfo.ARGB, border | _iconInfo.ARGB);
+    drawBorderedRect(hdc, drawRect,
+        uiScale.sliderCornerRadius, uiScale.sliderBorderWidth,
+        0xAA000000 | _iconInfo.ARGB, border | _iconInfo.ARGB);
 
     if (_iconInfo.hLarge)
         DrawIconEx(hdc,
@@ -536,13 +537,14 @@ SelectInfo SliderManager::getSelectAtPosition(POINT mousePos)
 
 void SliderManager::recalculateSliderRects(const RECT& r)
 {
-    int offset = r.left + margin + 3;
-    auto top = r.top + margin * 2 + 3;
-    auto bottom = r.bottom - margin * 2 - 3;
-    _sliderMaster._rect = { offset, top, offset += sliderWidth + 20, bottom };
+    int offset = r.left + uiScale.getSliderOffsetR() + uiScale.frameBorderWidth;
+    auto top = r.top + uiScale.sliderSpacing + uiScale.frameBorderWidth;
+    auto bottom = r.bottom - uiScale.sliderSpacing - uiScale.frameBorderWidth;
+
+    _sliderMaster._rect = { offset, top, offset += uiScale.sliderWidthMaster, bottom };
 
     for (auto& slider : _slidersApps) {
-        slider._rect = { offset, top, offset += sliderWidth, bottom };
+        slider._rect = { offset, top, offset += uiScale.sliderWidthApp, bottom };
     }
 }
 

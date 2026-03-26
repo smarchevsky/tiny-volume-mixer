@@ -28,3 +28,18 @@ struct SelectInfo {
     PID _pid;
     VolumeType _type;
 };
+
+struct UIConfig {
+    uint8_t frameBorderWidth = 3;
+    uint8_t sliderSpacing = 8;
+    uint8_t sliderBorderWidth = frameBorderWidth;
+    uint8_t sliderCornerRadius = 8;
+    uint8_t sliderWidthApp = 80;
+    uint8_t sliderWidthMaster = 100;
+    uint8_t frameCornerRadius = sliderCornerRadius + sliderSpacing + frameBorderWidth;
+    int getSliderOffsetL() { return sliderSpacing / 2; }
+    int getSliderOffsetR() { return sliderSpacing - getSliderOffsetL(); }
+};
+
+inline const UIConfig uiScale_125;
+inline UIConfig uiScale = uiScale_125;

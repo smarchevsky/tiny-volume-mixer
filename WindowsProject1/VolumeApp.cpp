@@ -71,7 +71,7 @@ void VolumeApp::onPaint(HDC hdc)
 {
     RECT windowRect;
     GetClientRect(_hWnd, &windowRect);
-    drawBorderedRect(hdc, windowRect, borderR, 3, 0x88333333, 0x88AAAAAA);
+    drawBorderedRect(hdc, windowRect, uiScale.frameCornerRadius, uiScale.frameBorderWidth, 0x88333333, 0x88AAAAAA);
     sliderManager.drawSliders(hdc);
 }
 
@@ -86,6 +86,7 @@ void VolumeApp::onMouseScroll(POINT cursorClientPos, float delta)
     auto hoverInfo = sliderManager.getSelectAtPosition(cursorClientPos);
     if (auto slider = sliderManager.getSliderFromSelect(hoverInfo)) {
         float sliderHeight = slider->getHeight();
+        // slider->debugUpdateIcon();
 
         float oldVal = powf(slider->_val, .5f);
         float newVal = std::clamp(oldVal + delta / 16, 0.f, 1.f);

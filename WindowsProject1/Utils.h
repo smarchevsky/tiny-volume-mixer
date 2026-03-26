@@ -57,9 +57,6 @@ public:
 
 static bool isValidRect(const RECT& rect) { return rect.right > rect.left && rect.bottom > rect.top; }
 
-static constexpr int sliderWidth = 80;
-static constexpr int margin = 4;
-
 class Slider {
     PID _pid;
 
