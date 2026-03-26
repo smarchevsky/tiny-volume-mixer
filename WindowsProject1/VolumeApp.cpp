@@ -36,7 +36,7 @@ void VolumeApp::handleMMAppRegistered(AudioSessionInitInfo* sessionInitInfo)
 {
     AudioUpdateInfo& info = sessionInitInfo->updateInfo;
 
-    IconInfo iconInfo = IconManager::get().tryRetrieveIcon(sessionInitInfo->iconPath, info._pid);
+    IconInfo* iconInfo = IconManager::get().tryRetrieveIcon(sessionInitInfo->iconPath, info._pid);
 
     sliderManager.appSliderAdd(info._pid, info._vol, info._isMuted, iconInfo);
     delete sessionInitInfo;
@@ -90,7 +90,7 @@ void VolumeApp::onMouseScroll(POINT cursorClientPos, float delta)
     auto hoverInfo = sliderManager.getSelectAtPosition(cursorClientPos);
     if (auto slider = sliderManager.getSliderFromSelect(hoverInfo)) {
         float sliderHeight = slider->getHeight();
-        // slider->debugUpdateIcon();
+        // slider->debugUpdateIcon(_uiConfig.iconSize);
 
         float oldVal = powf(slider->_val, .5f);
         float newVal = std::clamp(oldVal + delta / 16, 0.f, 1.f);

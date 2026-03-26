@@ -223,7 +223,7 @@ COLORREF getAvgColorARGB(int width, int height, DWORD* pixels)
     return defaultColor;
 }
 
-HICON loadIconFromPng(const std::wstring& pngPath)
+HICON createIconFromPng(const std::wstring& pngPath)
 {
     HBITMAP hBmp = PNGLoader::get().getBitmapFromPng(pngPath);
     DWORD* pixels;
@@ -236,17 +236,17 @@ HICON loadIconFromPng(const std::wstring& pngPath)
     return hIcon;
 }
 
-HICON getIconFromPackageInstallPath(PID pid, const std::wstring& path, int iconSize)
+HICON createIconFromPackageInstallPath(PID pid, int iconSize)
 {
     std::wstring installPath = GetPackageInstallPath(pid); // from earlier
     std::wstring pngPath = GetLogoPathFromManifest(installPath, iconSize);
 
     if (!pngPath.empty())
-        return loadIconFromPng(pngPath);
+        return createIconFromPng(pngPath);
     return {};
 }
 
-HICON getIconFromPath(std::wstring& path, int iconSize)
+HICON createIconFromPath(std::wstring& path, int iconSize)
 {
     if (path.empty())
         return {};
@@ -350,7 +350,7 @@ void printFileName(const WCHAR* path)
 }
 
 #pragma region ICON
-IconInfo IconManager::tryRetrieveIcon(WCHAR* iconPath, PID pid)
+IconInfo* IconManager::tryRetrieveIcon(WCHAR* iconPath, PID pid)
 {
     std::wstring pathStr;
 
@@ -367,19 +367,22 @@ IconInfo IconManager::tryRetrieveIcon(WCHAR* iconPath, PID pid)
         }
     }
 
-    HICON icon = getIconFromPath(pathStr, _iconSize);
+    if (pathStr.empty())
+        return nullptr;
+
+    HICON icon = createIconFromPath(pathStr, _iconSize);
     if (!icon)
-        icon = getIconFromPackageInstallPath(pid, pathStr, _iconSize);
+        icon = createIconFromPackageInstallPath(pid, _iconSize);
+    if (!icon)
+        icon = _iiNoIconApp.hLarge;
 
-    printFileName(pathStr.c_str());
-
-    if (icon)
-        return createIconInfo(icon);
-    return iiNoIconApp;
+    auto& cachedIcon = _cachedAppIcons[pathStr] = createIconInfo(icon);
+    return &cachedIcon;
 }
 
 void IconManager::init(int iconSize)
 {
+    uninit();
     _iconSize = iconSize;
 
     wchar_t dllPathSource[MAX_PATH];
@@ -395,21 +398,23 @@ void IconManager::init(int iconSize)
         return createIconInfo(icon, false);
     };
 
-    iiMasterSpeaker = loadIcon(L"\\mmres.dll", -3004);
-    iiMasterHeadphones = loadIcon(L"\\mmres.dll", -3015);
-    iiNoIconApp = loadIcon(L"\\imageres.dll", -15);
+    _iiMasterSpeaker = loadIcon(L"\\mmres.dll", -3004);
+    _iiMasterHeadphones = loadIcon(L"\\mmres.dll", -3015);
+    _iiNoIconApp = loadIcon(L"\\imageres.dll", -15);
 }
 
 void IconManager::uninit()
 {
-    // for (auto& pair : cachedProcessIcons) {
-    //     auto& iconInfo = pair.second;
-    //     if (iconInfo.hLarge)
-    //         DestroyIcon(iconInfo.hLarge);
-    // }
-    DestroyIcon(iiMasterSpeaker.hLarge);
-    DestroyIcon(iiMasterHeadphones.hLarge);
-    DestroyIcon(iiNoIconApp.hLarge);
+    for (auto& pair : _cachedAppIcons) {
+        auto& iconInfo = pair.second;
+        if (iconInfo.hLarge) {
+            DestroyIcon(iconInfo.hLarge);
+            iconInfo.hLarge = nullptr;
+        }
+    }
+    DestroyIcon(_iiMasterSpeaker.hLarge);
+    DestroyIcon(_iiMasterHeadphones.hLarge);
+    DestroyIcon(_iiNoIconApp.hLarge);
 }
 
 #pragma endregion
@@ -432,15 +437,16 @@ void Slider::draw(HDC hdc, const UIConfig& uic) const
     };
 
     const DWORD border = _focused ? 0xFF000000 : 0xAA000000;
+    DWORD sliderColor = _iconInfo ? _iconInfo->ARGB : defaultColor;
     drawBorderedRect(hdc, drawRect,
         uic.sliderCornerRadius, uic.sliderBorderWidth,
-        0xAA000000 | _iconInfo.ARGB, border | _iconInfo.ARGB);
+        0xAA000000 | sliderColor, border | sliderColor);
 
-    if (_iconInfo.hLarge)
+    if (_iconInfo && _iconInfo->hLarge)
         DrawIconEx(hdc,
-            (_rect.left + _rect.right) / 2 - _iconInfo.width / 2,
-            _rect.bottom - 30 - _iconInfo.width / 2,
-            _iconInfo.hLarge, 0, 0, 0, NULL, DI_NORMAL);
+            (_rect.left + _rect.right) / 2 - _iconInfo->width / 2,
+            _rect.bottom - 30 - _iconInfo->width / 2,
+            _iconInfo->hLarge, 0, 0, 0, NULL, DI_NORMAL);
 }
 
 //
@@ -485,7 +491,7 @@ void Slider::debugUpdateIcon(int iconSize)
         HICON icon {};
         int iconIndex = iconIDs[currentIndex];
         SHDefExtractIconW(path, -iconIndex, 0, &icon, NULL, MAKELONG(iconSize, 0));
-        _iconInfo.hLarge = icon;
+        const_cast<IconInfo*>(_iconInfo)->hLarge = icon;
         wprintf(L"iconIndex: %d\n", iconIndex);
         currentIndex = (currentIndex + 1) % iconIDs.size();
     }
@@ -506,7 +512,7 @@ Slider* SliderManager::getSliderFromSelect(SelectInfo info)
     return nullptr;
 }
 
-void SliderManager::appSliderAdd(PID pid, float vol, bool muted, const IconInfo& iconInfo)
+void SliderManager::appSliderAdd(PID pid, float vol, bool muted, const IconInfo* iconInfo)
 {
     _slidersApps.push_back(Slider(pid, vol, iconInfo));
 }

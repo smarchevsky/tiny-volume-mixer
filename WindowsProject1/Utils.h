@@ -5,8 +5,8 @@
 #include "Draw.h"
 
 #include <string>
+#include <unordered_map>
 #include <vector>
-// #include <unordered_map>
 
 inline HBITMAP getBitmapFromHDC(HDC hdc) { return (HBITMAP)GetCurrentObject(hdc, OBJ_BITMAP); }
 inline void getBitmapData(HBITMAP hBmp, int& width, int& height, DWORD*& bits)
@@ -36,15 +36,15 @@ class IconManager {
     IconManager(const IconManager&) = delete;
     int _iconSize = 24;
 
-    // std::unordered_map<std::wstring, IconInfo> cachedProcessIcons;
-    IconInfo iiMasterSpeaker {}, iiMasterHeadphones {}, iiNoIconApp {};
+    std::unordered_map<std::wstring, IconInfo> _cachedAppIcons;
+    IconInfo _iiMasterSpeaker {}, _iiMasterHeadphones {}, _iiNoIconApp {};
 
 public:
     void init(int iconSize);
     void uninit();
 
-    IconInfo getIconMasterVol() { return iiMasterSpeaker; }
-    IconInfo tryRetrieveIcon(WCHAR* iconPath, PID pid);
+    IconInfo* getIconMasterVol() { return &_iiMasterSpeaker; }
+    IconInfo* tryRetrieveIcon(WCHAR* iconPath, PID pid);
 
     static IconManager& get()
     {
@@ -63,12 +63,12 @@ class Slider {
     PID _pid;
 
 public:
-    IconInfo _iconInfo;
+    const IconInfo* _iconInfo {};
     RECT _rect;
     float _val;
     bool _focused;
 
-    Slider(PID pid, float value, const IconInfo& iconInfo)
+    Slider(PID pid, float value, const IconInfo* iconInfo)
     {
         _pid = pid, _iconInfo = iconInfo, _rect = { 0 }, _val = value, _focused = false;
     }
@@ -93,7 +93,7 @@ class SliderManager {
     std::vector<Slider> _slidersApps;
 
 public:
-    void appSliderAdd(PID pid, float vol, bool muted, const IconInfo& iconInfo);
+    void appSliderAdd(PID pid, float vol, bool muted, const IconInfo* iconInfo);
     void appSliderRemove(PID pid);
 
     Slider* getSliderFromSelect(SelectInfo info);
