@@ -1,7 +1,5 @@
 #include "VolumeApp.h"
 
-HBRUSH hBrushBackground = CreateSolidBrush(HEX_TO_RGB(0x373F4E));
-
 void VolumeApp::construct(HINSTANCE instance, WNDPROC wndProc)
 {
     RECT rc;
