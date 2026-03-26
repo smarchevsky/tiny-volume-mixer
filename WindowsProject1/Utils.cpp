@@ -549,6 +549,13 @@ void SliderManager::recalculateSliderRects(const RECT& r, const UIConfig& uic)
 
     _sliderMaster._rect = { offset, top, offset += uic.sliderWidthMaster, bottom };
 
+    for (int i = 1; i < _slidersApps.size(); ++i) {
+        if(_slidersApps[i].getPID() == 0) {
+            std::swap(_slidersApps[i], _slidersApps[0]);
+            std::swap(_slidersApps[i]._focused, _slidersApps[0]._focused);
+        }
+    }
+
     for (auto& slider : _slidersApps) {
         slider._rect = { offset, top, offset += uic.sliderWidthApp, bottom };
     }
