@@ -11,6 +11,10 @@ class VolumeApp : public App {
     SliderManager sliderManager;
     SelectInfo sliderInfoHovered;
 
+    HFONT _hFont;
+    HDC _fontDC;
+    SIZE _textSize;
+
     virtual void onPaint(HDC hdc) override;
     virtual void onResize(RECT newRect) override;
 
