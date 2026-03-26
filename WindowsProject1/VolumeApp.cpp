@@ -10,6 +10,12 @@ void VolumeApp::construct(HINSTANCE instance, WNDPROC wndProc)
     initWindow(instance, wndProc, rc);
     // setWindowSemiTransparent(true);
 
+    _uiConfig = UIConfig::get();
+
+    IconManager::get().init(_uiConfig.iconSize);
+    sliderManager.getSliderFromSelect(SelectInfo(VolumeType::Master, 0))->_iconInfo
+        = IconManager::get().getIconMasterVol();
+
     _audioAppListerner.init(_hWnd);
 }
 
@@ -39,7 +45,7 @@ void VolumeApp::handleMMAppRegistered(AudioSessionInitInfo* sessionInitInfo)
 
     RECT rc;
     GetClientRect(_hWnd, &rc);
-    sliderManager.recalculateSliderRects(rc);
+    sliderManager.recalculateSliderRects(rc, _uiConfig);
 
     InvalidateRect(_hWnd, NULL, FALSE);
 }
@@ -51,7 +57,7 @@ void VolumeApp::handleMMAppUnegistered(WPARAM wParam, LPARAM lParam)
 
     AudioUpdateInfo info(wParam, lParam);
     sliderManager.appSliderRemove(info._pid);
-    sliderManager.recalculateSliderRects(rc);
+    sliderManager.recalculateSliderRects(rc, _uiConfig);
 
     InvalidateRect(_hWnd, NULL, FALSE);
     _audioAppListerner.cleanupExpiredSessions();
@@ -71,13 +77,13 @@ void VolumeApp::onPaint(HDC hdc)
 {
     RECT windowRect;
     GetClientRect(_hWnd, &windowRect);
-    drawBorderedRect(hdc, windowRect, uiScale.frameCornerRadius, uiScale.frameBorderWidth, 0x88333333, 0x88AAAAAA);
-    sliderManager.drawSliders(hdc);
+    drawBorderedRect(hdc, windowRect, _uiConfig.frameCornerRadius, _uiConfig.frameBorderWidth, 0x88333333, 0x88AAAAAA);
+    sliderManager.drawSliders(hdc, _uiConfig);
 }
 
 void VolumeApp::onResize(RECT rc)
 {
-    sliderManager.recalculateSliderRects(rc);
+    sliderManager.recalculateSliderRects(rc, _uiConfig);
     InvalidateRect(_hWnd, NULL, FALSE);
 }
 

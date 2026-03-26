@@ -18,7 +18,6 @@
 
 namespace fs = std::filesystem;
 constexpr DWORD defaultColor = 0x00AAAAAA;
-static uint8_t iconSize = 48;
 
 namespace {
 class PNGLoader {
@@ -121,7 +120,7 @@ std::wstring GetPackageInstallPath(DWORD pid)
 }
 
 // Find the best scaled asset that actually exists on disk
-std::wstring ResolveBestAsset(const std::wstring& installPath, const std::wstring& rawLogoPath)
+std::wstring ResolveBestAsset(const std::wstring& installPath, const std::wstring& rawLogoPath, int iconSize)
 {
     fs::path base = fs::path(installPath) / rawLogoPath;
     fs::path dir = base.parent_path();
@@ -143,7 +142,7 @@ std::wstring ResolveBestAsset(const std::wstring& installPath, const std::wstrin
 }
 
 // Parse AppxManifest.xml and return the logo PNG path
-std::wstring GetLogoPathFromManifest(const std::wstring& installPath)
+std::wstring GetLogoPathFromManifest(const std::wstring& installPath, int iconSize)
 {
     std::wstring manifestPath = (fs::path(installPath) / L"AppxManifest.xml").wstring();
 
@@ -203,7 +202,7 @@ std::wstring GetLogoPathFromManifest(const std::wstring& installPath)
     if (logoPath.empty())
         return {};
 
-    return ResolveBestAsset(installPath, logoPath);
+    return ResolveBestAsset(installPath, logoPath, iconSize);
 }
 
 COLORREF getAvgColorARGB(int width, int height, DWORD* pixels)
@@ -237,17 +236,17 @@ HICON loadIconFromPng(const std::wstring& pngPath)
     return hIcon;
 }
 
-HICON getIconFromPackageInstallPath(PID pid, const std::wstring& path)
+HICON getIconFromPackageInstallPath(PID pid, const std::wstring& path, int iconSize)
 {
     std::wstring installPath = GetPackageInstallPath(pid); // from earlier
-    std::wstring pngPath = GetLogoPathFromManifest(installPath);
+    std::wstring pngPath = GetLogoPathFromManifest(installPath, iconSize);
 
     if (!pngPath.empty())
         return loadIconFromPng(pngPath);
     return {};
 }
 
-HICON getIconFromPath(std::wstring& path)
+HICON getIconFromPath(std::wstring& path, int iconSize)
 {
     if (path.empty())
         return {};
@@ -272,7 +271,7 @@ HICON getIconFromPath(std::wstring& path)
     }
 
     HICON icon {};
-    SHDefExtractIconW(fullPath, iconIndex, 0, &icon, NULL, MAKELONG(iconSize, 0));
+    SHDefExtractIconW(fullPath, iconIndex, 0, &icon, NULL, MAKELONG(std::clamp(iconSize, 8, 256), 0));
     return icon;
 
     return {};
@@ -368,15 +367,37 @@ IconInfo IconManager::tryRetrieveIcon(WCHAR* iconPath, PID pid)
         }
     }
 
-    HICON icon = getIconFromPath(pathStr);
+    HICON icon = getIconFromPath(pathStr, _iconSize);
     if (!icon)
-        icon = getIconFromPackageInstallPath(pid, pathStr);
+        icon = getIconFromPackageInstallPath(pid, pathStr, _iconSize);
 
     printFileName(pathStr.c_str());
 
     if (icon)
         return createIconInfo(icon);
     return iiNoIconApp;
+}
+
+void IconManager::init(int iconSize)
+{
+    _iconSize = iconSize;
+
+    wchar_t dllPathSource[MAX_PATH];
+    GetSystemDirectoryW(dllPathSource, MAX_PATH);
+
+    auto loadIcon = [dllPathSource, iconSize](const wchar_t* path, int iconIndex) -> IconInfo {
+        wchar_t dllPath[MAX_PATH];
+        wcscpy_s(dllPath, MAX_PATH, dllPathSource);
+        wcscat_s(dllPath, path);
+
+        HICON icon {};
+        SHDefExtractIconW(dllPath, iconIndex, 0, &icon, NULL, MAKELONG(std::clamp(iconSize, 8, 256), 0));
+        return createIconInfo(icon, false);
+    };
+
+    iiMasterSpeaker = loadIcon(L"\\mmres.dll", -3004);
+    iiMasterHeadphones = loadIcon(L"\\mmres.dll", -3015);
+    iiNoIconApp = loadIcon(L"\\imageres.dll", -15);
 }
 
 void IconManager::uninit()
@@ -391,26 +412,6 @@ void IconManager::uninit()
     DestroyIcon(iiNoIconApp.hLarge);
 }
 
-IconManager::IconManager()
-{
-    wchar_t dllPathSource[MAX_PATH];
-    GetSystemDirectoryW(dllPathSource, MAX_PATH);
-
-    auto loadIcon = [&dllPathSource](const wchar_t* path, int iconIndex) -> IconInfo {
-        wchar_t dllPath[MAX_PATH];
-        wcscpy_s(dllPath, MAX_PATH, dllPathSource);
-        wcscat_s(dllPath, path);
-
-        HICON icon {};
-        SHDefExtractIconW(dllPath, iconIndex, 0, &icon, NULL, MAKELONG(iconSize, 0));
-        return createIconInfo(icon, false);
-    };
-
-    iiMasterSpeaker = loadIcon(L"\\mmres.dll", -3004);
-    iiMasterHeadphones = loadIcon(L"\\mmres.dll", -3015);
-    iiNoIconApp = loadIcon(L"\\imageres.dll", -15);
-}
-
 #pragma endregion
 
 //
@@ -422,17 +423,17 @@ IconManager::IconManager()
 // #include <shellapi.h>
 //  #pragma comment(lib, "Shell32.lib")
 
-void Slider::draw(HDC hdc) const
+void Slider::draw(HDC hdc, const UIConfig& uic) const
 {
     float drawHeight = (_rect.bottom - _rect.top) * (1.f - _val);
     RECT drawRect {
-        _rect.left + uiScale.getSliderOffsetL(), _rect.top + LONG(drawHeight),
-        _rect.right - uiScale.getSliderOffsetR(), _rect.bottom
+        _rect.left + uic.getSliderOffsetL(), _rect.top + LONG(drawHeight),
+        _rect.right - uic.getSliderOffsetR(), _rect.bottom
     };
 
     const DWORD border = _focused ? 0xFF000000 : 0xAA000000;
     drawBorderedRect(hdc, drawRect,
-        uiScale.sliderCornerRadius, uiScale.sliderBorderWidth,
+        uic.sliderCornerRadius, uic.sliderBorderWidth,
         0xAA000000 | _iconInfo.ARGB, border | _iconInfo.ARGB);
 
     if (_iconInfo.hLarge)
@@ -474,7 +475,7 @@ void ListIconIDs(const std::wstring& dllPath)
     FreeLibrary(hMod);
 }
 
-void Slider::debugUpdateIcon()
+void Slider::debugUpdateIcon(int iconSize)
 {
     auto path = L"C:\\Windows\\System32\\mmres.dll";
     if (iconIDs.empty())
@@ -505,11 +506,6 @@ Slider* SliderManager::getSliderFromSelect(SelectInfo info)
     return nullptr;
 }
 
-SliderManager::SliderManager()
-{
-    _sliderMaster._iconInfo = IconManager::get().getIconMasterVol();
-}
-
 void SliderManager::appSliderAdd(PID pid, float vol, bool muted, const IconInfo& iconInfo)
 {
     _slidersApps.push_back(Slider(pid, vol, iconInfo));
@@ -535,24 +531,24 @@ SelectInfo SliderManager::getSelectAtPosition(POINT mousePos)
     return {};
 }
 
-void SliderManager::recalculateSliderRects(const RECT& r)
+void SliderManager::recalculateSliderRects(const RECT& r, const UIConfig& uic)
 {
-    int offset = r.left + uiScale.getSliderOffsetR() + uiScale.frameBorderWidth;
-    auto top = r.top + uiScale.sliderSpacing + uiScale.frameBorderWidth;
-    auto bottom = r.bottom - uiScale.sliderSpacing - uiScale.frameBorderWidth;
+    int offset = r.left + uic.getSliderOffsetR() + uic.frameBorderWidth;
+    auto top = r.top + uic.sliderSpacing + uic.frameBorderWidth;
+    auto bottom = r.bottom - uic.sliderSpacing - uic.frameBorderWidth;
 
-    _sliderMaster._rect = { offset, top, offset += uiScale.sliderWidthMaster, bottom };
+    _sliderMaster._rect = { offset, top, offset += uic.sliderWidthMaster, bottom };
 
     for (auto& slider : _slidersApps) {
-        slider._rect = { offset, top, offset += uiScale.sliderWidthApp, bottom };
+        slider._rect = { offset, top, offset += uic.sliderWidthApp, bottom };
     }
 }
 
-void SliderManager::drawSliders(HDC hdc)
+void SliderManager::drawSliders(HDC hdc, const UIConfig& uic)
 {
-    _sliderMaster.draw(hdc);
+    _sliderMaster.draw(hdc, uic);
     for (auto& slider : _slidersApps)
-        slider.draw(hdc);
+        slider.draw(hdc, uic);
 }
 #pragma endregion
 

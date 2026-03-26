@@ -32,14 +32,19 @@ struct SelectInfo {
 struct UIConfig {
     uint8_t frameBorderWidth = 3;
     uint8_t sliderSpacing = 8;
-    uint8_t sliderBorderWidth = frameBorderWidth;
     uint8_t sliderCornerRadius = 8;
     uint8_t sliderWidthApp = 80;
     uint8_t sliderWidthMaster = 100;
+    uint8_t sliderBorderWidth = frameBorderWidth;
     uint8_t frameCornerRadius = sliderCornerRadius + sliderSpacing + frameBorderWidth;
-    int getSliderOffsetL() { return sliderSpacing / 2; }
-    int getSliderOffsetR() { return sliderSpacing - getSliderOffsetL(); }
-};
+    uint8_t iconSize = 48;
 
-inline const UIConfig uiScale_125;
-inline UIConfig uiScale = uiScale_125;
+    int getSliderOffsetL() const { return sliderSpacing / 2; }
+    int getSliderOffsetR() const { return sliderSpacing - getSliderOffsetL(); }
+
+    static UIConfig get()
+    {
+        UIConfig config;
+        return config;
+    }
+};

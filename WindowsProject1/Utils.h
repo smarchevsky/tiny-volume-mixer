@@ -32,18 +32,20 @@ struct IconInfo {
 };
 
 class IconManager {
-    IconManager();
+    IconManager() = default;
     IconManager(const IconManager&) = delete;
+    int _iconSize = 24;
 
     // std::unordered_map<std::wstring, IconInfo> cachedProcessIcons;
-    IconInfo iiMasterSpeaker, iiMasterHeadphones, iiNoIconApp;
+    IconInfo iiMasterSpeaker {}, iiMasterHeadphones {}, iiNoIconApp {};
 
 public:
-    auto getIconMasterVol() { return iiMasterSpeaker; }
+    void init(int iconSize);
+    void uninit();
 
+    IconInfo getIconMasterVol() { return iiMasterSpeaker; }
     IconInfo tryRetrieveIcon(WCHAR* iconPath, PID pid);
 
-    void uninit();
     static IconManager& get()
     {
         static IconManager instance;
@@ -75,10 +77,10 @@ public:
     PID getPID() const { return _pid; }
     float getHeight() const { return float(_rect.bottom - _rect.top); }
     bool intersects(POINT pos) const { return isValidRect(_rect) ? PtInRect(&_rect, pos) : false; }
-    void draw(HDC hdc) const;
+    void draw(HDC hdc, const UIConfig& uic) const;
 
 #if defined(_DEBUG)
-    void debugUpdateIcon();
+    void debugUpdateIcon(int iconSize);
 #endif
 };
 
@@ -91,15 +93,14 @@ class SliderManager {
     std::vector<Slider> _slidersApps;
 
 public:
-    SliderManager();
     void appSliderAdd(PID pid, float vol, bool muted, const IconInfo& iconInfo);
     void appSliderRemove(PID pid);
 
     Slider* getSliderFromSelect(SelectInfo info);
     SelectInfo getSelectAtPosition(POINT mousePos);
 
-    void recalculateSliderRects(const RECT& rect);
-    void drawSliders(HDC hdc);
+    void recalculateSliderRects(const RECT& rect, const UIConfig& uic);
+    void drawSliders(HDC hdc, const UIConfig& uic);
 };
 
 //
