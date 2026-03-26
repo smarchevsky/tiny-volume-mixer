@@ -449,7 +449,7 @@ void Slider::draw(HDC hdc, const UIConfig& uic) const
     if (_iconInfo && _iconInfo->hLarge)
         DrawIconEx(hdc,
             (_rect.left + _rect.right) / 2 - _iconInfo->width / 2,
-            _rect.bottom - 30 - _iconInfo->width / 2,
+            _rect.bottom - _iconInfo->width / 2 - (uic.sliderWidthApp - uic.sliderSpacing) / 2,
             _iconInfo->hLarge, 0, 0, 0, NULL, DI_NORMAL);
 }
 
@@ -550,7 +550,7 @@ void SliderManager::recalculateSliderRects(const RECT& r, const UIConfig& uic)
     _sliderMaster._rect = { offset, top, offset += uic.sliderWidthMaster, bottom };
 
     for (int i = 1; i < _slidersApps.size(); ++i) {
-        if(_slidersApps[i].getPID() == 0) {
+        if (_slidersApps[i].getPID() == 0) {
             std::swap(_slidersApps[i], _slidersApps[0]);
             std::swap(_slidersApps[i]._focused, _slidersApps[0]._focused);
         }
