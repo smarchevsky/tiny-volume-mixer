@@ -18,8 +18,62 @@
 
 namespace fs = std::filesystem;
 constexpr DWORD defaultColor = 0x00AAAAAA;
+#define CLAMP_ICON_SIZE(size) std::clamp(size, 8, 256)
 
 namespace {
+COLORREF getAvgColorARGB(int width, int height, DWORD* pixels)
+{
+    uint64_t totalR = 0, totalG = 0, totalB = 0;
+    int opaquePixels = 0;
+
+    const int pixelCount = width * height;
+    for (int i = 0; i < pixelCount; i++) {
+        BYTE a = (pixels[i] >> 24) & 0xFF, r = (pixels[i] >> 16) & 0xFF, g = (pixels[i] >> 8) & 0xFF, b = pixels[i] & 0xFF;
+        if (a > 127)
+            totalR += r, totalG += g, totalB += b, opaquePixels++;
+    }
+
+    if (opaquePixels > 0)
+        return ARGB(0, BYTE(totalR / opaquePixels), BYTE(totalG / opaquePixels), BYTE(totalB / opaquePixels));
+
+    return defaultColor;
+}
+
+IconInfo createIconInfo(HICON icon, bool calculateIconColor = true)
+{
+    // calc avg color
+    ICONINFO iconInfo;
+    GetIconInfo(icon, &iconInfo);
+
+    BITMAP bmp;
+    GetObject(iconInfo.hbmColor, sizeof(BITMAP), &bmp);
+
+    BITMAPINFOHEADER bi = { 0 };
+    bi.biSize = sizeof(BITMAPINFOHEADER);
+    bi.biWidth = bmp.bmWidth;
+    bi.biHeight = -bmp.bmHeight;
+    bi.biPlanes = 1;
+    bi.biBitCount = 32;
+    bi.biCompression = BI_RGB;
+
+    int pixelCount = bmp.bmWidth * bmp.bmHeight;
+    if (pixelCount > 256 * 256)
+        return {};
+
+    std::vector<DWORD> pixels(pixelCount);
+    HDC hdc = GetDC(NULL);
+    GetDIBits(hdc, iconInfo.hbmColor, 0, bmp.bmHeight, &pixels[0], (BITMAPINFO*)&bi, DIB_RGB_COLORS);
+    ReleaseDC(NULL, hdc);
+
+    // make icon info
+    IconInfo ii {};
+
+    ii.hLarge = icon;
+    ii.width = bmp.bmWidth;
+    ii.ARGB = calculateIconColor ? getAvgColorARGB(bmp.bmWidth, bmp.bmHeight, &pixels[0]) : defaultColor;
+    return ii;
+}
+
 class PNGLoader {
     IWICImagingFactory* pFactory = nullptr;
 
@@ -27,7 +81,7 @@ class PNGLoader {
     ~PNGLoader() { pFactory->Release(); }
 
 public:
-    HBITMAP getBitmapFromPng(const std::wstring& pngPath)
+    HBITMAP getBitmapFromPng(const std::wstring& pngPath, int* customIconSize)
     {
         IWICBitmapDecoder* pDecoder = nullptr;
         pFactory->CreateDecoderFromFilename(pngPath.c_str(), nullptr,
@@ -36,15 +90,20 @@ public:
         IWICBitmapFrameDecode* pFrame = nullptr;
         pDecoder->GetFrame(0, &pFrame);
 
+        IWICBitmapScaler* pScaler = nullptr;
+        if (customIconSize) {
+            pFactory->CreateBitmapScaler(&pScaler);
+            pScaler->Initialize(pFrame, *customIconSize, *customIconSize, WICBitmapInterpolationModeHighQualityCubic);
+        }
+
         IWICFormatConverter* pConverter = nullptr;
         pFactory->CreateFormatConverter(&pConverter);
 
         WICPixelFormatGUID srcFormat;
         pFrame->GetPixelFormat(&srcFormat);
 
-        pConverter->Initialize(pFrame, GUID_WICPixelFormat32bppPBGRA,
-            WICBitmapDitherTypeNone, nullptr, 0.0,
-            WICBitmapPaletteTypeCustom);
+        pConverter->Initialize(pScaler ? pScaler : (IWICBitmapSource*)pFrame, GUID_WICPixelFormat32bppPBGRA,
+            WICBitmapDitherTypeNone, nullptr, 0.0, WICBitmapPaletteTypeCustom);
 
         UINT w = 0, h = 0;
         pConverter->GetSize(&w, &h);
@@ -66,6 +125,8 @@ public:
         pConverter->CopyPixels(nullptr, w * 4, w * h * 4, (BYTE*)pBits);
 
         pConverter->Release();
+        if (pScaler)
+            pScaler->Release();
         pFrame->Release();
         pDecoder->Release();
         return hBmp;
@@ -78,21 +139,9 @@ public:
     }
 };
 
-std::wstring getProcessName(PID pid)
-{
-    if (pid == 0)
-        return L"System Sounds";
-    TCHAR szName[MAX_PATH] = TEXT("<unknown>");
-    HANDLE hProc = OpenProcess(PROCESS_QUERY_INFORMATION | PROCESS_VM_READ, FALSE, pid);
-    if (hProc) {
-        GetModuleBaseName(hProc, NULL, szName, MAX_PATH);
-        CloseHandle(hProc);
-    }
-    return szName;
-};
-
 std::wstring GetPackageInstallPath(DWORD pid)
 {
+    //                            PROCESS_QUERY_INFORMATION | PROCESS_VM_READ
     HANDLE hProcess = OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, FALSE, pid);
     if (!hProcess)
         return {};
@@ -120,20 +169,23 @@ std::wstring GetPackageInstallPath(DWORD pid)
 }
 
 // Find the best scaled asset that actually exists on disk
-std::wstring ResolveBestAsset(const std::wstring& installPath, const std::wstring& rawLogoPath, int iconSize)
+std::wstring ResolveBestAsset(const std::wstring& installPath, const std::wstring& rawLogoPath, int desiredIconSize, int& outFoundSize)
 {
+    outFoundSize = desiredIconSize;
     fs::path base = fs::path(installPath) / rawLogoPath;
     fs::path dir = base.parent_path();
     std::wstring stem = base.stem().wstring(); // "Square44x44Logo"
     std::wstring ext = base.extension().wstring(); // ".png"
 
-    // Preferred scale order (highest quality first)
-
-    std::wstring scaleVariant = L".targetsize-" + std::to_wstring((int)iconSize);
-    fs::path candidate = dir / (stem + scaleVariant + ext);
-
-    if (fs::exists(candidate))
-        return candidate.wstring();
+    fs::path candidate;
+    int sampleSizes[3] { desiredIconSize, desiredIconSize * 2, 256 };
+    for (int i = 0; i < 3; ++i) {
+        candidate = dir / (stem + L".targetsize-" + std::to_wstring(sampleSizes[i]) + ext);
+        if (fs::exists(candidate)) {
+            outFoundSize = sampleSizes[i];
+            return candidate.wstring();
+        }
+    }
 
     if (fs::exists(base))
         return base.wstring();
@@ -142,7 +194,7 @@ std::wstring ResolveBestAsset(const std::wstring& installPath, const std::wstrin
 }
 
 // Parse AppxManifest.xml and return the logo PNG path
-std::wstring GetLogoPathFromManifest(const std::wstring& installPath, int iconSize)
+std::wstring GetLogoPathFromManifest(const std::wstring& installPath)
 {
     std::wstring manifestPath = (fs::path(installPath) / L"AppxManifest.xml").wstring();
 
@@ -199,33 +251,12 @@ std::wstring GetLogoPathFromManifest(const std::wstring& installPath, int iconSi
     pReader->Release();
     pStream->Release();
 
-    if (logoPath.empty())
-        return {};
-
-    return ResolveBestAsset(installPath, logoPath, iconSize);
+    return logoPath;
 }
 
-COLORREF getAvgColorARGB(int width, int height, DWORD* pixels)
+HICON createIconFromPng(const std::wstring& pngPath, int* customIconSize)
 {
-    uint64_t totalR = 0, totalG = 0, totalB = 0;
-    int opaquePixels = 0;
-
-    const int pixelCount = width * height;
-    for (int i = 0; i < pixelCount; i++) {
-        BYTE a = (pixels[i] >> 24) & 0xFF, r = (pixels[i] >> 16) & 0xFF, g = (pixels[i] >> 8) & 0xFF, b = pixels[i] & 0xFF;
-        if (a > 127)
-            totalR += r, totalG += g, totalB += b, opaquePixels++;
-    }
-
-    if (opaquePixels > 0)
-        return ARGB(0, BYTE(totalR / opaquePixels), BYTE(totalG / opaquePixels), BYTE(totalB / opaquePixels));
-
-    return defaultColor;
-}
-
-HICON createIconFromPng(const std::wstring& pngPath)
-{
-    HBITMAP hBmp = PNGLoader::get().getBitmapFromPng(pngPath);
+    HBITMAP hBmp = PNGLoader::get().getBitmapFromPng(pngPath, customIconSize);
     DWORD* pixels;
     int width, height;
     getBitmapData(hBmp, width, height, pixels);
@@ -236,14 +267,21 @@ HICON createIconFromPng(const std::wstring& pngPath)
     return hIcon;
 }
 
-HICON createIconFromPackageInstallPath(PID pid, int iconSize)
+HICON createIconFromPackageInstallPath(PID pid, int desiredIconSize)
 {
-    std::wstring installPath = GetPackageInstallPath(pid); // from earlier
-    std::wstring pngPath = GetLogoPathFromManifest(installPath, iconSize);
+    desiredIconSize = CLAMP_ICON_SIZE(desiredIconSize);
 
-    if (!pngPath.empty())
-        return createIconFromPng(pngPath);
-    return {};
+    std::wstring installPath = GetPackageInstallPath(pid); // from earlier
+    std::wstring logoPath = GetLogoPathFromManifest(installPath);
+    if (logoPath.empty())
+        return {};
+
+    int foundCustomSize;
+    std::wstring pngPath = ResolveBestAsset(installPath, logoPath, desiredIconSize, foundCustomSize);
+    if (pngPath.empty())
+        return {};
+
+    return createIconFromPng(pngPath, (foundCustomSize == desiredIconSize) ? nullptr : &desiredIconSize);
 }
 
 HICON createIconFromPath(std::wstring& path, int iconSize)
@@ -271,46 +309,12 @@ HICON createIconFromPath(std::wstring& path, int iconSize)
     }
 
     HICON icon {};
-    SHDefExtractIconW(fullPath, iconIndex, 0, &icon, NULL, MAKELONG(std::clamp(iconSize, 8, 256), 0));
+    SHDefExtractIconW(fullPath, iconIndex, 0, &icon, NULL, MAKELONG(CLAMP_ICON_SIZE(iconSize), 0));
     return icon;
 
     return {};
 }
 
-IconInfo createIconInfo(HICON icon, bool calculateIconColor = true)
-{
-    // calc avg color
-    ICONINFO iconInfo;
-    GetIconInfo(icon, &iconInfo);
-
-    BITMAP bmp;
-    GetObject(iconInfo.hbmColor, sizeof(BITMAP), &bmp);
-
-    BITMAPINFOHEADER bi = { 0 };
-    bi.biSize = sizeof(BITMAPINFOHEADER);
-    bi.biWidth = bmp.bmWidth;
-    bi.biHeight = -bmp.bmHeight;
-    bi.biPlanes = 1;
-    bi.biBitCount = 32;
-    bi.biCompression = BI_RGB;
-
-    int pixelCount = bmp.bmWidth * bmp.bmHeight;
-    if (pixelCount > 256 * 256)
-        return {};
-
-    std::vector<DWORD> pixels(pixelCount);
-    HDC hdc = GetDC(NULL);
-    GetDIBits(hdc, iconInfo.hbmColor, 0, bmp.bmHeight, &pixels[0], (BITMAPINFO*)&bi, DIB_RGB_COLORS);
-    ReleaseDC(NULL, hdc);
-
-    // make icon info
-    IconInfo ii {};
-
-    ii.hLarge = icon;
-    ii.width = bmp.bmWidth;
-    ii.ARGB = calculateIconColor ? getAvgColorARGB(bmp.bmWidth, bmp.bmHeight, &pixels[0]) : defaultColor;
-    return ii;
-}
 } // namespace
 
 //
@@ -394,7 +398,7 @@ void IconManager::init(int iconSize)
         wcscat_s(dllPath, path);
 
         HICON icon {};
-        SHDefExtractIconW(dllPath, iconIndex, 0, &icon, NULL, MAKELONG(std::clamp(iconSize, 8, 256), 0));
+        SHDefExtractIconW(dllPath, iconIndex, 0, &icon, NULL, MAKELONG(CLAMP_ICON_SIZE(iconSize), 0));
         return createIconInfo(icon, false);
     };
 
