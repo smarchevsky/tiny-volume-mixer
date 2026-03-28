@@ -244,7 +244,7 @@ void drawStencil(HDC hdc, const StencilGrayscale& stencil, POINT pos, DWORD col0
     int h = drawRect.bottom - drawRect.top;
     int w = drawRect.right - drawRect.left;
     for (int y = 0; y < h; y++) {
-        int hdcY = (y + pos.y) * canvasSize.cx;
+        int hdcY = (y + pos.y) * canvasSize.cx + pos.x;
         int stencilY = y * stencilSize.cx;
         for (int x = 0; x < w; x++) {
             BYTE stencilAlpha = stencilData[stencilY + x];
@@ -252,7 +252,7 @@ void drawStencil(HDC hdc, const StencilGrayscale& stencil, POINT pos, DWORD col0
             BYTE r = (ar + (br - ar) * stencilAlpha / 255);
             BYTE g = (ag + (bg - ag) * stencilAlpha / 255);
             BYTE b = (ab + (bb - ab) * stencilAlpha / 255);
-            CompositeAlpha(pixels[hdcY + (horizontalShift + x) % w + pos.x], ARGB(a, r, g, b));
+            CompositeAlpha(pixels[hdcY + (horizontalShift + x) % w], ARGB(a, r, g, b));
         }
     }
 }
