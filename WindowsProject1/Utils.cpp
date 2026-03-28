@@ -1,20 +1,31 @@
 #include "Utils.h"
 
-#include <psapi.h> // GetModuleBaseName
+// #include <psapi.h> // GetModuleBaseName
+
+// SHDefExtractIconW, SHGetKnownFolderPath
 #include <shlobj.h>
 
+// GetPackageFullName, GetPackageFamilyName, GetPackagePathByFullName
 #include <appmodel.h>
-#include <filesystem>
+
+// everything related to PNG loader
+#include <wincodec.h>
+#pragma comment(lib, "windowscodecs.lib")
+
+#include <xmllite.h> // CreateXMLReader
+#pragma comment(lib, "xmllite.lib")
+
+// SHLoadIndirectString, PathFindFileNameW, SHCreateStreamOnFileW, StrStrW
 #include <shlwapi.h>
+#pragma comment(lib, "shlwapi.lib")
+
+// GetFileVersionInfoW, VerQueryValueW
+#include <winver.h>
+#pragma comment(lib, "Version.lib")
+
+#include <filesystem>
 #include <string>
 #include <vector>
-#include <wincodec.h>
-#include <xmllite.h>
-
-#pragma comment(lib, "windowscodecs.lib")
-#pragma comment(lib, "xmllite.lib")
-#pragma comment(lib, "shlwapi.lib")
-#pragma comment(lib, "Version.lib") // GetFileVersionInfoW, VerQueryValueW
 
 namespace fs = std::filesystem;
 constexpr DWORD defaultColor = 0x00AAAAAA;
