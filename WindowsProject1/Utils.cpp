@@ -140,36 +140,30 @@ void TextRenderer::init(int fontSize)
     // BitBlt(hdc, 194, 16, _textSize.cx, _textSize.cy, _fontDC, 0, 0, SRCCOPY);
 }
 
-HBITMAP TextRenderer::renderTextToGrayscaleStencil(const std::wstring& text)
+HBITMAP TextRenderer::renderTextToAlphaBitmap(const std::wstring& text)
 {
     assert(_hFont);
-    HBITMAP fontBufferBitmap {};
     HDC fontBufferDC = CreateCompatibleDC(NULL);
 
     HFONT hOldFont = (HFONT)SelectObject(fontBufferDC, _hFont);
-    HBITMAP oldBMP = (HBITMAP)SelectObject(fontBufferDC, _hFont);
 
     SIZE textSize;
     GetTextExtentPoint32(fontBufferDC, text.c_str(), (int)text.length(), &textSize);
 
     DWORD* pixelsARGB;
     BITMAPINFO bmi = getBMI_ARGB(textSize.cx, textSize.cy);
-    fontBufferBitmap = CreateDIBSection(fontBufferDC, &bmi, DIB_RGB_COLORS, (void**)&pixelsARGB, NULL, 0);
+    HBITMAP fontBufferBitmap = CreateDIBSection(fontBufferDC, &bmi, DIB_RGB_COLORS, (void**)&pixelsARGB, NULL, 0);
 
     if (fontBufferBitmap) {
-        SelectObject(fontBufferDC, fontBufferBitmap);
-
+        HBITMAP hOldBmp = (HBITMAP)SelectObject(fontBufferDC, fontBufferBitmap);
         SetBkMode(fontBufferDC, TRANSPARENT);
-        // SetBkColor(fontBufferDC, RGB(255, 255, 255));
-        SetTextColor(fontBufferDC, RGB(255, 255, 255));
-
-        RECT rect = { 0, 0, textSize.cx, textSize.cy };
+        SetTextColor(fontBufferDC, RGB(255, 255, 255)); // White text
         TextOut(fontBufferDC, 0, 0, text.c_str(), (int)text.length());
         for (int i = 0; i < textSize.cx * textSize.cy; ++i)
             pixelsARGB[i] = (pixelsARGB[i] & 0xFF) << 24;
+        SelectObject(fontBufferDC, hOldBmp);
     }
 
-    SelectObject(fontBufferDC, oldBMP);
     SelectObject(fontBufferDC, hOldFont);
     DeleteDC(fontBufferDC);
 

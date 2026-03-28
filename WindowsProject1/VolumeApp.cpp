@@ -22,7 +22,7 @@ void VolumeApp::construct(HINSTANCE instance, WNDPROC wndProc)
     _audioAppListerner.init(_hWnd);
 
     TextRenderer::get().init();
-    stencil = TextRenderer::get().renderTextToGrayscaleStencil(L"Hello, world!");
+    stencil = TextRenderer::get().renderTextToAlphaBitmap(L"Hello, world!");
     // auto s = stencil.getSize();
     // auto data = stencil.data();
     // printf("stencil size %d %d\n", s.cx, s.cy);

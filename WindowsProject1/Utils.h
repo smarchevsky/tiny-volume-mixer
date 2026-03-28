@@ -59,7 +59,7 @@ class TextRenderer {
     ~TextRenderer();
 
 public:
-    HBITMAP renderTextToGrayscaleStencil(const std::wstring& text);
+    HBITMAP renderTextToAlphaBitmap(const std::wstring& text);
 
     void init(int fontSize = 28);
     static TextRenderer& get()
