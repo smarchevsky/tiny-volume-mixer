@@ -1,5 +1,8 @@
 #include "VolumeApp.h"
 
+#include "IconManager.h"
+#include "Utils.h"
+
 void VolumeApp::construct(HINSTANCE instance, WNDPROC wndProc)
 {
     RECT rc;

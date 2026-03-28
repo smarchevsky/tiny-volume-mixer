@@ -6,6 +6,8 @@
 #include <algorithm>
 #include <math.h>
 
+#define ARGBf(name, dval) float name##a = float((dval >> 24) & 0xFF), name##r = float((dval >> 16) & 0xFF), name##g = float((dval >> 8) & 0xFF), name##b = float((dval) & 0xFF);
+
 namespace {
 inline void CompositeAlpha(DWORD& back, DWORD front)
 {

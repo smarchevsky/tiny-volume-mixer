@@ -4,6 +4,8 @@
 
 #include <stdint.h>
 
+#define ARGB(a, r, g, b) ((DWORD(a) << 24) | (DWORD(r) << 16) | (DWORD(g) << 8) | DWORD(b))
+
 typedef DWORD PID;
 
 enum {

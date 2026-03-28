@@ -130,7 +130,9 @@
     <ClInclude Include="Common.h" />
     <ClInclude Include="Draw.h" />
     <ClInclude Include="framework.h" />
+    <ClInclude Include="IconManager.h" />
     <ClInclude Include="Resource.h" />
+    <ClInclude Include="SliderManager.h" />
     <ClInclude Include="targetver.h" />
     <ClInclude Include="Timer.h" />
     <ClInclude Include="Utils.h" />
@@ -141,6 +143,8 @@
     <ClCompile Include="App.cpp" />
     <ClCompile Include="AudioUtils.cpp" />
     <ClCompile Include="Draw.cpp" />
+    <ClCompile Include="IconManager.cpp" />
+    <ClCompile Include="SliderManager.cpp" />
     <ClCompile Include="Utils.cpp" />
     <ClCompile Include="VolumeApp.cpp" />
     <ClCompile Include="WindowsProject1.cpp" />

@@ -3,7 +3,8 @@
 #include "App.h"
 
 #include "AudioUtils.h"
-#include "Utils.h"
+#include "SliderManager.h"
+//#include "Utils.h"
 
 class VolumeApp : public App {
     AudioUpdateListener _audioAppListerner;
