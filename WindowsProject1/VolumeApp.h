@@ -4,17 +4,12 @@
 
 #include "AudioUtils.h"
 #include "SliderManager.h"
-//#include "Utils.h"
 
 class VolumeApp : public App {
     AudioUpdateListener _audioAppListerner;
     UIConfig _uiConfig;
     SliderManager sliderManager;
     SelectInfo sliderInfoHovered;
-
-    HFONT _hFont;
-    HDC _fontDC;
-    SIZE _textSize;
 
     virtual void onPaint(HDC hdc) override;
     virtual void onResize(RECT newRect) override;
