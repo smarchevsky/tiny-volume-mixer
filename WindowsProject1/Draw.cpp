@@ -223,13 +223,11 @@ void drawBorderedRect(HDC hdc, const RECT rc, int radius, int bw, DWORD bg_col, 
     }
 }
 
-void drawStencil(HDC hdc, const PixelBuffer_RG& stencil, POINT pos, DWORD col0, DWORD col1, int horizontalShift)
+void drawStencil(HDC hdc, BYTE* data, const SIZE stencilSize, const POINT pos, DWORD col0, DWORD col1, int horizontalShift)
 {
-    const BYTE* stencilData = stencil.data<0>();
-    if (!stencilData)
+    if (!data)
         return;
 
-    SIZE stencilSize = stencil.getSize();
     RECT rc = { pos.x, pos.y, pos.x + stencilSize.cx, pos.y + stencilSize.cy };
 
     DWORD* pixels {};
@@ -247,7 +245,7 @@ void drawStencil(HDC hdc, const PixelBuffer_RG& stencil, POINT pos, DWORD col0, 
         int hdcY = (y + pos.y) * canvasSize.cx + pos.x;
         int stencilY = y * stencilSize.cx;
         for (int x = 0; x < w; x++) {
-            BYTE stencilAlpha = stencilData[stencilY + x];
+            BYTE stencilAlpha = data[stencilY + x];
             BYTE a = (aa + (ba - aa) * stencilAlpha / 255);
             BYTE r = (ar + (br - ar) * stencilAlpha / 255);
             BYTE g = (ag + (bg - ag) * stencilAlpha / 255);
