@@ -48,7 +48,12 @@ public:
         return buf + sizeSize;
     }
 
-    void free() { delete buf; }
+    void free()
+    {
+        if (buf)
+            delete buf;
+        buf = nullptr;
+    }
 };
 
 struct UIConfig {
