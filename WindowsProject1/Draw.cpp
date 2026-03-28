@@ -39,6 +39,11 @@ inline void CompositeAlpha(DWORD& back, DWORD front)
         (fb * fa + bb * inv_a) / 255);
 }
 
+inline void ReplaceRGB(DWORD& back, DWORD front)
+{
+    back = (back & 0xFF000000) | (front & 0x00FFFFFF);
+}
+
 bool validateCommon(HDC hdc, RECT rc, DWORD*& pixels, SIZE& canvasSize, RECT& drawRect)
 {
     int canvasWidth, canvasHeight;
@@ -65,16 +70,10 @@ bool validateCommon(HDC hdc, RECT rc, DWORD*& pixels, SIZE& canvasSize, RECT& dr
     return true;
 }
 
-}
-
-void drawBorderedRect(HDC hdc, const RECT rc, int radius, int bw, DWORD bg_col, DWORD bo_col)
+template <void (*Op)(DWORD&, DWORD)>
+void drawBorderedRectInternal(const SIZE canvasSize, const RECT& drawRect,
+    DWORD* pixels, const RECT rc, int radius, int bw, DWORD bg_col, DWORD bo_col)
 {
-    DWORD* pixels {};
-    SIZE canvasSize;
-    RECT drawRect;
-    if (!validateCommon(hdc, rc, pixels, canvasSize, drawRect))
-        return;
-
     int cl = (int)drawRect.left, ct = (int)drawRect.top, cr = (int)drawRect.right, cb = (int)drawRect.bottom;
 
     const int rcl = rc.left;
@@ -134,21 +133,21 @@ void drawBorderedRect(HDC hdc, const RECT rc, int radius, int bw, DWORD bg_col, 
         if (bg_col & 0xFF000000) {
             for (int y = rct_bwy_start; y < rct_minry_end; y++) // top section
                 for (int x = rcl_minrx_start; x < rcr_minrx_end; x++)
-                    CompositeAlpha(pixels[y * canvasSize.cx + x], bg_col);
+                    Op(pixels[y * canvasSize.cx + x], bg_col);
 
             for (int y = rcb_minry_start; y < rcb_bw_end; y++) // bottom section
                 for (int x = rcl_minrx_start; x < rcr_minrx_end; x++)
-                    CompositeAlpha(pixels[y * canvasSize.cx + x], bg_col);
+                    Op(pixels[y * canvasSize.cx + x], bg_col);
         }
 
         if (bo_col & 0xFF000000) {
             for (int y = rct_start; y < rct_bwy_end; y++) // top border
                 for (int x = rcl_minrx_start; x < rcr_minrx_end; x++)
-                    CompositeAlpha(pixels[y * canvasSize.cx + x], bo_col);
+                    Op(pixels[y * canvasSize.cx + x], bo_col);
 
             for (int y = rcb_bw_start; y < rcb_end; y++) // bottom border
                 for (int x = rcl_minrx_start; x < rcr_minrx_end; x++)
-                    CompositeAlpha(pixels[y * canvasSize.cx + x], bo_col);
+                    Op(pixels[y * canvasSize.cx + x], bo_col);
         }
     }
 
@@ -156,7 +155,7 @@ void drawBorderedRect(HDC hdc, const RECT rc, int radius, int bw, DWORD bg_col, 
         if (rcl_bwx_start < rcr_bw_end) {
             for (int y = rct_minry_start; y < rcb_minry_end; y++) // mid section
                 for (int x = rcl_bwx_start; x < rcr_bw_end; x++)
-                    CompositeAlpha(pixels[y * canvasSize.cx + x], bg_col);
+                    Op(pixels[y * canvasSize.cx + x], bg_col);
         }
     }
 
@@ -164,13 +163,13 @@ void drawBorderedRect(HDC hdc, const RECT rc, int radius, int bw, DWORD bg_col, 
         if (rcl_start < rcl_bwx_end) {
             for (int y = rct_minry_start; y < rcb_minry_end; y++) // left border
                 for (int x = rcl_start; x < rcl_bwx_end; x++)
-                    CompositeAlpha(pixels[y * canvasSize.cx + x], bo_col);
+                    Op(pixels[y * canvasSize.cx + x], bo_col);
         }
 
         if (rcr_bw_start < rcr_end) {
             for (int y = rct_minry_start; y < rcb_minry_end; y++) // right border
                 for (int x = rcr_bw_start; x < rcr_end; x++)
-                    CompositeAlpha(pixels[y * canvasSize.cx + x], bo_col);
+                    Op(pixels[y * canvasSize.cx + x], bo_col);
         }
     }
 
@@ -191,7 +190,7 @@ void drawBorderedRect(HDC hdc, const RECT rc, int radius, int bw, DWORD bg_col, 
         float g = (ag + t * (bg - ag));
         float b = (ab + t * (bb - ab));
 
-        CompositeAlpha(bkg, ARGB(a, r, g, b));
+        Op(bkg, ARGB(a, r, g, b));
     };
 
     if (rcl_start < rcl_minrx_end) {
@@ -222,6 +221,18 @@ void drawBorderedRect(HDC hdc, const RECT rc, int radius, int bw, DWORD bg_col, 
             }
     }
 }
+}
+
+void drawBorderedRect(HDC hdc, const RECT rc, int radius, int bw, DWORD bg_col, DWORD bo_col)
+{
+    DWORD* pixels {};
+    SIZE canvasSize;
+    RECT drawRect;
+    if (!validateCommon(hdc, rc, pixels, canvasSize, drawRect))
+        return;
+
+    drawBorderedRectInternal<CompositeAlpha>(canvasSize, drawRect, pixels, rc, radius, bw, bg_col, bo_col);
+}
 
 #define LERP_BYTE(result, a, b)                             \
     BYTE result##a = (aa + (ba - aa) * stencilAlpha / 255); \
@@ -229,7 +240,7 @@ void drawBorderedRect(HDC hdc, const RECT rc, int radius, int bw, DWORD bg_col, 
     BYTE result##g = (ag + (bg - ag) * stencilAlpha / 255); \
     BYTE result##b = (ab + (bb - ab) * stencilAlpha / 255);
 
-void drawStencil(HDC hdc, HBITMAP bmp, const POINT pos, int horizontalShift)
+void drawStencil(HDC hdc, HBITMAP bmp, const POINT pos, const RECT& roundRect, int radius, DWORD b, DWORD f, int horizontalShift)
 {
     if (!bmp)
         return;
@@ -238,27 +249,31 @@ void drawStencil(HDC hdc, HBITMAP bmp, const POINT pos, int horizontalShift)
     DWORD* bitmapPixels;
     getBitmapData(bmp, bmpW, bmpH, bitmapPixels);
 
-    RECT rc = { pos.x, pos.y, pos.x + bmpW, pos.y + bmpH };
+    RECT bitmapRect = { pos.x, pos.y, pos.x + bmpW, pos.y + bmpH };
 
     SIZE canvasSize;
     RECT drawRect;
     DWORD* canvasPixels;
-    if (!validateCommon(hdc, rc, canvasPixels, canvasSize, drawRect))
+    if (!validateCommon(hdc, bitmapRect, canvasPixels, canvasSize, drawRect))
         return;
 
     int h = drawRect.bottom - drawRect.top;
     int w = drawRect.right - drawRect.left;
+
+    for (int y = 0; y < h; y++) {
+        int stencilY = y * bmpW;
+        for (int x = 0; x < w; x++) {
+            DWORD& pixel = bitmapPixels[stencilY + x];
+            ReplaceRGB(pixel, b);
+        }
+    }
+
     for (int y = 0; y < h; y++) {
         int hdcY = (y + pos.y) * canvasSize.cx + pos.x;
         int stencilY = y * bmpW;
         for (int x = 0; x < w; x++) {
             DWORD pixelColor = bitmapPixels[stencilY + x];
-            ARGBsplit(DWORD, v, pixelColor);
-
-            // canvasPixels[hdcY + (horizontalShift + x) % w] = pixelColor;
-
-            CompositeAlpha(canvasPixels[hdcY + (horizontalShift + x) % w],
-                ARGB(va, 255, 255, 255));
+            CompositeAlpha(canvasPixels[hdcY + (horizontalShift + x) % w], pixelColor);
         }
     }
 }

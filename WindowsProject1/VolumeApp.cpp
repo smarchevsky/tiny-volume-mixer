@@ -92,7 +92,8 @@ void VolumeApp::onPaint(HDC hdc)
     drawBorderedRect(hdc, windowRect, _uiConfig.frameCornerRadius, _uiConfig.frameBorderWidth, 0x88333333, 0x88AAAAAA);
     sliderManager.drawSliders(hdc, _uiConfig);
 
-    drawStencil(hdc, stencil, { 400, 200 });
+    RECT rc {};
+    drawStencil(hdc, stencil, { 400, 200 }, rc, 16, 0x00FF00, 0xFFFFFF);
 }
 
 void VolumeApp::onResize(RECT rc)
