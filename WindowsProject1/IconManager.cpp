@@ -48,21 +48,15 @@ IconInfo createIconInfo(HICON icon, bool calculateIconColor = true)
     BITMAP bmp;
     GetObject(iconInfo.hbmColor, sizeof(BITMAP), &bmp);
 
-    BITMAPINFOHEADER bi = { 0 };
-    bi.biSize = sizeof(BITMAPINFOHEADER);
-    bi.biWidth = bmp.bmWidth;
-    bi.biHeight = -bmp.bmHeight;
-    bi.biPlanes = 1;
-    bi.biBitCount = 32;
-    bi.biCompression = BI_RGB;
-
     int pixelCount = bmp.bmWidth * bmp.bmHeight;
     if (pixelCount > 256 * 256)
         return {};
 
     std::vector<DWORD> pixels(pixelCount);
+
     HDC hdc = GetDC(NULL);
-    GetDIBits(hdc, iconInfo.hbmColor, 0, bmp.bmHeight, &pixels[0], (BITMAPINFO*)&bi, DIB_RGB_COLORS);
+    BITMAPINFO bmi = getBMI_ARGB(bmp.bmWidth, bmp.bmHeight);
+    GetDIBits(hdc, iconInfo.hbmColor, 0, bmp.bmHeight, &pixels[0], (BITMAPINFO*)&bmi, DIB_RGB_COLORS);
     ReleaseDC(NULL, hdc);
 
     // make icon info

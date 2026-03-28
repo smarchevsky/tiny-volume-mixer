@@ -56,11 +56,10 @@ bool validateCommon(HDC hdc, RECT rc, DWORD*& pixels, SIZE& canvasSize, RECT& dr
         drawRect.top = std::max(drawRect.top, rcClip.top);
         drawRect.right = std::min(drawRect.right, rcClip.right);
         drawRect.bottom = std::max(drawRect.bottom, rcClip.bottom);
-        printf("rcClip %d, %d, %d, %d\n", rcClip.left, rcClip.top, rcClip.right, rcClip.bottom);
+        // printf("rcClip %d, %d, %d, %d\n", rcClip.left, rcClip.top, rcClip.right, rcClip.bottom);
     }
 
-    RECT dest;
-    if (!IntersectRect(&dest, &drawRect, &rc))
+    if (!IntersectRect(&drawRect, &drawRect, &rc))
         return false;
 
     return true;
@@ -221,5 +220,32 @@ void drawBorderedRect(HDC hdc, const RECT rc, int radius, int bw, DWORD bg_col, 
                 float dist = makeDist(rcw - x - 1 + rcl, rch - y - 1 + rct, radius);
                 CompositeRadius(pixels[y * canvasSize.cx + x], dist);
             }
+    }
+}
+
+void drawStencil(HDC hdc, const StencilGrayscale& stencil, POINT pos, DWORD col)
+{
+    const BYTE* stencilData = stencil.data();
+    if (!stencilData)
+        return;
+
+    SIZE stencilSize = stencil.getSize();
+    RECT rc = { pos.x, pos.y, pos.x + stencilSize.cx, pos.y + stencilSize.cy };
+
+    DWORD* pixels {};
+    SIZE canvasSize;
+    RECT drawRect;
+    if (!validateCommon(hdc, rc, pixels, canvasSize, drawRect))
+        return;
+
+    BYTE a = (col >> 24) & 0xFF;
+    DWORD colRGB = 0x00FFFFFF & col;
+
+    for (int y = 0; y < drawRect.bottom - drawRect.top; y++) {
+        int hdcY = (y + pos.y) * canvasSize.cx + pos.x, stencilY = y * stencilSize.cx;
+        for (int x = 0; x < drawRect.right - drawRect.left; x++) {
+            BYTE stencilAlpha = stencilData[stencilY + x];
+            CompositeAlpha(pixels[hdcY + x], stencilAlpha << 24 | colRGB);
+        }
     }
 }

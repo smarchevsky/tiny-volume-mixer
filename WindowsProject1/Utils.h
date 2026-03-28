@@ -5,8 +5,6 @@
 #include "Draw.h"
 
 #include <string>
-#include <unordered_map>
-#include <vector>
 
 inline HBITMAP getBitmapFromHDC(HDC hdc) { return (HBITMAP)GetCurrentObject(hdc, OBJ_BITMAP); }
 inline void getBitmapData(HBITMAP hBmp, int& width, int& height, DWORD*& bits)
@@ -21,11 +19,23 @@ inline void getBitmapData(HBITMAP hBmp, int& width, int& height, DWORD*& bits)
     }
 }
 
+inline BITMAPINFO getBMI_ARGB(int w, int h)
+{
+    BITMAPINFO bmi = { 0 };
+    bmi.bmiHeader.biSize = sizeof(BITMAPINFOHEADER);
+    bmi.bmiHeader.biWidth = w;
+    bmi.bmiHeader.biHeight = -h;
+    bmi.bmiHeader.biPlanes = 1;
+    bmi.bmiHeader.biBitCount = 32;
+    bmi.bmiHeader.biCompression = BI_RGB;
+    return bmi;
+}
+
 //
 // PNG LOADER
 //
 
-class IWICImagingFactory;
+struct IWICImagingFactory;
 class PNGLoader {
     IWICImagingFactory* pFactory = nullptr;
 
@@ -38,6 +48,23 @@ public:
     static PNGLoader& get()
     {
         static PNGLoader instance;
+        return instance;
+    }
+};
+
+class TextRenderer {
+    HFONT _hFont {};
+
+    TextRenderer() = default;
+    ~TextRenderer();
+
+public:
+    StencilGrayscale renderTextToGrayscaleStencil(const std::wstring& text);
+
+    void init(int fontSize = 28);
+    static TextRenderer& get()
+    {
+        static TextRenderer instance;
         return instance;
     }
 };

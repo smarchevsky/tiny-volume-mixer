@@ -3,6 +3,8 @@
 #include "IconManager.h"
 #include "Utils.h"
 
+static StencilGrayscale stencil;
+
 void VolumeApp::construct(HINSTANCE instance, WNDPROC wndProc)
 {
     RECT rc;
@@ -18,6 +20,15 @@ void VolumeApp::construct(HINSTANCE instance, WNDPROC wndProc)
         = IconManager::get().getIconMasterVol();
 
     _audioAppListerner.init(_hWnd);
+
+    TextRenderer::get().init();
+    stencil = TextRenderer::get().renderTextToGrayscaleStencil(L"Hello, world!");
+    // auto s = stencil.getSize();
+    // auto data = stencil.data();
+    // printf("stencil size %d %d\n", s.cx, s.cy);
+    // for (int i = 0; i < s.cx * s.cy; ++i) {
+    //     printf("%d ", data[i]);
+    // }
 }
 
 void VolumeApp::destroyWindow(HWND hWnd)
@@ -80,6 +91,8 @@ void VolumeApp::onPaint(HDC hdc)
     GetClientRect(_hWnd, &windowRect);
     drawBorderedRect(hdc, windowRect, _uiConfig.frameCornerRadius, _uiConfig.frameBorderWidth, 0x88333333, 0x88AAAAAA);
     sliderManager.drawSliders(hdc, _uiConfig);
+
+    drawStencil(hdc, stencil, { 400, 200 }, 0xFFFF0055);
 }
 
 void VolumeApp::onResize(RECT rc)

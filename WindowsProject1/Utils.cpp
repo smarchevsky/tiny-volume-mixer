@@ -19,7 +19,9 @@
 #include <shlobj.h>
 
 #include <string>
-#include <vector>
+// #include <vector>
+#include <algorithm>
+#include <cassert>
 
 //
 // PNG LOADER
@@ -54,17 +56,10 @@ HBITMAP PNGLoader::getBitmapFromPng(const std::wstring& pngPath, int* customIcon
     UINT w = 0, h = 0;
     pConverter->GetSize(&w, &h);
 
-    // Create DIB section
-    BITMAPINFO bmi = {};
-    bmi.bmiHeader.biSize = sizeof(BITMAPINFOHEADER);
-    bmi.bmiHeader.biWidth = (LONG)w;
-    bmi.bmiHeader.biHeight = -(LONG)h; // top-down
-    bmi.bmiHeader.biPlanes = 1;
-    bmi.bmiHeader.biBitCount = 32;
-    bmi.bmiHeader.biCompression = BI_RGB;
-
     void* pBits = nullptr;
+
     HDC hdc = GetDC(nullptr);
+    BITMAPINFO bmi = getBMI_ARGB(w, h);
     HBITMAP hBmp = CreateDIBSection(hdc, &bmi, DIB_RGB_COLORS, &pBits, nullptr, 0);
     ReleaseDC(nullptr, hdc);
 
@@ -106,6 +101,88 @@ void printFileName(const WCHAR* path)
             wprintf(L"FILE NAME: %s\n", fileName);
         }
     }
+}
+
+//
+// FONT
+//
+
+TextRenderer::~TextRenderer()
+{
+    if (_hFont)
+        DeleteObject(_hFont);
+}
+
+void TextRenderer::init(int fontSize)
+{
+    fontSize = std::clamp(fontSize, 8, 255);
+
+    if (_hFont)
+        DeleteObject(_hFont);
+
+    _hFont = CreateFont(
+        fontSize, // Height (arbitrary size)
+        0, // Width (0 let's Windows choose best match)
+        0, // Escapement
+        0, // Orientation
+        FW_BOLD, // Weight (e.g., FW_NORMAL, FW_BOLD)
+        FALSE, // Italic
+        FALSE, // Underline
+        FALSE, // Strikeout
+        ANSI_CHARSET, // Charset
+        OUT_DEFAULT_PRECIS, // Out Precision
+        CLIP_DEFAULT_PRECIS, // Clip Precision
+        DEFAULT_QUALITY, // Quality
+        DEFAULT_PITCH | FF_SWISS, // Pitch and Family
+        L"Segoe UI" // Typeface name
+    );
+
+    // BitBlt(hdc, 194, 16, _textSize.cx, _textSize.cy, _fontDC, 0, 0, SRCCOPY);
+}
+
+StencilGrayscale TextRenderer::renderTextToGrayscaleStencil(const std::wstring& text)
+{
+    assert(_hFont);
+
+    StencilGrayscale stencil;
+    HDC fontBufferDC = CreateCompatibleDC(NULL);
+    HFONT hOldFont = (HFONT)SelectObject(fontBufferDC, _hFont);
+
+    SelectObject(fontBufferDC, _hFont);
+
+    SIZE textSize;
+    GetTextExtentPoint32(fontBufferDC, text.c_str(), (int)text.length(), &textSize);
+
+    DWORD* pixelsARGB;
+    BITMAPINFO bmi = getBMI_ARGB(textSize.cx, textSize.cy);
+    HBITMAP fontBufferBitmap = CreateDIBSection(fontBufferDC, &bmi, DIB_RGB_COLORS, (void**)&pixelsARGB, NULL, 0);
+
+    if (fontBufferBitmap) {
+        SelectObject(fontBufferDC, fontBufferBitmap);
+
+        // SetBkMode(fontBufferDC, TRANSPARENT);
+        SetBkColor(fontBufferDC, RGB(0, 0, 0));
+        SetTextColor(fontBufferDC, RGB(255, 255, 255));
+        RECT rect = { 0, 0, textSize.cx, textSize.cy };
+        TextOut(fontBufferDC, 0, 0, text.c_str(), (int)text.length());
+
+        assert(textSize.cx >= 0);
+        assert(textSize.cy >= 0);
+        if (BYTE* buf = stencil.allocateSize(textSize.cx, textSize.cy)) {
+            for (int y = 0; y < textSize.cy; ++y) {
+                for (int x = 0; x < textSize.cx; ++x) {
+                    int index = y * textSize.cx + x;
+                    buf[index] = pixelsARGB[index] & 0xFF;
+                }
+            }
+        }
+
+        DeleteObject(fontBufferBitmap);
+    }
+
+    SelectObject(fontBufferDC, hOldFont);
+    DeleteDC(fontBufferDC); 
+    return stencil;
 }
 
 //
