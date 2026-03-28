@@ -229,31 +229,36 @@ void drawBorderedRect(HDC hdc, const RECT rc, int radius, int bw, DWORD bg_col, 
     BYTE result##g = (ag + (bg - ag) * stencilAlpha / 255); \
     BYTE result##b = (ab + (bb - ab) * stencilAlpha / 255);
 
-void drawStencil(HDC hdc, BYTE* data, const SIZE stencilSize, const POINT pos, DWORD col0, DWORD col1, int horizontalShift)
+void drawStencil(HDC hdc, HBITMAP bmp, const POINT pos, int horizontalShift)
 {
-    if (!data)
+    if (!bmp)
         return;
 
-    RECT rc = { pos.x, pos.y, pos.x + stencilSize.cx, pos.y + stencilSize.cy };
+    int bmpW, bmpH;
+    DWORD* bitmapPixels;
+    getBitmapData(bmp, bmpW, bmpH, bitmapPixels);
 
-    DWORD* pixels {};
+    RECT rc = { pos.x, pos.y, pos.x + bmpW, pos.y + bmpH };
+
     SIZE canvasSize;
     RECT drawRect;
-    if (!validateCommon(hdc, rc, pixels, canvasSize, drawRect))
+    DWORD* canvasPixels;
+    if (!validateCommon(hdc, rc, canvasPixels, canvasSize, drawRect))
         return;
-
-    ARGBsplit(BYTE, a, col0);
-    ARGBsplit(BYTE, b, col1);
 
     int h = drawRect.bottom - drawRect.top;
     int w = drawRect.right - drawRect.left;
     for (int y = 0; y < h; y++) {
         int hdcY = (y + pos.y) * canvasSize.cx + pos.x;
-        int stencilY = y * stencilSize.cx;
+        int stencilY = y * bmpW;
         for (int x = 0; x < w; x++) {
-            BYTE stencilAlpha = data[stencilY + x];
-            LERP_BYTE(r, a, b);
-            CompositeAlpha(pixels[hdcY + (horizontalShift + x) % w], ARGB(ra, rr, rg, rb));
+            DWORD pixelColor = bitmapPixels[stencilY + x];
+            ARGBsplit(DWORD, v, pixelColor);
+
+            // canvasPixels[hdcY + (horizontalShift + x) % w] = pixelColor;
+
+            CompositeAlpha(canvasPixels[hdcY + (horizontalShift + x) % w],
+                ARGB(va, 255, 255, 255));
         }
     }
 }

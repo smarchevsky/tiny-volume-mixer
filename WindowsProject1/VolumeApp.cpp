@@ -3,7 +3,7 @@
 #include "IconManager.h"
 #include "Utils.h"
 
-static PixelBuffer_RG stencil;
+static HBITMAP stencil;
 
 void VolumeApp::construct(HINSTANCE instance, WNDPROC wndProc)
 {
@@ -92,7 +92,7 @@ void VolumeApp::onPaint(HDC hdc)
     drawBorderedRect(hdc, windowRect, _uiConfig.frameCornerRadius, _uiConfig.frameBorderWidth, 0x88333333, 0x88AAAAAA);
     sliderManager.drawSliders(hdc, _uiConfig);
 
-    drawStencil(hdc, stencil.data<0>(), stencil.size(), { 400, 200 }, 0x0000FF00, 0xFF00FF00);
+    drawStencil(hdc, stencil, { 400, 200 });
 }
 
 void VolumeApp::onResize(RECT rc)
