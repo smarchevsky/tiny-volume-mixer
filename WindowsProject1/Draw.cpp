@@ -8,7 +8,7 @@
 #include <algorithm>
 #include <math.h>
 
-#define ARGBf(name, dval) float name##a = float((dval >> 24) & 0xFF), name##r = float((dval >> 16) & 0xFF), name##g = float((dval >> 8) & 0xFF), name##b = float((dval) & 0xFF);
+#define ARGBsplit(T, name, dval) T name##a = T((dval >> 24) & 0xFF), name##r = T((dval >> 16) & 0xFF), name##g = T((dval >> 8) & 0xFF), name##b = T((dval) & 0xFF);
 
 namespace {
 inline void CompositeAlpha(DWORD& back, DWORD front)
@@ -184,8 +184,8 @@ void drawBorderedRect(HDC hdc, const RECT rc, int radius, int bw, DWORD bg_col, 
         dist += 1;
         float t = std::clamp(dist - bw, 0.f, 1.f);
 
-        ARGBf(a, bo_col);
-        ARGBf(b, bg_col);
+        ARGBsplit(float, a, bo_col);
+        ARGBsplit(float, b, bg_col);
         float a = (aa + t * (ba - aa)) * std::clamp(dist, 0.f, 1.f);
         float r = (ar + t * (br - ar));
         float g = (ag + t * (bg - ag));
@@ -223,7 +223,7 @@ void drawBorderedRect(HDC hdc, const RECT rc, int radius, int bw, DWORD bg_col, 
     }
 }
 
-void drawStencil(HDC hdc, const StencilGrayscale& stencil, POINT pos, DWORD col)
+void drawStencil(HDC hdc, const StencilGrayscale& stencil, POINT pos, DWORD col0, DWORD col1)
 {
     const BYTE* stencilData = stencil.data();
     if (!stencilData)
@@ -238,14 +238,18 @@ void drawStencil(HDC hdc, const StencilGrayscale& stencil, POINT pos, DWORD col)
     if (!validateCommon(hdc, rc, pixels, canvasSize, drawRect))
         return;
 
-    BYTE a = (col >> 24) & 0xFF;
-    DWORD colRGB = 0x00FFFFFF & col;
+    ARGBsplit(BYTE, a, col0);
+    ARGBsplit(BYTE, b, col1);
 
     for (int y = 0; y < drawRect.bottom - drawRect.top; y++) {
         int hdcY = (y + pos.y) * canvasSize.cx + pos.x, stencilY = y * stencilSize.cx;
         for (int x = 0; x < drawRect.right - drawRect.left; x++) {
             BYTE stencilAlpha = stencilData[stencilY + x];
-            CompositeAlpha(pixels[hdcY + x], stencilAlpha << 24 | colRGB);
+            BYTE a = (aa + (ba - aa) * stencilAlpha / 255);
+            BYTE r = (ar + (br - ar) * stencilAlpha / 255);
+            BYTE g = (ag + (bg - ag) * stencilAlpha / 255);
+            BYTE b = (ab + (bb - ab) * stencilAlpha / 255);
+            CompositeAlpha(pixels[hdcY + x], ARGB(a, r, g, b));
         }
     }
 }
