@@ -31,27 +31,44 @@ struct SelectInfo {
     VolumeType _type;
 };
 
-class StencilGrayscale {
-    BYTE* buf {}; // w, h, data
-    static constexpr int sizeSize = sizeof(LONG) * 2;
+class PixelBuffer_RG {
+    BYTE* buf {}; // w, h, offset1, data0, data1
+    static constexpr int sizeSize = sizeof(LONG) * 3;
     inline LONG getIntData(int index) const { return *((LONG*)buf + index); }
     inline LONG& getIntData(int index) { return *((LONG*)buf + index); }
 
 public:
     SIZE getSize() const { return { getIntData(0), getIntData(1) }; }
-    const BYTE* data() const { return buf ? (buf + sizeSize) : nullptr; }
-
-    BYTE* allocateSize(int w, int h)
+    template <int ChannelIndex>
+    const BYTE* data() const
     {
-        buf = new BYTE[sizeSize + w * h];
-        getIntData(0) = w, getIntData(1) = h;
-        return buf + sizeSize;
+        static_assert(ChannelIndex == 0 || ChannelIndex == 1);
+        if (!buf)
+            return nullptr;
+        if constexpr (ChannelIndex == 0)
+            return buf + sizeSize;
+        else
+            return buf + getIntData(2);
     }
 
-    void free()
+    template <int ChannelIndex>
+    BYTE* data()    
+    {
+        return const_cast<BYTE*>(const_cast<const PixelBuffer_RG*>(this)->data<ChannelIndex>());
+    }
+
+    void allocateSize(int w, int h)
+    {
+        int singleChannelSize = w * h;
+        buf = (BYTE*)malloc(sizeSize + singleChannelSize * 2);
+        getIntData(0) = w, getIntData(1) = h;
+        getIntData(2) = sizeSize + singleChannelSize;
+    }
+
+    void cleanup()
     {
         if (buf)
-            delete buf;
+            free(buf);
         buf = nullptr;
     }
 };

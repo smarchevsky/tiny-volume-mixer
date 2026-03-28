@@ -59,7 +59,7 @@ class TextRenderer {
     ~TextRenderer();
 
 public:
-    StencilGrayscale renderTextToGrayscaleStencil(const std::wstring& text);
+    PixelBuffer_RG renderTextToGrayscaleStencil(const std::wstring& text);
 
     void init(int fontSize = 28);
     static TextRenderer& get()

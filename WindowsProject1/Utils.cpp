@@ -140,11 +140,11 @@ void TextRenderer::init(int fontSize)
     // BitBlt(hdc, 194, 16, _textSize.cx, _textSize.cy, _fontDC, 0, 0, SRCCOPY);
 }
 
-StencilGrayscale TextRenderer::renderTextToGrayscaleStencil(const std::wstring& text)
+PixelBuffer_RG TextRenderer::renderTextToGrayscaleStencil(const std::wstring& text)
 {
     assert(_hFont);
 
-    StencilGrayscale stencil;
+    PixelBuffer_RG stencil;
     HDC fontBufferDC = CreateCompatibleDC(NULL);
     HFONT hOldFont = (HFONT)SelectObject(fontBufferDC, _hFont);
 
@@ -160,15 +160,16 @@ StencilGrayscale TextRenderer::renderTextToGrayscaleStencil(const std::wstring& 
     if (fontBufferBitmap) {
         SelectObject(fontBufferDC, fontBufferBitmap);
 
-        // SetBkMode(fontBufferDC, TRANSPARENT);
         SetBkColor(fontBufferDC, RGB(0, 0, 0));
         SetTextColor(fontBufferDC, RGB(255, 255, 255));
+
         RECT rect = { 0, 0, textSize.cx, textSize.cy };
         TextOut(fontBufferDC, 0, 0, text.c_str(), (int)text.length());
 
         assert(textSize.cx >= 0);
         assert(textSize.cy >= 0);
-        if (BYTE* buf = stencil.allocateSize(textSize.cx, textSize.cy)) {
+        stencil.allocateSize(textSize.cx, textSize.cy);
+        if (BYTE* buf = stencil.data<0>()) {
             for (int y = 0; y < textSize.cy; ++y) {
                 for (int x = 0; x < textSize.cx; ++x) {
                     int index = y * textSize.cx + x;
@@ -181,7 +182,7 @@ StencilGrayscale TextRenderer::renderTextToGrayscaleStencil(const std::wstring& 
     }
 
     SelectObject(fontBufferDC, hOldFont);
-    DeleteDC(fontBufferDC); 
+    DeleteDC(fontBufferDC);
     return stencil;
 }
 

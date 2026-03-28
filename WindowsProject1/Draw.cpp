@@ -223,9 +223,9 @@ void drawBorderedRect(HDC hdc, const RECT rc, int radius, int bw, DWORD bg_col, 
     }
 }
 
-void drawStencil(HDC hdc, const StencilGrayscale& stencil, POINT pos, DWORD col0, DWORD col1, int horizontalShift)
+void drawStencil(HDC hdc, const PixelBuffer_RG& stencil, POINT pos, DWORD col0, DWORD col1, int horizontalShift)
 {
-    const BYTE* stencilData = stencil.data();
+    const BYTE* stencilData = stencil.data<0>();
     if (!stencilData)
         return;
 

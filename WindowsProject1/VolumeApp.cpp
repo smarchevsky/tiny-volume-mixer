@@ -3,7 +3,7 @@
 #include "IconManager.h"
 #include "Utils.h"
 
-static StencilGrayscale stencil;
+static PixelBuffer_RG stencil;
 
 void VolumeApp::construct(HINSTANCE instance, WNDPROC wndProc)
 {
