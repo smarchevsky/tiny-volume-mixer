@@ -223,6 +223,12 @@ void drawBorderedRect(HDC hdc, const RECT rc, int radius, int bw, DWORD bg_col, 
     }
 }
 
+#define LERP_BYTE(result, a, b)                             \
+    BYTE result##a = (aa + (ba - aa) * stencilAlpha / 255); \
+    BYTE result##r = (ar + (br - ar) * stencilAlpha / 255); \
+    BYTE result##g = (ag + (bg - ag) * stencilAlpha / 255); \
+    BYTE result##b = (ab + (bb - ab) * stencilAlpha / 255);
+
 void drawStencil(HDC hdc, BYTE* data, const SIZE stencilSize, const POINT pos, DWORD col0, DWORD col1, int horizontalShift)
 {
     if (!data)
@@ -246,11 +252,8 @@ void drawStencil(HDC hdc, BYTE* data, const SIZE stencilSize, const POINT pos, D
         int stencilY = y * stencilSize.cx;
         for (int x = 0; x < w; x++) {
             BYTE stencilAlpha = data[stencilY + x];
-            BYTE a = (aa + (ba - aa) * stencilAlpha / 255);
-            BYTE r = (ar + (br - ar) * stencilAlpha / 255);
-            BYTE g = (ag + (bg - ag) * stencilAlpha / 255);
-            BYTE b = (ab + (bb - ab) * stencilAlpha / 255);
-            CompositeAlpha(pixels[hdcY + (horizontalShift + x) % w], ARGB(a, r, g, b));
+            LERP_BYTE(r, a, b);
+            CompositeAlpha(pixels[hdcY + (horizontalShift + x) % w], ARGB(ra, rr, rg, rb));
         }
     }
 }
