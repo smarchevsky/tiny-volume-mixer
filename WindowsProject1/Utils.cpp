@@ -55,7 +55,7 @@ HBITMAP PNGLoader::getBitmapFromPng(const std::wstring& pngPath, int* customIcon
     void* pBits = nullptr;
 
     HDC hdc = GetDC(nullptr);
-    BITMAPINFO bmi = getBMI_ARGB(w, h);
+    BITMAPINFO bmi = getBMI_ARGB({ (LONG)w, (LONG)h });
     HBITMAP hBmp = CreateDIBSection(hdc, &bmi, DIB_RGB_COLORS, &pBits, nullptr, 0);
     ReleaseDC(nullptr, hdc);
 
@@ -117,7 +117,7 @@ HBITMAP TextRenderer::renderTextToAlphaBitmap(const std::wstring& text)
     GetTextExtentPoint32(fontBufferDC, text.c_str(), (int)text.length(), &textSize);
 
     DWORD* pixelsARGB;
-    BITMAPINFO bmi = getBMI_ARGB(textSize.cx, textSize.cy);
+    BITMAPINFO bmi = getBMI_ARGB(textSize);
     HBITMAP fontBufferBitmap = CreateDIBSection(fontBufferDC, &bmi, DIB_RGB_COLORS, (void**)&pixelsARGB, NULL, 0);
 
     if (fontBufferBitmap) {

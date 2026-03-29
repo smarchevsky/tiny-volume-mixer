@@ -44,15 +44,13 @@ inline void ReplaceRGB(DWORD& back, DWORD front)
     back = (back & 0xFF000000) | (front & 0x00FFFFFF);
 }
 
-bool validateCommon(HDC hdc, RECT rc, DWORD*& pixels, SIZE& canvasSize, RECT& drawRect)
+bool validateCommon(HDC hdc, RECT roundRect, DWORD*& pixels, SIZE& canvasSize, RECT& drawRect)
 {
-    int canvasWidth, canvasHeight;
-    getBitmapData(getBitmapFromHDC(hdc), canvasWidth, canvasHeight, pixels);
+    getBitmapData(getBitmapFromHDC(hdc), canvasSize, pixels);
     if (!pixels)
         return false;
 
-    canvasSize.cx = canvasWidth, canvasSize.cy = canvasHeight;
-    drawRect = { 0, 0, canvasWidth, canvasHeight };
+    drawRect = { 0, 0, canvasSize.cx, canvasSize.cy };
 
     RECT rcClip;
     int regionType = GetClipBox(hdc, &rcClip);
@@ -64,7 +62,7 @@ bool validateCommon(HDC hdc, RECT rc, DWORD*& pixels, SIZE& canvasSize, RECT& dr
         // printf("rcClip %d, %d, %d, %d\n", rcClip.left, rcClip.top, rcClip.right, rcClip.bottom);
     }
 
-    if (!IntersectRect(&drawRect, &drawRect, &rc))
+    if (!IntersectRect(&drawRect, &drawRect, &roundRect))
         return false;
 
     return true;
@@ -245,11 +243,11 @@ void drawStencil(HDC hdc, HBITMAP bmp, const POINT pos, const RECT& roundRect, i
     if (!bmp)
         return;
 
-    int bmpW, bmpH;
+    SIZE bitmapSize;
     DWORD* bitmapPixels;
-    getBitmapData(bmp, bmpW, bmpH, bitmapPixels);
+    getBitmapData(bmp, bitmapSize, bitmapPixels);
 
-    RECT bitmapRect = { pos.x, pos.y, pos.x + bmpW, pos.y + bmpH };
+    RECT bitmapRect = { pos.x, pos.y, pos.x + bitmapSize.cx, pos.y + bitmapSize.cy };
 
     SIZE canvasSize;
     RECT drawRect;
@@ -261,7 +259,7 @@ void drawStencil(HDC hdc, HBITMAP bmp, const POINT pos, const RECT& roundRect, i
     int w = drawRect.right - drawRect.left;
 
     for (int y = 0; y < h; y++) {
-        int stencilY = y * bmpW;
+        int stencilY = y * bitmapSize.cx;
         for (int x = 0; x < w; x++) {
             DWORD& pixel = bitmapPixels[stencilY + x];
             ReplaceRGB(pixel, b);
@@ -270,7 +268,7 @@ void drawStencil(HDC hdc, HBITMAP bmp, const POINT pos, const RECT& roundRect, i
 
     for (int y = 0; y < h; y++) {
         int hdcY = (y + pos.y) * canvasSize.cx + pos.x;
-        int stencilY = y * bmpW;
+        int stencilY = y * bitmapSize.cx;
         for (int x = 0; x < w; x++) {
             DWORD pixelColor = bitmapPixels[stencilY + x];
             CompositeAlpha(canvasPixels[hdcY + (horizontalShift + x) % w], pixelColor);

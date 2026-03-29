@@ -7,24 +7,24 @@
 #include <string>
 
 inline HBITMAP getBitmapFromHDC(HDC hdc) { return (HBITMAP)GetCurrentObject(hdc, OBJ_BITMAP); }
-inline void getBitmapData(HBITMAP hBmp, int& width, int& height, DWORD*& bits)
+inline void getBitmapData(HBITMAP hBmp, SIZE& size, DWORD*& bits)
 {
     bits = nullptr;
     if (hBmp) {
         DIBSECTION ds;
         GetObject(hBmp, sizeof(DIBSECTION), &ds);
-        width = ds.dsBm.bmWidth;
-        height = ds.dsBm.bmHeight;
+        size.cx = ds.dsBm.bmWidth;
+        size.cy = ds.dsBm.bmHeight;
         bits = (DWORD*)ds.dsBm.bmBits;
     }
 }
 
-inline BITMAPINFO getBMI_ARGB(int w, int h)
+inline BITMAPINFO getBMI_ARGB(SIZE size)
 {
     BITMAPINFO bmi = { 0 };
     bmi.bmiHeader.biSize = sizeof(BITMAPINFOHEADER);
-    bmi.bmiHeader.biWidth = w;
-    bmi.bmiHeader.biHeight = -h;
+    bmi.bmiHeader.biWidth = size.cx;
+    bmi.bmiHeader.biHeight = -size.cy;
     bmi.bmiHeader.biPlanes = 1;
     bmi.bmiHeader.biBitCount = 32;
     bmi.bmiHeader.biCompression = BI_RGB;

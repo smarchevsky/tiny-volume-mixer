@@ -59,7 +59,7 @@ IconInfo createIconInfo(HICON icon, bool calculateIconColor = true)
     std::vector<DWORD> pixels(pixelCount);
 
     HDC hdc = GetDC(NULL);
-    BITMAPINFO bmi = getBMI_ARGB(bmp.bmWidth, bmp.bmHeight);
+    BITMAPINFO bmi = getBMI_ARGB({ bmp.bmWidth, bmp.bmHeight });
     GetDIBits(hdc, iconInfo.hbmColor, 0, bmp.bmHeight, &pixels[0], (BITMAPINFO*)&bmi, DIB_RGB_COLORS);
     ReleaseDC(NULL, hdc);
 
@@ -190,9 +190,9 @@ HICON createIconFromPng(const std::wstring& pngPath, int* customIconSize)
 {
     HBITMAP hBmp = PNGLoader::get().getBitmapFromPng(pngPath, customIconSize);
     DWORD* pixels;
-    int width, height;
-    getBitmapData(hBmp, width, height, pixels);
-    HBITMAP hMask = CreateBitmap(width, height, 1, 1, nullptr);
+    SIZE iconSize;
+    getBitmapData(hBmp, iconSize, pixels);
+    HBITMAP hMask = CreateBitmap(iconSize.cx, iconSize.cy, 1, 1, nullptr);
     ICONINFO ii = { TRUE, 0, 0, hMask, hBmp };
     HICON hIcon = CreateIconIndirect(&ii);
     DeleteObject(hBmp);
