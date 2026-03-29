@@ -67,7 +67,6 @@ IconInfo createIconInfo(HICON icon, bool calculateIconColor = true)
     IconInfo ii {};
 
     ii.hLarge = icon;
-    ii.width = bmp.bmWidth;
     ii.ARGB = calculateIconColor ? getAvgColorARGB(bmp.bmWidth, bmp.bmHeight, &pixels[0]) : defaultSliderColor;
     return ii;
 }

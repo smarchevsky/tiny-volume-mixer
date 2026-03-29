@@ -10,7 +10,6 @@ struct IconInfo {
     HBITMAP textBmp;
     HICON hLarge;
     DWORD ARGB;
-    int width;
 };
 
 class IconManager {

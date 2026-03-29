@@ -71,17 +71,18 @@ void Slider::draw(HDC hdc, const UIConfig& uic) const
 
     const DWORD border = _focused ? 0xFF000000 : 0xAA000000;
     DWORD sliderColor = _iconInfo ? _iconInfo->ARGB : defaultSliderColor;
+
     drawBorderedRect(hdc, drawRect,
         uic.sliderCornerRadius, uic.sliderBorderWidth,
         0xAA000000 | sliderColor, border | sliderColor);
 
     if (_iconInfo && _iconInfo->textBmp && _focused)
-        drawStencil(hdc, _iconInfo->textBmp, { _rect.left, _rect.top }, drawRect, uic.sliderCornerRadius, 0xFFFF0000, 0xFFFFFFFF);
+        drawStencil(hdc, _iconInfo->textBmp, { drawRect.left, _rect.top }, drawRect, uic.sliderCornerRadius, 0xFFFFFF, 0xFFFFFF);
 
     if (_iconInfo && _iconInfo->hLarge)
         DrawIconEx(hdc,
-            (_rect.left + _rect.right) / 2 - _iconInfo->width / 2,
-            _rect.bottom - _iconInfo->width / 2 - (uic.sliderWidthApp - uic.sliderSpacing) / 2,
+            (_rect.left + _rect.right) / 2 - uic.iconSize / 2,
+            _rect.bottom - uic.iconSize / 2 - (uic.sliderWidthApp - uic.sliderSpacing) / 2,
             _iconInfo->hLarge, 0, 0, 0, NULL, DI_NORMAL);
 }
 
