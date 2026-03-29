@@ -15,6 +15,10 @@
 #include <shlwapi.h>
 #pragma comment(lib, "shlwapi.lib")
 
+// GetFileVersionInfoW, VerQueryValueW
+#include <winver.h>
+#pragma comment(lib, "Version.lib")
+
 #include <filesystem>
 
 namespace fs = std::filesystem;
@@ -244,36 +248,75 @@ HICON createIconFromPath(std::wstring& path, int iconSize)
     return {};
 }
 
+LPWSTR getFileName(const LPWSTR path)
+{
+    DWORD dummy;
+    DWORD size = GetFileVersionInfoSizeW(path, &dummy);
+    if (size > 0) {
+        std::vector<BYTE> data(size);
+        if (GetFileVersionInfoW(path, 0, size, data.data())) {
+            LPWSTR description = nullptr;
+            UINT descLen = 0;
+            if (VerQueryValueW(data.data(), L"\\StringFileInfo\\040904b0\\FileDescription",
+                    (LPVOID*)&description, &descLen)) {
+                // wprintf(L"DESCRIPTION: %s\n", description);
+                return description;
+            }
+        }
+    }
+
+    wchar_t exePath[MAX_PATH];
+    if (SUCCEEDED(SHLoadIndirectString(path, exePath, MAX_PATH, NULL))) {
+        if (LPWSTR fileName = PathFindFileNameW(exePath)) {
+            if (fileName[0] >= L'a' && fileName[0] <= L'z')
+                fileName[0] += L'A' - L'a';
+            // if (WCHAR* extension = wcsrchr(fileName, L'.'))
+            if (LPWSTR extension = StrStrW(fileName, L".exe"))
+                *extension = '\0';
+            // wprintf(L"FILE NAME: %s\n", fileName);
+            return fileName;
+        }
+    }
+
+    return nullptr;
+}
 } // namespace
 
 #pragma region ICON
 IconInfo* IconManager::tryRetrieveIcon(WCHAR* iconPath, PID pid)
 {
-    std::wstring pathStr;
-
-    if (iconPath && wcslen(iconPath)) { // retrieve from AudioSessionInfo
-        pathStr = iconPath;
-
-    } else { // retrieve from PID
-        if (HANDLE hProcess = OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, FALSE, pid)) {
-            wchar_t exePath[MAX_PATH];
-            DWORD size = MAX_PATH;
-            if (QueryFullProcessImageNameW(hProcess, 0, exePath, &size))
-                pathStr = exePath;
-            CloseHandle(hProcess);
+    HBITMAP textBmp {};
+    std::wstring iconPathStr;
+    if (HANDLE hProcess = OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, FALSE, pid)) {
+        wchar_t exePath[MAX_PATH];
+        DWORD size = MAX_PATH;
+        if (QueryFullProcessImageNameW(hProcess, 0, exePath, &size)) {
+            iconPathStr = exePath;
+            if (LPWSTR fileName = getFileName(exePath)) {
+                textBmp = TextRenderer::get().renderTextToAlphaBitmap(fileName);
+            }
         }
+
+        CloseHandle(hProcess);
     }
 
-    if (pathStr.empty())
+    if (iconPath && wcslen(iconPath)) { // retrieve from AudioSessionInfo
+        iconPathStr = iconPath;
+        if (pid == 0 && !textBmp)
+            textBmp = TextRenderer::get().renderTextToAlphaBitmap(L"System Sounds");
+    }
+
+    if (iconPathStr.empty())
         return nullptr;
 
-    HICON icon = createIconFromPath(pathStr, _iconSize);
+    HICON icon = createIconFromPath(iconPathStr, _iconSize);
     if (!icon)
         icon = createIconFromPackageInstallPath(pid, _iconSize);
     if (!icon)
         icon = _iiNoIconApp.hLarge;
 
-    auto& cachedIcon = _cachedAppIcons[pathStr] = createIconInfo(icon);
+    auto& cachedIcon = _cachedAppIcons[iconPathStr] = createIconInfo(icon);
+    cachedIcon.textBmp = textBmp;
     return &cachedIcon;
 }
 

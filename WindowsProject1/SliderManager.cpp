@@ -75,6 +75,9 @@ void Slider::draw(HDC hdc, const UIConfig& uic) const
         uic.sliderCornerRadius, uic.sliderBorderWidth,
         0xAA000000 | sliderColor, border | sliderColor);
 
+    if (_iconInfo && _iconInfo->textBmp && _focused)
+        drawStencil(hdc, _iconInfo->textBmp, { _rect.left, _rect.top }, drawRect, uic.sliderCornerRadius, 0xFFFF0000, 0xFFFFFFFF);
+
     if (_iconInfo && _iconInfo->hLarge)
         DrawIconEx(hdc,
             (_rect.left + _rect.right) / 2 - _iconInfo->width / 2,

@@ -7,6 +7,7 @@
 constexpr DWORD defaultSliderColor = 0x00AAAAAA;
 
 struct IconInfo {
+    HBITMAP textBmp;
     HICON hLarge;
     DWORD ARGB;
     int width;

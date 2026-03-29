@@ -11,10 +11,6 @@
 #include <wincodec.h>
 #pragma comment(lib, "windowscodecs.lib")
 
-// GetFileVersionInfoW, VerQueryValueW
-#include <winver.h>
-#pragma comment(lib, "Version.lib")
-
 // SHDefExtractIconW, SHGetKnownFolderPath
 #include <shlobj.h>
 
@@ -71,36 +67,6 @@ HBITMAP PNGLoader::getBitmapFromPng(const std::wstring& pngPath, int* customIcon
     pFrame->Release();
     pDecoder->Release();
     return hBmp;
-}
-
-void printFileName(const WCHAR* path)
-{
-    DWORD dummy;
-    DWORD size = GetFileVersionInfoSizeW(path, &dummy);
-    if (size > 0) {
-        std::vector<BYTE> data(size);
-        if (GetFileVersionInfoW(path, 0, size, data.data())) {
-            LPWSTR description = nullptr;
-            UINT descLen = 0;
-            if (VerQueryValueW(data.data(), L"\\StringFileInfo\\040904b0\\FileDescription",
-                    (LPVOID*)&description, &descLen)) {
-                wprintf(L"DESCRIPTION: %s\n", description);
-                return;
-            }
-        }
-    }
-
-    wchar_t exePath[MAX_PATH];
-    if (SUCCEEDED(SHLoadIndirectString(path, exePath, MAX_PATH, NULL))) {
-        if (WCHAR* fileName = PathFindFileNameW(exePath)) {
-            if (fileName[0] >= L'a' && fileName[0] <= L'z')
-                fileName[0] += L'A' - L'a';
-            // if (WCHAR* extension = wcsrchr(fileName, L'.'))
-            if (WCHAR* extension = StrStrW(fileName, L".exe"))
-                *extension = '\0';
-            wprintf(L"FILE NAME: %s\n", fileName);
-        }
-    }
 }
 
 //

@@ -22,13 +22,6 @@ void VolumeApp::construct(HINSTANCE instance, WNDPROC wndProc)
     _audioAppListerner.init(_hWnd);
 
     TextRenderer::get().init();
-    stencil = TextRenderer::get().renderTextToAlphaBitmap(L"Hello, world!");
-    // auto s = stencil.getSize();
-    // auto data = stencil.data();
-    // printf("stencil size %d %d\n", s.cx, s.cy);
-    // for (int i = 0; i < s.cx * s.cy; ++i) {
-    //     printf("%d ", data[i]);
-    // }
 }
 
 void VolumeApp::destroyWindow(HWND hWnd)
