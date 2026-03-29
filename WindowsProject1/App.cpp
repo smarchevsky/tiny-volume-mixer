@@ -16,7 +16,7 @@ void App::initWindow(HINSTANCE instance, WNDPROC wndProc, RECT rc)
     SetProcessDpiAwarenessContext(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2);
 
     LoadStringW(_hInstance, IDS_APP_TITLE, szTitle, MAX_LOADSTRING);
-    LoadStringW(_hInstance, IDC_WINDOWSPROJECT1, szWindowClass, MAX_LOADSTRING);
+    LoadStringW(_hInstance, IDC_TINY_VOLUME_APP, szWindowClass, MAX_LOADSTRING);
 
     auto icon = LoadIcon(_hInstance, MAKEINTRESOURCE(IDI_ICON_MULTIRES));
     WNDCLASSEXW wcex {};
