@@ -247,19 +247,21 @@ HICON createIconFromPath(std::wstring& path, int iconSize)
     return {};
 }
 
-LPWSTR getFileName(const LPWSTR path)
+std::wstring getFileName(const LPWSTR path)
 {
+    std::wstring result;
     DWORD dummy;
     DWORD size = GetFileVersionInfoSizeW(path, &dummy);
     if (size > 0) {
-        std::vector<BYTE> data(size);
-        if (GetFileVersionInfoW(path, 0, size, data.data())) {
-            LPWSTR description = nullptr;
+        result.resize(size);
+        if (GetFileVersionInfoW(path, 0, size, (void*)result.c_str())) {
+            LPWSTR description = {};
             UINT descLen = 0;
-            if (VerQueryValueW(data.data(), L"\\StringFileInfo\\040904b0\\FileDescription",
+            if (VerQueryValueW(result.c_str(), L"\\StringFileInfo\\040904b0\\FileDescription",
                     (LPVOID*)&description, &descLen)) {
-                // wprintf(L"DESCRIPTION: %s\n", description);
-                return description;
+                wprintf(L"DESCRIPTION: %s\n", description);
+                result = description;
+                return result;
             }
         }
     }
@@ -270,14 +272,15 @@ LPWSTR getFileName(const LPWSTR path)
             if (fileName[0] >= L'a' && fileName[0] <= L'z')
                 fileName[0] += L'A' - L'a';
             // if (WCHAR* extension = wcsrchr(fileName, L'.'))
-            if (LPWSTR extension = StrStrW(fileName, L".exe"))
+            if (LPWSTR extension = wcsstr(fileName, L".exe"))
                 *extension = '\0';
-            // wprintf(L"FILE NAME: %s\n", fileName);
-            return fileName;
+            wprintf(L"FILE NAME: %s\n", fileName);
+            result = fileName;
+            return result;
         }
     }
 
-    return nullptr;
+    return result;
 }
 } // namespace
 
@@ -291,7 +294,8 @@ IconInfo* IconManager::tryRetrieveIcon(WCHAR* iconPath, PID pid)
         DWORD size = MAX_PATH;
         if (QueryFullProcessImageNameW(hProcess, 0, exePath, &size)) {
             iconPathStr = exePath;
-            if (LPWSTR fileName = getFileName(exePath)) {
+            auto fileName = getFileName(exePath);
+            if (!fileName.empty()) {
                 textBmp = TextRenderer::get().renderTextToAlphaBitmap(fileName);
             }
         }
@@ -299,10 +303,11 @@ IconInfo* IconManager::tryRetrieveIcon(WCHAR* iconPath, PID pid)
         CloseHandle(hProcess);
     }
 
+    if (pid == 0 && !textBmp)
+        textBmp = TextRenderer::get().renderTextToAlphaBitmap(L"System");
+
     if (iconPath && wcslen(iconPath)) { // retrieve from AudioSessionInfo
         iconPathStr = iconPath;
-        if (pid == 0 && !textBmp)
-            textBmp = TextRenderer::get().renderTextToAlphaBitmap(L"System Sounds");
     }
 
     if (iconPathStr.empty())
