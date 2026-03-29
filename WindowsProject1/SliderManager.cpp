@@ -84,7 +84,7 @@ void Slider::draw(HDC hdc, const UIConfig& uic) const
     };
 
     const DWORD border = _focused ? 0xFF000000 : 0xAA000000;
-    DWORD sliderColor = _sliderInfo ? _sliderInfo->ARGB : defaultSliderColor;
+    DWORD sliderColor = _sliderInfo ? _sliderInfo->colorSlider : defaultSliderColor;
 
     drawBorderedRectAlphaComposite(hdc, roundRect,
         uic.sliderCornerRadius, uic.sliderBorderWidth,
@@ -100,22 +100,25 @@ void Slider::draw(HDC hdc, const UIConfig& uic) const
         DWORD* pixels;
         getBitmapData(_sliderInfo->textBmp, bitmapSize, pixels);
         LONG extend = bitmapSize.cx - textRegionW;
-        constexpr DWORD textColor = 0xDDDDDD;
+        const DWORD textColor = _sliderInfo->colorText;
+        const DWORD textColorBack = sliderColor; // uic.colorWindowFrame;
+
         if (extend <= 0) { // fits in slider
             pos.x -= extend / 2;
-            drawRoundRectToBitmap(_sliderInfo->textBmp, roundRect - pos, uic.sliderCornerRadius, sliderColor, textColor);
+            drawRoundRectToBitmap(_sliderInfo->textBmp, roundRect - pos, uic.sliderCornerRadius, textColorBack, textColor);
             drawBitmapAlphaComposite(hdc, _sliderInfo->textBmp, pos);
+
         } else {
             constexpr int margin = 20;
             if (bitmapSize.cx)
                 pos.x -= _textShift % (bitmapSize.cx + margin);
 
             RECT clipRect = { textRegionRect.left, pos.y, textRegionRect.right, pos.y + bitmapSize.cy };
-            drawRoundRectToBitmap(_sliderInfo->textBmp, roundRect - pos, uic.sliderCornerRadius, sliderColor, textColor);
+            drawRoundRectToBitmap(_sliderInfo->textBmp, roundRect - pos, uic.sliderCornerRadius, textColorBack, textColor);
             drawBitmapAlphaComposite(hdc, _sliderInfo->textBmp, pos, &clipRect);
 
             pos.x += bitmapSize.cx + margin;
-            drawRoundRectToBitmap(_sliderInfo->textBmp, roundRect - pos, uic.sliderCornerRadius, sliderColor, textColor);
+            drawRoundRectToBitmap(_sliderInfo->textBmp, roundRect - pos, uic.sliderCornerRadius, textColorBack, textColor);
             drawBitmapAlphaComposite(hdc, _sliderInfo->textBmp, pos, &clipRect);
         }
     }

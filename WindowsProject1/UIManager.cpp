@@ -68,7 +68,13 @@ SliderInfo createIconInfo(HICON icon, bool calculateIconColor = true)
     SliderInfo ii {};
 
     ii.hIconLarge = icon;
-    ii.ARGB = calculateIconColor ? getAvgColorARGB(bmp.bmWidth, bmp.bmHeight, &pixels[0]) : defaultSliderColor;
+    ii.colorSlider = calculateIconColor ? getAvgColorARGB(bmp.bmWidth, bmp.bmHeight, &pixels[0]) : defaultSliderColor;
+    {
+        ARGB_SPLIT(BYTE, a, ii.colorSlider);
+        ARGB_SPLIT(BYTE, b, 0xFFFFFFFF);
+        LERP_BYTE_COLOR(r, a, b, 200);
+        ii.colorText = ARGB(ra, rr, rg, rb);
+    }
     return ii;
 }
 
@@ -328,32 +334,11 @@ SliderInfo* UIManager::generateSliderInfo(WCHAR* iconPath, PID pid)
 void UIManager::init(const UIConfig& config)
 {
     uninit();
-    _iconSize = config.iconSize;
 
-    wchar_t dllPathSource[MAX_PATH];
-    GetSystemDirectoryW(dllPathSource, MAX_PATH);
-
-    auto loadIcon = [dllPathSource, this](const wchar_t* path, int iconIndex) -> SliderInfo {
-        wchar_t dllPath[MAX_PATH];
-        wcscpy_s(dllPath, MAX_PATH, dllPathSource);
-        wcscat_s(dllPath, path);
-
-        HICON icon {};
-        SHDefExtractIconW(dllPath, iconIndex, 0, &icon, NULL, MAKELONG(CLAMP_ICON_SIZE(_iconSize), 0));
-        return createIconInfo(icon, false);
-    };
-
-    _iiMasterSpeaker = loadIcon(L"\\mmres.dll", -3004);
-    _iiMasterHeadphones = loadIcon(L"\\mmres.dll", -3015);
-    _iiNoIconApp = loadIcon(L"\\imageres.dll", -15);
-
-    int fontSize = std::clamp((int)config.fontSize, 8, 255);
-
-    if (_hFont)
-        DeleteObject(_hFont);
+    // TEXT
 
     _hFont = CreateFont(
-        fontSize, // Height (arbitrary size)
+        std::clamp((int)config.fontSize, 8, 255), // Height (arbitrary size)
         0, // Width (0 let's Windows choose best match)
         0, // Escapement
         0, // Orientation
@@ -368,6 +353,29 @@ void UIManager::init(const UIConfig& config)
         DEFAULT_PITCH | FF_SWISS, // Pitch and Family
         L"Segoe UI" // Typeface name
     );
+
+    // ICONS
+
+    _iconSize = config.iconSize;
+
+    wchar_t dllPathSource[MAX_PATH];
+    GetSystemDirectoryW(dllPathSource, MAX_PATH);
+
+    auto loadIcon = [dllPathSource, this](const wchar_t* path, int iconIndex) -> SliderInfo {
+        wchar_t dllPath[MAX_PATH];
+        wcscpy_s(dllPath, MAX_PATH, dllPathSource);
+        wcscat_s(dllPath, path);
+
+        HICON icon {};
+        SHDefExtractIconW(dllPath, iconIndex, 0, &icon, NULL, MAKELONG(CLAMP_ICON_SIZE(_iconSize), 0));
+        auto sliderInfo = createIconInfo(icon, false);
+        sliderInfo.textBmp = renderTextToAlphaBitmap(_hFont, L"Master");
+        return sliderInfo;
+    };
+
+    _iiMasterSpeaker = loadIcon(L"\\mmres.dll", -3004);
+    _iiMasterHeadphones = loadIcon(L"\\mmres.dll", -3015);
+    _iiNoIconApp = loadIcon(L"\\imageres.dll", -15);
 }
 
 void UIManager::uninit()

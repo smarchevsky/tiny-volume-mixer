@@ -9,7 +9,8 @@ constexpr DWORD defaultSliderColor = 0x00AAAAAA;
 struct SliderInfo {
     HBITMAP textBmp;
     HICON hIconLarge;
-    DWORD ARGB;
+    DWORD colorText;
+    DWORD colorSlider;
 };
 
 class UIManager {

@@ -8,12 +8,12 @@ void VolumeApp::construct(HINSTANCE instance, WNDPROC wndProc)
     RECT rc;
     FileManager::get().loadWindowRect(rc);
 
+    _uiConfig = UIConfig::get();
+    UIManager::get().init(_uiConfig);
+
     initWindow(instance, wndProc, rc);
     _isAppHovered = false, updateTimerStateUI();
 
-    _uiConfig = UIConfig::get();
-
-    UIManager::get().init(_uiConfig);
     sliderManager.getSliderFromSelect(SelectInfo(VolumeType::Master, 0))->_sliderInfo
         = UIManager::get().getIconMasterVol();
 
@@ -78,7 +78,9 @@ void VolumeApp::onPaint(HDC hdc)
 {
     RECT windowRect;
     GetClientRect(_hWnd, &windowRect);
-    drawBorderedRectAlphaComposite(hdc, windowRect, _uiConfig.frameCornerRadius, _uiConfig.frameBorderWidth, 0x88333333, 0x88AAAAAA);
+    drawBorderedRectAlphaComposite(hdc, windowRect,
+        _uiConfig.frameCornerRadius, _uiConfig.frameBorderWidth,
+        _uiConfig.colorWindowBck, _uiConfig.colorWindowFrame);
     sliderManager.drawSliders(hdc, _uiConfig);
 
     RECT rc {};
@@ -111,6 +113,7 @@ void VolumeApp::onMouseLeave()
 
     if (auto slider = sliderManager.getSliderFromSelect(sliderInfoHovered)) {
         slider->_focused = false;
+        slider->_textShift = 0;
         InvalidateRect(_hWnd, &slider->_rect, FALSE);
     }
     sliderInfoHovered = {};

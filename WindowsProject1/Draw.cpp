@@ -8,11 +8,6 @@
 #include <algorithm>
 #include <math.h>
 
-#define ARGBsplit(T, name, dval) T name##a = T((dval >> 24) & 0xFF), name##r = T((dval >> 16) & 0xFF), name##g = T((dval >> 8) & 0xFF), name##b = T((dval) & 0xFF);
-
-#define LERP_BYTE(result, col0, col1, x) BYTE result##a = (col0##a + (col1##a - col0##a) * (x) / 255), result##r = (col0##r + (col1##r - col0##r) * (x) / 255), \
-                                              result##g = (col0##g + (col1##g - col0##g) * (x) / 255), result##b = (col0##b + (col1##b - col0##b) * (x) / 255);
-
 namespace {
 inline void CompositeAlpha(DWORD& back, DWORD front)
 {
@@ -44,9 +39,9 @@ inline void CompositeAlpha(DWORD& back, DWORD front)
 
 inline void ReplaceRGB(DWORD& back, DWORD front)
 {
-    ARGBsplit(BYTE, b, back);
-    ARGBsplit(BYTE, f, front);
-    LERP_BYTE(r, b, f, fa);
+    ARGB_SPLIT(BYTE, b, back);
+    ARGB_SPLIT(BYTE, f, front);
+    LERP_BYTE_COLOR(r, b, f, fa);
     back = (back & 0xFF000000) | (ARGB(ra, rr, rg, rb) & 0x00FFFFFF);
 }
 
@@ -179,8 +174,8 @@ void drawBorderedRectInternal(const SIZE canvasSize, const RECT& clipRegion,
         dist += 1;
         float t = std::clamp(dist - bw, 0.f, 1.f);
 
-        ARGBsplit(float, a, bo_col);
-        ARGBsplit(float, b, bg_col);
+        ARGB_SPLIT(float, a, bo_col);
+        ARGB_SPLIT(float, b, bg_col);
         float a = (aa + t * (ba - aa)) * std::clamp(dist, 0.f, 1.f);
         float r = (ar + t * (br - ar));
         float g = (ag + t * (bg - ag));
