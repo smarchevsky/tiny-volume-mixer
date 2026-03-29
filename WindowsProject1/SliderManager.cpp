@@ -1,3 +1,4 @@
+
 #include "SliderManager.h"
 
 #include "Draw.h"
@@ -58,6 +59,18 @@ HICON debugUpdateIcon(int iconSize)
 #endif
 #endif
 
+inline RECT operator-(RECT rc, POINT p)
+{
+    rc.left -= p.x, rc.top -= p.y, rc.right -= p.x, rc.bottom -= p.y;
+    return rc;
+}
+
+inline RECT operator+(RECT rc, POINT p)
+{
+    rc.left += p.x, rc.top += p.y, rc.right += p.x, rc.bottom += p.y;
+    return rc;
+}
+
 void Slider::draw(HDC hdc, const UIConfig& uic) const
 {
 #if DEBUG_ITERATE_ICONS == 1
@@ -65,7 +78,7 @@ void Slider::draw(HDC hdc, const UIConfig& uic) const
 #endif
 
     float drawHeight = (_rect.bottom - _rect.top) * (1.f - _val);
-    RECT drawRect {
+    const RECT roundRect {
         _rect.left + uic.getSliderOffsetL(), _rect.top + LONG(drawHeight),
         _rect.right - uic.getSliderOffsetR(), _rect.bottom
     };
@@ -73,20 +86,27 @@ void Slider::draw(HDC hdc, const UIConfig& uic) const
     const DWORD border = _focused ? 0xFF000000 : 0xAA000000;
     DWORD sliderColor = _sliderInfo ? _sliderInfo->ARGB : defaultSliderColor;
 
-    drawBorderedRectAlphaComposite(hdc, drawRect,
+    drawBorderedRectAlphaComposite(hdc, roundRect,
         uic.sliderCornerRadius, uic.sliderBorderWidth,
         0xAA000000 | sliderColor, border | sliderColor);
 
-    if (_sliderInfo && _sliderInfo->textBmp) {
-        POINT pos = { drawRect.left, _rect.top };
+    if (_focused && _sliderInfo && _sliderInfo->textBmp) {
+        RECT textRegionRect = _rect;
+        LONG textRegionW = textRegionRect.right - textRegionRect.left;
 
-        SIZE bitmapSize;
+        POINT pos = { textRegionRect.left, _rect.top };
+
+        SIZE bitmapSize {};
         DWORD* pixels;
         getBitmapData(_sliderInfo->textBmp, bitmapSize, pixels);
-        if (!pixels)
-            return;
-        drawRoundRectToBitmap(_sliderInfo->textBmp, pos, drawRect, uic.sliderCornerRadius, sliderColor, 0xFFFFFF);
-        drawBitmapAlphaComposite(hdc, _sliderInfo->textBmp, pos);
+        LONG extend = textRegionW - bitmapSize.cx;
+        pos.x += extend / 2;
+
+        drawRoundRectToBitmap(_sliderInfo->textBmp, roundRect - pos, uic.sliderCornerRadius, sliderColor, 0xFFFFFF);
+
+        RECT bitmapRect = { pos.x, pos.y, pos.x + bitmapSize.cx, pos.y + bitmapSize.cy };
+        bitmapRect.left = max(bitmapRect.left, _rect.left), bitmapRect.right = min(bitmapRect.right, _rect.right);
+        drawBitmapAlphaComposite(hdc, _sliderInfo->textBmp, pos, &bitmapRect);
     }
 
     if (_sliderInfo && _sliderInfo->hIconLarge)

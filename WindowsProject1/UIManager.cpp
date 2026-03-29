@@ -296,7 +296,7 @@ SliderInfo* UIManager::generateSliderInfo(WCHAR* iconPath, PID pid)
         if (QueryFullProcessImageNameW(hProcess, 0, exePath, &size)) {
             iconPathStr = exePath;
             auto fileName = getFileName(exePath);
-            if (!fileName.empty()) {
+            if (pid != 0 && !fileName.empty()) {
                 textBmp = renderTextToAlphaBitmap(_hFont, fileName);
             }
         }
@@ -304,8 +304,8 @@ SliderInfo* UIManager::generateSliderInfo(WCHAR* iconPath, PID pid)
         CloseHandle(hProcess);
     }
 
-    if (pid == 0 && !textBmp)
-        textBmp = renderTextToAlphaBitmap(_hFont, L"System");
+    if (pid == 0)
+        textBmp = renderTextToAlphaBitmap(_hFont, L"System Sounds");
 
     if (iconPath && wcslen(iconPath)) { // retrieve from AudioSessionInfo
         iconPathStr = iconPath;

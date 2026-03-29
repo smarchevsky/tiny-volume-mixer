@@ -50,25 +50,25 @@ inline void ReplaceRGB(DWORD& back, DWORD front)
     back = (back & 0xFF000000) | (ARGB(ra, rr, rg, rb) & 0x00FFFFFF);
 }
 
-bool validateCommon(HDC hdc, RECT roundRect, DWORD*& pixels, SIZE& canvasSize, RECT& drawRect)
+bool validateCommon(HDC hdc, RECT renderableRect, DWORD*& pixels, SIZE& canvasSize, RECT& clipRect)
 {
     getBitmapData(getBitmapFromHDC(hdc), canvasSize, pixels);
     if (!pixels)
         return false;
 
-    drawRect = { 0, 0, canvasSize.cx, canvasSize.cy };
+    clipRect = { 0, 0, canvasSize.cx, canvasSize.cy };
 
     RECT rcClip;
     int regionType = GetClipBox(hdc, &rcClip);
     if (regionType != ERROR && regionType != NULLREGION) {
-        drawRect.left = std::max(drawRect.left, rcClip.left);
-        drawRect.top = std::max(drawRect.top, rcClip.top);
-        drawRect.right = std::min(drawRect.right, rcClip.right);
-        drawRect.bottom = std::max(drawRect.bottom, rcClip.bottom);
+        clipRect.left = std::max(clipRect.left, rcClip.left);
+        clipRect.top = std::max(clipRect.top, rcClip.top);
+        clipRect.right = std::min(clipRect.right, rcClip.right);
+        clipRect.bottom = std::max(clipRect.bottom, rcClip.bottom);
         // printf("rcClip %d, %d, %d, %d\n", rcClip.left, rcClip.top, rcClip.right, rcClip.bottom);
     }
 
-    if (!IntersectRect(&drawRect, &drawRect, &roundRect))
+    if (!IntersectRect(&clipRect, &clipRect, &renderableRect))
         return false;
 
     return true;
@@ -230,7 +230,7 @@ void drawBorderedRectAlphaComposite(HDC hdc, const RECT roundRect, int radius, i
     drawBorderedRectInternal<CompositeAlpha>(canvasSize, clipRegion, pixels, roundRect, radius, bw, bg_col, bo_col);
 }
 
-void drawBitmapAlphaComposite(HDC hdc, HBITMAP bmp, const POINT pos, int horizontalShift)
+void drawBitmapAlphaComposite(HDC hdc, HBITMAP bmp, const POINT pos, const RECT* customRect)
 {
     if (!bmp)
         return;
@@ -238,7 +238,6 @@ void drawBitmapAlphaComposite(HDC hdc, HBITMAP bmp, const POINT pos, int horizon
     SIZE bitmapSize;
     DWORD* bitmapPixels;
     getBitmapData(bmp, bitmapSize, bitmapPixels);
-
     RECT bitmapRect = { pos.x, pos.y, pos.x + bitmapSize.cx, pos.y + bitmapSize.cy };
 
     SIZE canvasSize;
@@ -247,20 +246,25 @@ void drawBitmapAlphaComposite(HDC hdc, HBITMAP bmp, const POINT pos, int horizon
     if (!validateCommon(hdc, bitmapRect, canvasPixels, canvasSize, drawRect))
         return;
 
-    int h = drawRect.bottom - drawRect.top;
-    int w = drawRect.right - drawRect.left;
+    if (customRect) {
+        if (!IntersectRect(&bitmapRect, &bitmapRect, customRect))
+            return;
+    }
 
-    for (int y = 0; y < h; y++) {
-        int hdcY = (y + pos.y) * canvasSize.cx + pos.x;
-        int stencilY = y * bitmapSize.cx;
-        for (int x = 0; x < w; x++) {
+    int w = bitmapRect.right - bitmapRect.left;
+
+    for (int y = bitmapRect.top; y < bitmapRect.bottom; y++) {
+        int hdcY = y * canvasSize.cx;
+        int stencilY = (y - pos.y) * bitmapSize.cx - pos.x;
+
+        for (int x = bitmapRect.left; x < bitmapRect.right; x++) {
             DWORD pixelColor = bitmapPixels[stencilY + x];
-            CompositeAlpha(canvasPixels[hdcY + (horizontalShift + x) % w], pixelColor);
+            CompositeAlpha(canvasPixels[hdcY + x], pixelColor);
         }
     }
 }
 
-void drawRoundRectToBitmap(HBITMAP dst, const POINT pos, RECT roundRect, int radius, DWORD col0, DWORD col1)
+void drawRoundRectToBitmap(HBITMAP dst, RECT roundRect, int radius, DWORD col0, DWORD col1)
 {
     SIZE bitmapSize;
     DWORD* pixels;
@@ -271,7 +275,6 @@ void drawRoundRectToBitmap(HBITMAP dst, const POINT pos, RECT roundRect, int rad
     for (int i = 0; i < bitmapSize.cx * bitmapSize.cy; ++i)
         pixels[i] = (pixels[i] & 0xFF000000) | (col0 & 0x00FFFFFF);
 
-    roundRect.left -= pos.x, roundRect.top -= pos.y, roundRect.right -= pos.x, roundRect.bottom -= pos.y;
     drawBorderedRectInternal<ReplaceRGB>(bitmapSize, { 0, 0, bitmapSize.cx, bitmapSize.cy },
         pixels, roundRect, radius, 0, 0xFF000000 | col1, 0xFF000000 | col1);
 }
