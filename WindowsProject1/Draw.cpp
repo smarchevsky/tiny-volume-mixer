@@ -69,17 +69,17 @@ bool validateCommon(HDC hdc, RECT roundRect, DWORD*& pixels, SIZE& canvasSize, R
 }
 
 template <void (*Op)(DWORD&, DWORD)>
-void drawBorderedRectInternal(const SIZE canvasSize, const RECT& drawRect,
-    DWORD* pixels, const RECT rc, int radius, int bw, DWORD bg_col, DWORD bo_col)
+void drawBorderedRectInternal(const SIZE canvasSize, const RECT& clipRegion,
+    DWORD* pixels, const RECT roundRect, int radius, int bw, DWORD bg_col, DWORD bo_col)
 {
-    int cl = (int)drawRect.left, ct = (int)drawRect.top, cr = (int)drawRect.right, cb = (int)drawRect.bottom;
+    int cl = (int)clipRegion.left, ct = (int)clipRegion.top, cr = (int)clipRegion.right, cb = (int)clipRegion.bottom;
 
-    const int rcl = rc.left;
-    const int rcr = rc.right;
-    const int rct = rc.top;
-    const int rcb = rc.bottom;
-    const int rcw = rc.right - rc.left;
-    const int rch = rc.bottom - rc.top;
+    const int rcl = roundRect.left;
+    const int rcr = roundRect.right;
+    const int rct = roundRect.top;
+    const int rcb = roundRect.bottom;
+    const int rcw = roundRect.right - roundRect.left;
+    const int rch = roundRect.bottom - roundRect.top;
 
     const int minrx = std::min(radius, std::max(rcw / 2, 0));
     const int minrx_right = std::min(radius, std::max((rcw + 1) / 2, 0));
@@ -221,15 +221,15 @@ void drawBorderedRectInternal(const SIZE canvasSize, const RECT& drawRect,
 }
 }
 
-void drawBorderedRect(HDC hdc, const RECT rc, int radius, int bw, DWORD bg_col, DWORD bo_col)
+void drawBorderedRectAlphaComposite(HDC hdc, const RECT roundRect, int radius, int bw, DWORD bg_col, DWORD bo_col)
 {
     DWORD* pixels {};
     SIZE canvasSize;
-    RECT drawRect;
-    if (!validateCommon(hdc, rc, pixels, canvasSize, drawRect))
+    RECT clipRegion;
+    if (!validateCommon(hdc, roundRect, pixels, canvasSize, clipRegion))
         return;
 
-    drawBorderedRectInternal<CompositeAlpha>(canvasSize, drawRect, pixels, rc, radius, bw, bg_col, bo_col);
+    drawBorderedRectInternal<CompositeAlpha>(canvasSize, clipRegion, pixels, roundRect, radius, bw, bg_col, bo_col);
 }
 
 #define LERP_BYTE(result, a, b)                             \
@@ -238,7 +238,7 @@ void drawBorderedRect(HDC hdc, const RECT rc, int radius, int bw, DWORD bg_col, 
     BYTE result##g = (ag + (bg - ag) * stencilAlpha / 255); \
     BYTE result##b = (ab + (bb - ab) * stencilAlpha / 255);
 
-void drawStencil(HDC hdc, HBITMAP bmp, const POINT pos, const RECT& roundRect, int radius, DWORD b, DWORD f, int horizontalShift)
+void drawBitmapAlphaComposite(HDC hdc, HBITMAP bmp, const POINT pos, int horizontalShift)
 {
     if (!bmp)
         return;
@@ -257,14 +257,6 @@ void drawStencil(HDC hdc, HBITMAP bmp, const POINT pos, const RECT& roundRect, i
 
     int h = drawRect.bottom - drawRect.top;
     int w = drawRect.right - drawRect.left;
-
-    for (int y = 0; y < h; y++) {
-        int stencilY = y * bitmapSize.cx;
-        for (int x = 0; x < w; x++) {
-            DWORD& pixel = bitmapPixels[stencilY + x];
-            ReplaceRGB(pixel, b);
-        }
-    }
 
     for (int y = 0; y < h; y++) {
         int hdcY = (y + pos.y) * canvasSize.cx + pos.x;

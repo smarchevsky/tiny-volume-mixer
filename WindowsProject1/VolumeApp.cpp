@@ -78,7 +78,7 @@ void VolumeApp::onPaint(HDC hdc)
 {
     RECT windowRect;
     GetClientRect(_hWnd, &windowRect);
-    drawBorderedRect(hdc, windowRect, _uiConfig.frameCornerRadius, _uiConfig.frameBorderWidth, 0x88333333, 0x88AAAAAA);
+    drawBorderedRectAlphaComposite(hdc, windowRect, _uiConfig.frameCornerRadius, _uiConfig.frameBorderWidth, 0x88333333, 0x88AAAAAA);
     sliderManager.drawSliders(hdc, _uiConfig);
 
     RECT rc {};

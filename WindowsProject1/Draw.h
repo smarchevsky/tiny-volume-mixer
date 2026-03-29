@@ -2,5 +2,5 @@
 
 #include "Common.h"
 
-void drawBorderedRect(HDC hdc, const RECT rc, int radius, int bw, DWORD bg_col, DWORD bo_col);
-void drawStencil(HDC hdc, HBITMAP bmp, const POINT pos, const RECT& rc, int radius, DWORD b, DWORD f, int horizontalShift = 0);
+void drawBorderedRectAlphaComposite(HDC hdc, const RECT roundRect, int radius, int bw, DWORD bg_col, DWORD bo_col);
+void drawBitmapAlphaComposite(HDC hdc, HBITMAP bmp, const POINT pos, int horizontalShift = 0);
