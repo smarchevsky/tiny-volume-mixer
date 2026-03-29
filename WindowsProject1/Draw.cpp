@@ -10,6 +10,9 @@
 
 #define ARGBsplit(T, name, dval) T name##a = T((dval >> 24) & 0xFF), name##r = T((dval >> 16) & 0xFF), name##g = T((dval >> 8) & 0xFF), name##b = T((dval) & 0xFF);
 
+#define LERP_BYTE(result, col0, col1, x) BYTE result##a = (col0##a + (col1##a - col0##a) * (x) / 255), result##r = (col0##r + (col1##r - col0##r) * (x) / 255), \
+                                              result##g = (col0##g + (col1##g - col0##g) * (x) / 255), result##b = (col0##b + (col1##b - col0##b) * (x) / 255);
+
 namespace {
 inline void CompositeAlpha(DWORD& back, DWORD front)
 {
@@ -41,7 +44,10 @@ inline void CompositeAlpha(DWORD& back, DWORD front)
 
 inline void ReplaceRGB(DWORD& back, DWORD front)
 {
-    back = (back & 0xFF000000) | (front & 0x00FFFFFF);
+    ARGBsplit(BYTE, b, back);
+    ARGBsplit(BYTE, f, front);
+    LERP_BYTE(r, b, f, fa);
+    back = (back & 0xFF000000) | (ARGB(ra, rr, rg, rb) & 0x00FFFFFF);
 }
 
 bool validateCommon(HDC hdc, RECT roundRect, DWORD*& pixels, SIZE& canvasSize, RECT& drawRect)
@@ -128,47 +134,39 @@ void drawBorderedRectInternal(const SIZE canvasSize, const RECT& clipRegion,
     const int rcr_end = std::min(rcr, cr);
 
     if (rcl_minrx_start < rcr_minrx_end) {
-        if (bg_col & 0xFF000000) {
-            for (int y = rct_bwy_start; y < rct_minry_end; y++) // top section
-                for (int x = rcl_minrx_start; x < rcr_minrx_end; x++)
-                    Op(pixels[y * canvasSize.cx + x], bg_col);
+        for (int y = rct_bwy_start; y < rct_minry_end; y++) // top section
+            for (int x = rcl_minrx_start; x < rcr_minrx_end; x++)
+                Op(pixels[y * canvasSize.cx + x], bg_col);
 
-            for (int y = rcb_minry_start; y < rcb_bw_end; y++) // bottom section
-                for (int x = rcl_minrx_start; x < rcr_minrx_end; x++)
-                    Op(pixels[y * canvasSize.cx + x], bg_col);
-        }
+        for (int y = rcb_minry_start; y < rcb_bw_end; y++) // bottom section
+            for (int x = rcl_minrx_start; x < rcr_minrx_end; x++)
+                Op(pixels[y * canvasSize.cx + x], bg_col);
 
-        if (bo_col & 0xFF000000) {
-            for (int y = rct_start; y < rct_bwy_end; y++) // top border
-                for (int x = rcl_minrx_start; x < rcr_minrx_end; x++)
-                    Op(pixels[y * canvasSize.cx + x], bo_col);
+        for (int y = rct_start; y < rct_bwy_end; y++) // top border
+            for (int x = rcl_minrx_start; x < rcr_minrx_end; x++)
+                Op(pixels[y * canvasSize.cx + x], bo_col);
 
-            for (int y = rcb_bw_start; y < rcb_end; y++) // bottom border
-                for (int x = rcl_minrx_start; x < rcr_minrx_end; x++)
-                    Op(pixels[y * canvasSize.cx + x], bo_col);
-        }
+        for (int y = rcb_bw_start; y < rcb_end; y++) // bottom border
+            for (int x = rcl_minrx_start; x < rcr_minrx_end; x++)
+                Op(pixels[y * canvasSize.cx + x], bo_col);
     }
 
-    if (bg_col & 0xFF000000) {
-        if (rcl_bwx_start < rcr_bw_end) {
-            for (int y = rct_minry_start; y < rcb_minry_end; y++) // mid section
-                for (int x = rcl_bwx_start; x < rcr_bw_end; x++)
-                    Op(pixels[y * canvasSize.cx + x], bg_col);
-        }
+    if (rcl_bwx_start < rcr_bw_end) {
+        for (int y = rct_minry_start; y < rcb_minry_end; y++) // mid section
+            for (int x = rcl_bwx_start; x < rcr_bw_end; x++)
+                Op(pixels[y * canvasSize.cx + x], bg_col);
     }
 
-    if (bo_col & 0xFF000000) {
-        if (rcl_start < rcl_bwx_end) {
-            for (int y = rct_minry_start; y < rcb_minry_end; y++) // left border
-                for (int x = rcl_start; x < rcl_bwx_end; x++)
-                    Op(pixels[y * canvasSize.cx + x], bo_col);
-        }
+    if (rcl_start < rcl_bwx_end) {
+        for (int y = rct_minry_start; y < rcb_minry_end; y++) // left border
+            for (int x = rcl_start; x < rcl_bwx_end; x++)
+                Op(pixels[y * canvasSize.cx + x], bo_col);
+    }
 
-        if (rcr_bw_start < rcr_end) {
-            for (int y = rct_minry_start; y < rcb_minry_end; y++) // right border
-                for (int x = rcr_bw_start; x < rcr_end; x++)
-                    Op(pixels[y * canvasSize.cx + x], bo_col);
-        }
+    if (rcr_bw_start < rcr_end) {
+        for (int y = rct_minry_start; y < rcb_minry_end; y++) // right border
+            for (int x = rcr_bw_start; x < rcr_end; x++)
+                Op(pixels[y * canvasSize.cx + x], bo_col);
     }
 
     // corners
@@ -232,12 +230,6 @@ void drawBorderedRectAlphaComposite(HDC hdc, const RECT roundRect, int radius, i
     drawBorderedRectInternal<CompositeAlpha>(canvasSize, clipRegion, pixels, roundRect, radius, bw, bg_col, bo_col);
 }
 
-#define LERP_BYTE(result, a, b)                             \
-    BYTE result##a = (aa + (ba - aa) * stencilAlpha / 255); \
-    BYTE result##r = (ar + (br - ar) * stencilAlpha / 255); \
-    BYTE result##g = (ag + (bg - ag) * stencilAlpha / 255); \
-    BYTE result##b = (ab + (bb - ab) * stencilAlpha / 255);
-
 void drawBitmapAlphaComposite(HDC hdc, HBITMAP bmp, const POINT pos, int horizontalShift)
 {
     if (!bmp)
@@ -266,4 +258,20 @@ void drawBitmapAlphaComposite(HDC hdc, HBITMAP bmp, const POINT pos, int horizon
             CompositeAlpha(canvasPixels[hdcY + (horizontalShift + x) % w], pixelColor);
         }
     }
+}
+
+void drawRoundRectToBitmap(HBITMAP dst, const POINT pos, RECT roundRect, int radius, DWORD col0, DWORD col1)
+{
+    SIZE bitmapSize;
+    DWORD* pixels;
+    getBitmapData(dst, bitmapSize, pixels);
+    if (!pixels)
+        return;
+
+    for (int i = 0; i < bitmapSize.cx * bitmapSize.cy; ++i)
+        pixels[i] = (pixels[i] & 0xFF000000) | (col0 & 0x00FFFFFF);
+
+    roundRect.left -= pos.x, roundRect.top -= pos.y, roundRect.right -= pos.x, roundRect.bottom -= pos.y;
+    drawBorderedRectInternal<ReplaceRGB>(bitmapSize, { 0, 0, bitmapSize.cx, bitmapSize.cy },
+        pixels, roundRect, radius, 0, 0xFF000000 | col1, 0xFF000000 | col1);
 }

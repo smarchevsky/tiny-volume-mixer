@@ -2,6 +2,7 @@
 
 #include "Draw.h"
 #include "UIManager.h"
+#include "Utils.h"
 
 #if defined(_DEBUG)
 
@@ -76,8 +77,17 @@ void Slider::draw(HDC hdc, const UIConfig& uic) const
         uic.sliderCornerRadius, uic.sliderBorderWidth,
         0xAA000000 | sliderColor, border | sliderColor);
 
-    if (_sliderInfo && _sliderInfo->textBmp && _focused)
-        drawBitmapAlphaComposite(hdc, _sliderInfo->textBmp, { drawRect.left, _rect.top } );
+    if (_sliderInfo && _sliderInfo->textBmp) {
+        POINT pos = { drawRect.left, _rect.top };
+
+        SIZE bitmapSize;
+        DWORD* pixels;
+        getBitmapData(_sliderInfo->textBmp, bitmapSize, pixels);
+        if (!pixels)
+            return;
+        drawRoundRectToBitmap(_sliderInfo->textBmp, pos, drawRect, uic.sliderCornerRadius, sliderColor, 0xFFFFFF);
+        drawBitmapAlphaComposite(hdc, _sliderInfo->textBmp, pos);
+    }
 
     if (_sliderInfo && _sliderInfo->hIconLarge)
         DrawIconEx(hdc,
