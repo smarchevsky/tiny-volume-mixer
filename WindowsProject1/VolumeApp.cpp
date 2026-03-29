@@ -1,9 +1,7 @@
 #include "VolumeApp.h"
 
-#include "IconManager.h"
+#include "UIManager.h"
 #include "Utils.h"
-
-static HBITMAP stencil;
 
 void VolumeApp::construct(HINSTANCE instance, WNDPROC wndProc)
 {
@@ -15,13 +13,11 @@ void VolumeApp::construct(HINSTANCE instance, WNDPROC wndProc)
 
     _uiConfig = UIConfig::get();
 
-    IconManager::get().init(_uiConfig.iconSize);
+    UIManager::get().init(_uiConfig);
     sliderManager.getSliderFromSelect(SelectInfo(VolumeType::Master, 0))->_iconInfo
-        = IconManager::get().getIconMasterVol();
+        = UIManager::get().getIconMasterVol();
 
     _audioAppListerner.init(_hWnd);
-
-    TextRenderer::get().init();
 }
 
 void VolumeApp::destroyWindow(HWND hWnd)
@@ -43,7 +39,7 @@ void VolumeApp::handleMMAppRegistered(AudioSessionInitInfo* sessionInitInfo)
 {
     AudioUpdateInfo& info = sessionInitInfo->updateInfo;
 
-    IconInfo* iconInfo = IconManager::get().tryRetrieveIcon(sessionInitInfo->iconPath, info._pid);
+    SliderInfo* iconInfo = UIManager::get().tryRetrieveIcon(sessionInitInfo->iconPath, info._pid);
 
     sliderManager.appSliderAdd(info._pid, info._vol, info._isMuted, iconInfo);
     delete sessionInitInfo;
@@ -86,7 +82,6 @@ void VolumeApp::onPaint(HDC hdc)
     sliderManager.drawSliders(hdc, _uiConfig);
 
     RECT rc {};
-    drawStencil(hdc, stencil, { 400, 200 }, rc, 16, 0x00FF00, 0xFFFFFF);
 }
 
 void VolumeApp::onResize(RECT rc)

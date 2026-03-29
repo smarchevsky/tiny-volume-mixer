@@ -7,7 +7,7 @@
 
 class VolumeApp : public App {
     AudioUpdateListener _audioAppListerner;
-    UIConfig _uiConfig;
+    UIConfig _uiConfig = UIConfig::get();
     SliderManager sliderManager;
     SelectInfo sliderInfoHovered;
 

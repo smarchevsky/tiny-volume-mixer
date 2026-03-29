@@ -4,7 +4,8 @@
 
 #include <vector>
 
-struct IconInfo;
+struct SliderInfo;
+struct UIConfig;
 
 static bool isValidRect(const RECT& rect) { return rect.right > rect.left && rect.bottom > rect.top; }
 
@@ -12,12 +13,12 @@ class Slider {
     PID _pid;
 
 public:
-    const IconInfo* _iconInfo {};
+    const SliderInfo* _iconInfo {};
     RECT _rect;
     float _val;
     bool _focused;
 
-    Slider(PID pid, float value, const IconInfo* iconInfo)
+    Slider(PID pid, float value, const SliderInfo* iconInfo)
     {
         _pid = pid, _iconInfo = iconInfo, _rect = { 0 }, _val = value, _focused = false;
     }
@@ -26,7 +27,7 @@ public:
     PID getPID() const { return _pid; }
     float getHeight() const { return float(_rect.bottom - _rect.top); }
     bool intersects(POINT pos) const { return isValidRect(_rect) ? PtInRect(&_rect, pos) : false; }
-    void draw(HDC hdc, const UIConfig& uic) const;  
+    void draw(HDC hdc, const UIConfig& uic) const;
 };
 
 class SliderManager {
@@ -34,7 +35,7 @@ class SliderManager {
     std::vector<Slider> _slidersApps;
 
 public:
-    void appSliderAdd(PID pid, float vol, bool muted, const IconInfo* iconInfo);
+    void appSliderAdd(PID pid, float vol, bool muted, const SliderInfo* iconInfo);
     void appSliderRemove(PID pid);
 
     Slider* getSliderFromSelect(SelectInfo info);

@@ -40,6 +40,7 @@ struct UIConfig {
     uint8_t sliderBorderWidth = frameBorderWidth;
     uint8_t frameCornerRadius = sliderCornerRadius + sliderSpacing + frameBorderWidth;
     uint8_t iconSize = 48;
+    uint8_t fontSize = 28;
 
     int getSliderOffsetL() const { return sliderSpacing / 2; }
     int getSliderOffsetR() const { return sliderSpacing - getSliderOffsetL(); }
@@ -49,4 +50,7 @@ struct UIConfig {
         UIConfig config;
         return config;
     }
+
+private:
+    UIConfig() = default;
 };

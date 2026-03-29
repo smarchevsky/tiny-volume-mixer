@@ -52,23 +52,6 @@ public:
     }
 };
 
-class TextRenderer {
-    HFONT _hFont {};
-
-    TextRenderer() = default;
-    ~TextRenderer();
-
-public:
-    HBITMAP renderTextToAlphaBitmap(const std::wstring& text);
-
-    void init(int fontSize = 28);
-    static TextRenderer& get()
-    {
-        static TextRenderer instance;
-        return instance;
-    }
-};
-
 //
 // FILE
 //

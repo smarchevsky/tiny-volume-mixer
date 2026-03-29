@@ -1,8 +1,5 @@
 #include "Utils.h"
 
-#include "IconManager.h"
-// #include <psapi.h> // GetModuleBaseName
-
 // SHLoadIndirectString, PathFindFileNameW, SHCreateStreamOnFileW, StrStrW
 #include <shlwapi.h>
 #pragma comment(lib, "shlwapi.lib")
@@ -14,10 +11,8 @@
 // SHDefExtractIconW, SHGetKnownFolderPath
 #include <shlobj.h>
 
-#include <string>
-// #include <vector>
 #include <algorithm>
-#include <cassert>
+#include <string>
 
 //
 // PNG LOADER
@@ -72,69 +67,6 @@ HBITMAP PNGLoader::getBitmapFromPng(const std::wstring& pngPath, int* customIcon
 //
 // FONT
 //
-
-TextRenderer::~TextRenderer()
-{
-    if (_hFont)
-        DeleteObject(_hFont);
-}
-
-void TextRenderer::init(int fontSize)
-{
-    fontSize = std::clamp(fontSize, 8, 255);
-
-    if (_hFont)
-        DeleteObject(_hFont);
-
-    _hFont = CreateFont(
-        fontSize, // Height (arbitrary size)
-        0, // Width (0 let's Windows choose best match)
-        0, // Escapement
-        0, // Orientation
-        FW_BOLD, // Weight (e.g., FW_NORMAL, FW_BOLD)
-        FALSE, // Italic
-        FALSE, // Underline
-        FALSE, // Strikeout
-        ANSI_CHARSET, // Charset
-        OUT_DEFAULT_PRECIS, // Out Precision
-        CLIP_DEFAULT_PRECIS, // Clip Precision
-        DEFAULT_QUALITY, // Quality
-        DEFAULT_PITCH | FF_SWISS, // Pitch and Family
-        L"Segoe UI" // Typeface name
-    );
-
-    // BitBlt(hdc, 194, 16, _textSize.cx, _textSize.cy, _fontDC, 0, 0, SRCCOPY);
-}
-
-HBITMAP TextRenderer::renderTextToAlphaBitmap(const std::wstring& text)
-{
-    assert(_hFont);
-    HDC fontBufferDC = CreateCompatibleDC(NULL);
-
-    HFONT hOldFont = (HFONT)SelectObject(fontBufferDC, _hFont);
-
-    SIZE textSize;
-    GetTextExtentPoint32(fontBufferDC, text.c_str(), (int)text.length(), &textSize);
-
-    DWORD* pixelsARGB;
-    BITMAPINFO bmi = getBMI_ARGB(textSize);
-    HBITMAP fontBufferBitmap = CreateDIBSection(fontBufferDC, &bmi, DIB_RGB_COLORS, (void**)&pixelsARGB, NULL, 0);
-
-    if (fontBufferBitmap) {
-        HBITMAP hOldBmp = (HBITMAP)SelectObject(fontBufferDC, fontBufferBitmap);
-        SetBkMode(fontBufferDC, TRANSPARENT);
-        SetTextColor(fontBufferDC, RGB(255, 255, 255)); // White text
-        TextOut(fontBufferDC, 0, 0, text.c_str(), (int)text.length());
-        for (int i = 0; i < textSize.cx * textSize.cy; ++i)
-            pixelsARGB[i] = (pixelsARGB[i] & 0xFF) << 24;
-        SelectObject(fontBufferDC, hOldBmp);
-    }
-
-    SelectObject(fontBufferDC, hOldFont);
-    DeleteDC(fontBufferDC);
-
-    return fontBufferBitmap;
-}
 
 //
 // FILE

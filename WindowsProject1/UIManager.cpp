@@ -1,4 +1,4 @@
-#include "IconManager.h"
+#include "UIManager.h"
 
 #include "Utils.h" // PNGLoader
 
@@ -19,6 +19,7 @@
 #include <winver.h>
 #pragma comment(lib, "Version.lib")
 
+#include <cassert>
 #include <filesystem>
 
 namespace fs = std::filesystem;
@@ -43,7 +44,7 @@ COLORREF getAvgColorARGB(int width, int height, DWORD* pixels)
     return defaultSliderColor;
 }
 
-IconInfo createIconInfo(HICON icon, bool calculateIconColor = true)
+SliderInfo createIconInfo(HICON icon, bool calculateIconColor = true)
 {
     // calc avg color
     ICONINFO iconInfo;
@@ -64,9 +65,9 @@ IconInfo createIconInfo(HICON icon, bool calculateIconColor = true)
     ReleaseDC(NULL, hdc);
 
     // make icon info
-    IconInfo ii {};
+    SliderInfo ii {};
 
-    ii.hLarge = icon;
+    ii.hIconLarge = icon;
     ii.ARGB = calculateIconColor ? getAvgColorARGB(bmp.bmWidth, bmp.bmHeight, &pixels[0]) : defaultSliderColor;
     return ii;
 }
@@ -284,8 +285,38 @@ std::wstring getFileName(const LPWSTR path)
 }
 } // namespace
 
+HBITMAP UIManager::renderTextToAlphaBitmap(const std::wstring& text)
+{
+    assert(_hFont);
+    HDC fontBufferDC = CreateCompatibleDC(NULL);
+
+    HFONT hOldFont = (HFONT)SelectObject(fontBufferDC, _hFont);
+
+    SIZE textSize;
+    GetTextExtentPoint32(fontBufferDC, text.c_str(), (int)text.length(), &textSize);
+
+    DWORD* pixelsARGB;
+    BITMAPINFO bmi = getBMI_ARGB(textSize);
+    HBITMAP fontBufferBitmap = CreateDIBSection(fontBufferDC, &bmi, DIB_RGB_COLORS, (void**)&pixelsARGB, NULL, 0);
+
+    if (fontBufferBitmap) {
+        HBITMAP hOldBmp = (HBITMAP)SelectObject(fontBufferDC, fontBufferBitmap);
+        SetBkMode(fontBufferDC, TRANSPARENT);
+        SetTextColor(fontBufferDC, RGB(255, 255, 255)); // White text
+        TextOut(fontBufferDC, 0, 0, text.c_str(), (int)text.length());
+        for (int i = 0; i < textSize.cx * textSize.cy; ++i)
+            pixelsARGB[i] = (pixelsARGB[i] & 0xFF) << 24;
+        SelectObject(fontBufferDC, hOldBmp);
+    }
+
+    SelectObject(fontBufferDC, hOldFont);
+    DeleteDC(fontBufferDC);
+
+    return fontBufferBitmap;
+}
+
 #pragma region ICON
-IconInfo* IconManager::tryRetrieveIcon(WCHAR* iconPath, PID pid)
+SliderInfo* UIManager::tryRetrieveIcon(WCHAR* iconPath, PID pid)
 {
     HBITMAP textBmp {};
     std::wstring iconPathStr;
@@ -296,7 +327,7 @@ IconInfo* IconManager::tryRetrieveIcon(WCHAR* iconPath, PID pid)
             iconPathStr = exePath;
             auto fileName = getFileName(exePath);
             if (!fileName.empty()) {
-                textBmp = TextRenderer::get().renderTextToAlphaBitmap(fileName);
+                textBmp = renderTextToAlphaBitmap(fileName);
             }
         }
 
@@ -304,7 +335,7 @@ IconInfo* IconManager::tryRetrieveIcon(WCHAR* iconPath, PID pid)
     }
 
     if (pid == 0 && !textBmp)
-        textBmp = TextRenderer::get().renderTextToAlphaBitmap(L"System");
+        textBmp = renderTextToAlphaBitmap(L"System");
 
     if (iconPath && wcslen(iconPath)) { // retrieve from AudioSessionInfo
         iconPathStr = iconPath;
@@ -317,48 +348,76 @@ IconInfo* IconManager::tryRetrieveIcon(WCHAR* iconPath, PID pid)
     if (!icon)
         icon = createIconFromPackageInstallPath(pid, _iconSize);
     if (!icon)
-        icon = _iiNoIconApp.hLarge;
+        icon = _iiNoIconApp.hIconLarge;
 
     auto& cachedIcon = _cachedAppIcons[iconPathStr] = createIconInfo(icon);
     cachedIcon.textBmp = textBmp;
     return &cachedIcon;
 }
 
-void IconManager::init(int iconSize)
+void UIManager::init(const UIConfig& config)
 {
     uninit();
-    _iconSize = iconSize;
+    _iconSize = config.iconSize;
 
     wchar_t dllPathSource[MAX_PATH];
     GetSystemDirectoryW(dllPathSource, MAX_PATH);
 
-    auto loadIcon = [dllPathSource, iconSize](const wchar_t* path, int iconIndex) -> IconInfo {
+    auto loadIcon = [dllPathSource, this](const wchar_t* path, int iconIndex) -> SliderInfo {
         wchar_t dllPath[MAX_PATH];
         wcscpy_s(dllPath, MAX_PATH, dllPathSource);
         wcscat_s(dllPath, path);
 
         HICON icon {};
-        SHDefExtractIconW(dllPath, iconIndex, 0, &icon, NULL, MAKELONG(CLAMP_ICON_SIZE(iconSize), 0));
+        SHDefExtractIconW(dllPath, iconIndex, 0, &icon, NULL, MAKELONG(CLAMP_ICON_SIZE(_iconSize), 0));
         return createIconInfo(icon, false);
     };
 
     _iiMasterSpeaker = loadIcon(L"\\mmres.dll", -3004);
     _iiMasterHeadphones = loadIcon(L"\\mmres.dll", -3015);
     _iiNoIconApp = loadIcon(L"\\imageres.dll", -15);
+
+    int fontSize = std::clamp((int)config.fontSize, 8, 255);
+
+    if (_hFont)
+        DeleteObject(_hFont);
+
+    _hFont = CreateFont(
+        fontSize, // Height (arbitrary size)
+        0, // Width (0 let's Windows choose best match)
+        0, // Escapement
+        0, // Orientation
+        FW_BOLD, // Weight (e.g., FW_NORMAL, FW_BOLD)
+        FALSE, // Italic
+        FALSE, // Underline
+        FALSE, // Strikeout
+        ANSI_CHARSET, // Charset
+        OUT_DEFAULT_PRECIS, // Out Precision
+        CLIP_DEFAULT_PRECIS, // Clip Precision
+        DEFAULT_QUALITY, // Quality
+        DEFAULT_PITCH | FF_SWISS, // Pitch and Family
+        L"Segoe UI" // Typeface name
+    );
 }
 
-void IconManager::uninit()
+void UIManager::uninit()
 {
     for (auto& pair : _cachedAppIcons) {
         auto& iconInfo = pair.second;
-        if (iconInfo.hLarge) {
-            DestroyIcon(iconInfo.hLarge);
-            iconInfo.hLarge = nullptr;
-        }
+        DestroyIcon(iconInfo.hIconLarge);
+        DeleteObject(iconInfo.textBmp);
+        iconInfo = {};
     }
-    DestroyIcon(_iiMasterSpeaker.hLarge);
-    DestroyIcon(_iiMasterHeadphones.hLarge);
-    DestroyIcon(_iiNoIconApp.hLarge);
+
+    DestroyIcon(_iiMasterSpeaker.hIconLarge);
+    DestroyIcon(_iiMasterHeadphones.hIconLarge);
+    DestroyIcon(_iiNoIconApp.hIconLarge);
+    _iiMasterSpeaker = _iiMasterHeadphones = _iiNoIconApp = {};
+
+    if (_hFont) {
+        DeleteObject(_hFont);
+        _hFont = nullptr;
+    }
 }
 
 #pragma endregion
