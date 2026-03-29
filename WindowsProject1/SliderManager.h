@@ -13,14 +13,14 @@ class Slider {
     PID _pid;
 
 public:
-    const SliderInfo* _iconInfo {};
+    const SliderInfo* _sliderInfo {};
     RECT _rect;
     float _val;
     bool _focused;
 
-    Slider(PID pid, float value, const SliderInfo* iconInfo)
+    Slider(PID pid, float value, const SliderInfo* sliderInfo)
     {
-        _pid = pid, _iconInfo = iconInfo, _rect = { 0 }, _val = value, _focused = false;
+        _pid = pid, _sliderInfo = sliderInfo, _rect = { 0 }, _val = value, _focused = false;
     }
     Slider() = default;
 
@@ -35,7 +35,7 @@ class SliderManager {
     std::vector<Slider> _slidersApps;
 
 public:
-    void appSliderAdd(PID pid, float vol, bool muted, const SliderInfo* iconInfo);
+    void appSliderAdd(PID pid, float vol, bool muted, const SliderInfo* sliderInfo);
     void appSliderRemove(PID pid);
 
     Slider* getSliderFromSelect(SelectInfo info);

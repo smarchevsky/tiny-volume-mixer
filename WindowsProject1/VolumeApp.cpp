@@ -14,7 +14,7 @@ void VolumeApp::construct(HINSTANCE instance, WNDPROC wndProc)
     _uiConfig = UIConfig::get();
 
     UIManager::get().init(_uiConfig);
-    sliderManager.getSliderFromSelect(SelectInfo(VolumeType::Master, 0))->_iconInfo
+    sliderManager.getSliderFromSelect(SelectInfo(VolumeType::Master, 0))->_sliderInfo
         = UIManager::get().getIconMasterVol();
 
     _audioAppListerner.init(_hWnd);
@@ -39,7 +39,7 @@ void VolumeApp::handleMMAppRegistered(AudioSessionInitInfo* sessionInitInfo)
 {
     AudioUpdateInfo& info = sessionInitInfo->updateInfo;
 
-    SliderInfo* iconInfo = UIManager::get().tryRetrieveIcon(sessionInitInfo->iconPath, info._pid);
+    SliderInfo* iconInfo = UIManager::get().generateSliderInfo(sessionInitInfo->iconPath, info._pid);
 
     sliderManager.appSliderAdd(info._pid, info._vol, info._isMuted, iconInfo);
     delete sessionInitInfo;

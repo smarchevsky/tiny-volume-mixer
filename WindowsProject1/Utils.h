@@ -35,6 +35,8 @@ inline BITMAPINFO getBMI_ARGB(SIZE size)
 // PNG LOADER
 //
 
+HBITMAP renderTextToAlphaBitmap(const HFONT font, const std::wstring& text);
+
 struct IWICImagingFactory;
 class PNGLoader {
     IWICImagingFactory* pFactory = nullptr;

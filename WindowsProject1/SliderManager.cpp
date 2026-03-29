@@ -60,7 +60,7 @@ HICON debugUpdateIcon(int iconSize)
 void Slider::draw(HDC hdc, const UIConfig& uic) const
 {
 #if DEBUG_ITERATE_ICONS == 1
-    const_cast<SliderInfo*>(_iconInfo)->hIconLarge = debugUpdateIcon(_iconInfo->width);
+    const_cast<SliderInfo*>(_sliderInfo)->hIconLarge = debugUpdateIcon(_sliderInfo->width);
 #endif
 
     float drawHeight = (_rect.bottom - _rect.top) * (1.f - _val);
@@ -70,20 +70,21 @@ void Slider::draw(HDC hdc, const UIConfig& uic) const
     };
 
     const DWORD border = _focused ? 0xFF000000 : 0xAA000000;
-    DWORD sliderColor = _iconInfo ? _iconInfo->ARGB : defaultSliderColor;
+    DWORD sliderColor = _sliderInfo ? _sliderInfo->ARGB : defaultSliderColor;
 
     drawBorderedRect(hdc, drawRect,
         uic.sliderCornerRadius, uic.sliderBorderWidth,
         0xAA000000 | sliderColor, border | sliderColor);
 
-    if (_iconInfo && _iconInfo->textBmp && _focused)
-        drawStencil(hdc, _iconInfo->textBmp, { drawRect.left, _rect.top }, drawRect, uic.sliderCornerRadius, 0xFFFFFF, 0xFFFFFF);
+    if (_sliderInfo && _sliderInfo->textBmp && _focused)
+        drawStencil(hdc, _sliderInfo->textBmp, { drawRect.left, _rect.top }, 
+            drawRect, uic.sliderCornerRadius, 0xFFFFFF, 0xFFFFFF);
 
-    if (_iconInfo && _iconInfo->hIconLarge)
+    if (_sliderInfo && _sliderInfo->hIconLarge)
         DrawIconEx(hdc,
             (_rect.left + _rect.right) / 2 - uic.iconSize / 2,
             _rect.bottom - uic.iconSize / 2 - (uic.sliderWidthApp - uic.sliderSpacing) / 2,
-            _iconInfo->hIconLarge, 0, 0, 0, NULL, DI_NORMAL);
+            _sliderInfo->hIconLarge, 0, 0, 0, NULL, DI_NORMAL);
 }
 
 Slider* SliderManager::getSliderFromSelect(SelectInfo info)
@@ -100,9 +101,9 @@ Slider* SliderManager::getSliderFromSelect(SelectInfo info)
     return nullptr;
 }
 
-void SliderManager::appSliderAdd(PID pid, float vol, bool muted, const SliderInfo* iconInfo)
+void SliderManager::appSliderAdd(PID pid, float vol, bool muted, const SliderInfo* sliderInfo)
 {
-    _slidersApps.push_back(Slider(pid, vol, iconInfo));
+    _slidersApps.push_back(Slider(pid, vol, sliderInfo));
 }
 
 void SliderManager::appSliderRemove(PID pid)

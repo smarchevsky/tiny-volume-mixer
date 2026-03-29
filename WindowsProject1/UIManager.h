@@ -25,10 +25,8 @@ private:
     void uninit();
 
 public:
-    SliderInfo* getIconMasterVol() { return &_iiMasterSpeaker; }
-    SliderInfo* tryRetrieveIcon(WCHAR* iconPath, PID pid);
-
-    HBITMAP renderTextToAlphaBitmap(const std::wstring& text);
+    const SliderInfo* getIconMasterVol() const { return &_iiMasterSpeaker; }
+    SliderInfo* generateSliderInfo(WCHAR* iconPath, PID pid);
 
     void init(const UIConfig& config);
     static UIManager& get()

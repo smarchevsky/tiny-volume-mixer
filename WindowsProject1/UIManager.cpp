@@ -285,38 +285,8 @@ std::wstring getFileName(const LPWSTR path)
 }
 } // namespace
 
-HBITMAP UIManager::renderTextToAlphaBitmap(const std::wstring& text)
-{
-    assert(_hFont);
-    HDC fontBufferDC = CreateCompatibleDC(NULL);
-
-    HFONT hOldFont = (HFONT)SelectObject(fontBufferDC, _hFont);
-
-    SIZE textSize;
-    GetTextExtentPoint32(fontBufferDC, text.c_str(), (int)text.length(), &textSize);
-
-    DWORD* pixelsARGB;
-    BITMAPINFO bmi = getBMI_ARGB(textSize);
-    HBITMAP fontBufferBitmap = CreateDIBSection(fontBufferDC, &bmi, DIB_RGB_COLORS, (void**)&pixelsARGB, NULL, 0);
-
-    if (fontBufferBitmap) {
-        HBITMAP hOldBmp = (HBITMAP)SelectObject(fontBufferDC, fontBufferBitmap);
-        SetBkMode(fontBufferDC, TRANSPARENT);
-        SetTextColor(fontBufferDC, RGB(255, 255, 255)); // White text
-        TextOut(fontBufferDC, 0, 0, text.c_str(), (int)text.length());
-        for (int i = 0; i < textSize.cx * textSize.cy; ++i)
-            pixelsARGB[i] = (pixelsARGB[i] & 0xFF) << 24;
-        SelectObject(fontBufferDC, hOldBmp);
-    }
-
-    SelectObject(fontBufferDC, hOldFont);
-    DeleteDC(fontBufferDC);
-
-    return fontBufferBitmap;
-}
-
 #pragma region ICON
-SliderInfo* UIManager::tryRetrieveIcon(WCHAR* iconPath, PID pid)
+SliderInfo* UIManager::generateSliderInfo(WCHAR* iconPath, PID pid)
 {
     HBITMAP textBmp {};
     std::wstring iconPathStr;
@@ -327,7 +297,7 @@ SliderInfo* UIManager::tryRetrieveIcon(WCHAR* iconPath, PID pid)
             iconPathStr = exePath;
             auto fileName = getFileName(exePath);
             if (!fileName.empty()) {
-                textBmp = renderTextToAlphaBitmap(fileName);
+                textBmp = renderTextToAlphaBitmap(_hFont, fileName);
             }
         }
 
@@ -335,7 +305,7 @@ SliderInfo* UIManager::tryRetrieveIcon(WCHAR* iconPath, PID pid)
     }
 
     if (pid == 0 && !textBmp)
-        textBmp = renderTextToAlphaBitmap(L"System");
+        textBmp = renderTextToAlphaBitmap(_hFont, L"System");
 
     if (iconPath && wcslen(iconPath)) { // retrieve from AudioSessionInfo
         iconPathStr = iconPath;
@@ -350,9 +320,9 @@ SliderInfo* UIManager::tryRetrieveIcon(WCHAR* iconPath, PID pid)
     if (!icon)
         icon = _iiNoIconApp.hIconLarge;
 
-    auto& cachedIcon = _cachedAppIcons[iconPathStr] = createIconInfo(icon);
-    cachedIcon.textBmp = textBmp;
-    return &cachedIcon;
+    auto& sliderInfo = _cachedAppIcons[iconPathStr] = createIconInfo(icon);
+    sliderInfo.textBmp = textBmp;
+    return &sliderInfo;
 }
 
 void UIManager::init(const UIConfig& config)
