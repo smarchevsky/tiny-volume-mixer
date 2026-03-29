@@ -16,11 +16,13 @@ public:
     const SliderInfo* _sliderInfo {};
     RECT _rect;
     float _val;
+    uint16_t _textShift;
     bool _focused;
 
     Slider(PID pid, float value, const SliderInfo* sliderInfo)
     {
-        _pid = pid, _sliderInfo = sliderInfo, _rect = { 0 }, _val = value, _focused = false;
+        _pid = pid, _sliderInfo = sliderInfo, _rect = { 0 }, _val = value, _textShift = 0;
+        _focused = false;
     }
     Slider() = default;
 

@@ -135,6 +135,12 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         return 0;
     }
 
+    case WM_TIMER:
+        if (wParam == WM_TIMER_UI) {
+            app.handleTimerUpdateUI();
+        }
+        break;
+
     case WM_COMMAND: {
         int wmId = LOWORD(wParam);
         switch (wmId) {

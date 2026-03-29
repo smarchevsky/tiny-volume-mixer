@@ -13,6 +13,7 @@ enum {
     WM_REFRESH_VOL,
     WM_APP_REGISTERED,
     WM_APP_UNREGISTERED,
+    WM_TIMER_UI,
 };
 
 enum class VolumeType : uint8_t {

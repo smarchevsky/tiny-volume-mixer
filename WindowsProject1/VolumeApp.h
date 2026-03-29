@@ -11,6 +11,8 @@ class VolumeApp : public App {
     SliderManager sliderManager;
     SelectInfo sliderInfoHovered;
 
+    bool _isAppHovered;
+
     virtual void onPaint(HDC hdc) override;
     virtual void onResize(RECT newRect) override;
 
@@ -22,6 +24,9 @@ public:
     void handleMMAppRegistered(AudioSessionInitInfo* sessionInitInfo);
     void handleMMAppUnegistered(WPARAM wParam, LPARAM lParam);
     void handleMMRefreshVol(WPARAM wParam, LPARAM lParam);
+
+    void updateTimerStateUI();
+    void handleTimerUpdateUI();
 
     virtual void construct(HINSTANCE instance, WNDPROC wndProc);
     virtual void destroyWindow(HWND hWnd) override;

@@ -9,7 +9,7 @@ void VolumeApp::construct(HINSTANCE instance, WNDPROC wndProc)
     FileManager::get().loadWindowRect(rc);
 
     initWindow(instance, wndProc, rc);
-    // setWindowSemiTransparent(true);
+    _isAppHovered = false, updateTimerStateUI();
 
     _uiConfig = UIConfig::get();
 
@@ -107,7 +107,8 @@ void VolumeApp::onMouseScroll(POINT cursorClientPos, float delta)
 
 void VolumeApp::onMouseLeave()
 {
-    // setWindowSemiTransparent(true);
+    _isAppHovered = false, updateTimerStateUI();
+
     if (auto slider = sliderManager.getSliderFromSelect(sliderInfoHovered)) {
         slider->_focused = false;
         InvalidateRect(_hWnd, &slider->_rect, FALSE);
@@ -117,8 +118,8 @@ void VolumeApp::onMouseLeave()
 
 void VolumeApp::onMouseMove(POINT cursorClientPos, bool justEntered)
 {
-    // if (justEntered)
-    // setWindowSemiTransparent(true);
+    if (justEntered)
+        _isAppHovered = true, updateTimerStateUI();
 
     SelectInfo newHoverInfo = sliderManager.getSelectAtPosition(cursorClientPos);
 
@@ -132,5 +133,21 @@ void VolumeApp::onMouseMove(POINT cursorClientPos, bool justEntered)
             InvalidateRect(_hWnd, &slider->_rect, FALSE);
         }
         sliderInfoHovered = newHoverInfo;
+    }
+}
+
+void VolumeApp::updateTimerStateUI()
+{
+    if (_isAppHovered)
+        SetTimer(_hWnd, WM_TIMER_UI, 100, (TIMERPROC)NULL);
+    else
+        KillTimer(_hWnd, WM_TIMER_UI);
+}
+
+void VolumeApp::handleTimerUpdateUI()
+{
+    if (auto slider = sliderManager.getSliderFromSelect(sliderInfoHovered)) {
+        slider->_textShift += 6;
+        InvalidateRect(_hWnd, &slider->_rect, FALSE);
     }
 }

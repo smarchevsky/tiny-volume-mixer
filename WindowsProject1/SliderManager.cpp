@@ -99,14 +99,25 @@ void Slider::draw(HDC hdc, const UIConfig& uic) const
         SIZE bitmapSize {};
         DWORD* pixels;
         getBitmapData(_sliderInfo->textBmp, bitmapSize, pixels);
-        LONG extend = textRegionW - bitmapSize.cx;
-        pos.x += extend / 2;
+        LONG extend = bitmapSize.cx - textRegionW;
+        constexpr DWORD textColor = 0xDDDDDD;
+        if (extend <= 0) { // fits in slider
+            pos.x -= extend / 2;
+            drawRoundRectToBitmap(_sliderInfo->textBmp, roundRect - pos, uic.sliderCornerRadius, sliderColor, textColor);
+            drawBitmapAlphaComposite(hdc, _sliderInfo->textBmp, pos);
+        } else {
+            constexpr int margin = 20;
+            if (bitmapSize.cx)
+                pos.x -= _textShift % (bitmapSize.cx + margin);
 
-        drawRoundRectToBitmap(_sliderInfo->textBmp, roundRect - pos, uic.sliderCornerRadius, sliderColor, 0xFFFFFF);
+            RECT clipRect = { textRegionRect.left, pos.y, textRegionRect.right, pos.y + bitmapSize.cy };
+            drawRoundRectToBitmap(_sliderInfo->textBmp, roundRect - pos, uic.sliderCornerRadius, sliderColor, textColor);
+            drawBitmapAlphaComposite(hdc, _sliderInfo->textBmp, pos, &clipRect);
 
-        RECT bitmapRect = { pos.x, pos.y, pos.x + bitmapSize.cx, pos.y + bitmapSize.cy };
-        bitmapRect.left = max(bitmapRect.left, _rect.left), bitmapRect.right = min(bitmapRect.right, _rect.right);
-        drawBitmapAlphaComposite(hdc, _sliderInfo->textBmp, pos, &bitmapRect);
+            pos.x += bitmapSize.cx + margin;
+            drawRoundRectToBitmap(_sliderInfo->textBmp, roundRect - pos, uic.sliderCornerRadius, sliderColor, textColor);
+            drawBitmapAlphaComposite(hdc, _sliderInfo->textBmp, pos, &clipRect);
+        }
     }
 
     if (_sliderInfo && _sliderInfo->hIconLarge)
