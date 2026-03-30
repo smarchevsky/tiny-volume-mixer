@@ -1,9 +1,9 @@
 //{{NO_DEPENDENCIES}}
 // Microsoft Visual C++ generated include file.
-// Used by WindowsProject1.rc
+// Used by TinyVolumeApp.rc
 //
 #define IDC_MYICON                      2
-#define IDD_WINDOWSPROJECT1_DIALOG      102
+#define IDD_TINY_VOLUME_APP_DIALOG      102
 #define IDS_APP_TITLE                   103
 #define IDD_ABOUTBOX                    103
 #define IDM_ABOUT                       104
