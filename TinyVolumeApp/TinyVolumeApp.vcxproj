@@ -24,6 +24,7 @@
     <ProjectGuid>{fca3513a-1fdc-4cbe-932c-37f91f936460}</ProjectGuid>
     <RootNamespace>WindowsProject1</RootNamespace>
     <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
+    <ProjectName>TinyVolumeApp</ProjectName>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
@@ -137,7 +138,7 @@
     <ClInclude Include="Timer.h" />
     <ClInclude Include="Utils.h" />
     <ClInclude Include="VolumeApp.h" />
-    <ClInclude Include="WindowsProject1.h" />
+    <ClInclude Include="TinyVolumeApp.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="App.cpp" />
@@ -147,10 +148,10 @@
     <ClCompile Include="SliderManager.cpp" />
     <ClCompile Include="Utils.cpp" />
     <ClCompile Include="VolumeApp.cpp" />
-    <ClCompile Include="WindowsProject1.cpp" />
+    <ClCompile Include="TinyVolumeApp.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ResourceCompile Include="WindowsProject1.rc" />
+    <ResourceCompile Include="TinyVolumeApp.rc" />
   </ItemGroup>
   <ItemGroup>
     <Image Include="IconMultires.ico" />

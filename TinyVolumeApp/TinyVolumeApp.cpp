@@ -1,7 +1,7 @@
 // WindowsProject1.cpp : Defines the entry point for the application.
 //
 
-#include "WindowsProject1.h"
+#include "TinyVolumeApp.h"
 
 #include "VolumeApp.h"
 

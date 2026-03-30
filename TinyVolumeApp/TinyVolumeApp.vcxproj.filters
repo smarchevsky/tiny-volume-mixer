@@ -24,7 +24,7 @@
     <ClInclude Include="Resource.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="WindowsProject1.h">
+    <ClInclude Include="TinyVolumeApp.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="AudioUtils.h">
@@ -48,9 +48,15 @@
     <ClInclude Include="Draw.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="UIManager.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="SliderManager.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="WindowsProject1.cpp">
+    <ClCompile Include="TinyVolumeApp.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="AudioUtils.cpp">
@@ -68,9 +74,15 @@
     <ClCompile Include="Draw.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="UIManager.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="SliderManager.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ResourceCompile Include="WindowsProject1.rc">
+    <ResourceCompile Include="TinyVolumeApp.rc">
       <Filter>Resource Files</Filter>
     </ResourceCompile>
   </ItemGroup>
