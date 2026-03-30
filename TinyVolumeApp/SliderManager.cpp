@@ -101,7 +101,7 @@ void Slider::draw(HDC hdc, const UIConfig& uic) const
         getBitmapData(_sliderInfo->textBmp, bitmapSize, pixels);
         LONG extend = bitmapSize.cx - textRegionW;
         const DWORD textColor = _sliderInfo->colorText;
-        const DWORD textColorBack = sliderColor; // uic.colorWindowFrame;
+        const DWORD textColorBack = uic.colorWindowFrame;
 
         if (extend <= 0) { // fits in slider
             pos.x -= extend / 2;
