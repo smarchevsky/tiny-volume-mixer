@@ -26,7 +26,15 @@ namespace fs = std::filesystem;
 #define CLAMP_ICON_SIZE(size) std::clamp(size, 8, 256)
 
 namespace {
-COLORREF getAvgColorARGB(int width, int height, DWORD* pixels)
+
+template <class T>
+inline void hash_combine(uint64_t& seed, const T& v)
+{
+    std::hash<T> hasher;
+    seed ^= hasher(v) + 0x9e3779b9 + (seed << 6) + (seed >> 2);
+}
+
+COLORREF getAvgColorARGB(int width, int height, DWORD* pixels, uint64_t& iconHash)
 {
     uint64_t totalR = 0, totalG = 0, totalB = 0;
     int opaquePixels = 0;
@@ -36,6 +44,7 @@ COLORREF getAvgColorARGB(int width, int height, DWORD* pixels)
         BYTE a = (pixels[i] >> 24) & 0xFF, r = (pixels[i] >> 16) & 0xFF, g = (pixels[i] >> 8) & 0xFF, b = pixels[i] & 0xFF;
         if (a > 127)
             totalR += r, totalG += g, totalB += b, opaquePixels++;
+        hash_combine(iconHash, pixels[i]);
     }
 
     if (opaquePixels > 0)
@@ -68,7 +77,13 @@ SliderInfo createIconInfo(HICON icon, bool calculateIconColor = true)
     SliderInfo ii {};
 
     ii.hIconLarge = icon;
-    ii.colorSlider = calculateIconColor ? getAvgColorARGB(bmp.bmWidth, bmp.bmHeight, &pixels[0]) : defaultSliderColor;
+    uint64_t iconHash {};
+    ii.colorSlider = calculateIconColor
+        ? getAvgColorARGB(bmp.bmWidth, bmp.bmHeight, &pixels[0], iconHash)
+        : defaultSliderColor;
+
+    ii.iconHash = iconHash;
+
     {
         ARGB_SPLIT(BYTE, a, ii.colorSlider);
         ARGB_SPLIT(BYTE, b, 0xFFFFFFFF);
@@ -328,6 +343,7 @@ SliderInfo* UIManager::generateSliderInfo(WCHAR* iconPath, PID pid)
 
     auto& sliderInfo = _cachedAppIcons[iconPathStr] = createIconInfo(icon);
     sliderInfo.textBmp = textBmp;
+    sliderInfo.iconHash = pid == 0 ? uint64_t(-1) : sliderInfo.iconHash; // sort system sounds first/last
     return &sliderInfo;
 }
 

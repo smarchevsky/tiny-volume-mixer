@@ -5,6 +5,8 @@
 #include "UIManager.h"
 #include "Utils.h"
 
+#include <algorithm> // std::sort
+
 #if defined(_DEBUG)
 
 #define DEBUG_ITERATE_ICONS 0
@@ -177,12 +179,18 @@ void SliderManager::recalculateSliderRects(const RECT& r, const UIConfig& uic)
 
     _sliderMaster._rect = { offset, top, offset += uic.sliderWidthMaster, bottom };
 
-    for (int i = 1; i < _slidersApps.size(); ++i) {
+    /*for (int i = 1; i < _slidersApps.size(); ++i) {
         if (_slidersApps[i].getPID() == 0) {
             std::swap(_slidersApps[i], _slidersApps[0]);
             std::swap(_slidersApps[i]._focused, _slidersApps[0]._focused);
         }
-    }
+    }*/
+
+    std::sort(_slidersApps.begin(), _slidersApps.end(), [](const Slider& s0, const Slider& s1) {
+        if (s0._sliderInfo && s1._sliderInfo)
+            return s0._sliderInfo->iconHash < s1._sliderInfo->iconHash;
+        return false;
+    });
 
     for (auto& slider : _slidersApps) {
         slider._rect = { offset, top, offset += uic.sliderWidthApp, bottom };
