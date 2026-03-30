@@ -311,7 +311,7 @@ SliderInfo* UIManager::generateSliderInfo(WCHAR* iconPath, PID pid)
     }
 
     if (pid == 0)
-        textBmp = renderTextToAlphaBitmap(_hFont, L"System Sounds");
+        textBmp = renderTextToAlphaBitmap(_hFont, L"System");
 
     if (iconPath && wcslen(iconPath)) { // retrieve from AudioSessionInfo
         iconPathStr = iconPath;
