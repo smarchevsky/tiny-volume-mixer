@@ -11,7 +11,9 @@
 namespace {
 inline void CompositeAlpha(DWORD& back, DWORD front)
 {
-    BYTE fa = (front >> 24) & 0xFF;
+    ARGB_SPLIT(BYTE, f, front);
+    ARGB_SPLIT(BYTE, b, back);
+
     if (fa == 255) {
         back = front;
         return;
@@ -20,18 +22,29 @@ inline void CompositeAlpha(DWORD& back, DWORD front)
         return;
     }
 
-    BYTE fr = (front >> 16) & 0xFF;
-    BYTE fg = (front >> 8) & 0xFF;
-    BYTE fb = front & 0xFF;
+    BYTE inv_a = 255 - fa;
+    back = ARGB(fa + (ba * inv_a) / 255,
+        (fr * fa + br * inv_a) / 255,
+        (fg * fa + bg * inv_a) / 255,
+        (fb * fa + bb * inv_a) / 255);
+}
 
-    BYTE ba = (back >> 24) & 0xFF;
-    BYTE br = (back >> 16) & 0xFF;
-    BYTE bg = (back >> 8) & 0xFF;
-    BYTE bb = back & 0xFF;
+inline void CompositeAlphaWithAlpha(DWORD& back, DWORD front, BYTE alpha)
+{
+    ARGB_SPLIT(BYTE, f, front);
+    ARGB_SPLIT(BYTE, b, back);
+    fa = fa * alpha / 255;
+
+    if (fa == 255) {
+        back = front;
+        return;
+    }
+    if (fa == 0) {
+        return;
+    }
 
     BYTE inv_a = 255 - fa;
-    back = ARGB(
-        fa + (ba * inv_a) / 255,
+    back = ARGB(fa + (ba * inv_a) / 255,
         (fr * fa + br * inv_a) / 255,
         (fg * fa + bg * inv_a) / 255,
         (fb * fa + bb * inv_a) / 255);
@@ -225,7 +238,7 @@ void drawBorderedRectAlphaComposite(HDC hdc, const RECT roundRect, int radius, i
     drawBorderedRectInternal<CompositeAlpha>(canvasSize, clipRegion, pixels, roundRect, radius, bw, bg_col, bo_col);
 }
 
-void drawBitmapAlphaComposite(HDC hdc, HBITMAP bmp, const POINT pos, const RECT* customRect)
+void drawBitmapAlphaComposite(HDC hdc, HBITMAP bmp, const POINT pos, const RECT* customRect, BYTE alpha)
 {
     if (!bmp)
         return;
@@ -254,7 +267,7 @@ void drawBitmapAlphaComposite(HDC hdc, HBITMAP bmp, const POINT pos, const RECT*
 
         for (int x = bitmapRect.left; x < bitmapRect.right; x++) {
             DWORD pixelColor = bitmapPixels[stencilY + x];
-            CompositeAlpha(canvasPixels[hdcY + x], pixelColor);
+            CompositeAlphaWithAlpha(canvasPixels[hdcY + x], pixelColor, alpha);
         }
     }
 }

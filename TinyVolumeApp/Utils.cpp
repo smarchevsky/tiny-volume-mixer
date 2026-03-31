@@ -149,7 +149,7 @@ HBITMAP renderTextToAlphaBitmap(const HFONT font, const std::wstring& text)
         SetTextColor(fontBufferDC, RGB(255, 255, 255)); // White text
         TextOut(fontBufferDC, 0, 0, text.c_str(), (int)text.length());
         for (int i = 0; i < textSize.cx * textSize.cy; ++i)
-            pixelsARGB[i] = (pixelsARGB[i] & 0xFF) << 24;
+            pixelsARGB[i] = (pixelsARGB[i] & 0xFF) << 24 | 0xFFFFFF;
         SelectObject(fontBufferDC, hOldBmp);
     }
 
