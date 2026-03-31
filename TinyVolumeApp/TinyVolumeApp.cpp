@@ -68,11 +68,12 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
     case WM_LBUTTONDOWN: {
         app.handleLMB(wParam, lParam, true);
         return 0;
-    }
+    } break;
+
     case WM_RBUTTONUP: {
         app.handleRMB(wParam, lParam, false);
         return 0;
-    }
+    } break;
 
     case WM_MOUSEMOVE: {
         static LPARAM prevLParam;
@@ -123,26 +124,25 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 
     case WM_ERASEBKGND: {
         return 1; // no redraw bkg
-    }
+    } break;
 
     case WM_NCCALCSIZE: {
         return 0;
-    }
+    } break;
 
     case WM_NCHITTEST: {
         return app.handleNCAHitTest(hWnd, lParam);
-    }
+    } break;
 
     case WM_GETMINMAXINFO: {
         app.handleMinMaxInfo(wParam, lParam);
         return 0;
-    }
+    } break;
 
-    case WM_TIMER:
-        if (wParam == WM_TIMER_UI) {
+    case WM_TIMER: {
+        if (wParam == WM_TIMER_UI)
             app.handleTimerUpdateUI();
-        }
-        break;
+    } break;
 
     case WM_COMMAND: {
         int wmId = LOWORD(wParam);
