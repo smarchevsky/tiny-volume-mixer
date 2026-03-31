@@ -98,12 +98,20 @@ void VolumeApp::onPaint(HDC hdc)
 {
     RECT windowRect;
     GetClientRect(_hWnd, &windowRect);
+
     drawBorderedRectAlphaComposite(hdc, windowRect,
         _uiConfig.frameCornerRadius, _uiConfig.frameBorderWidth,
         _uiConfig.colorWindowBck, _uiConfig.colorWindowFrame);
+
     sliderManager.drawSliders(hdc, _uiConfig);
 
-    RECT rc {};
+    if (auto slider = sliderManager.getSliderFromSelect(sliderInfoHovered)) {
+        if (slider && slider->_sliderInfo && slider->_sliderInfo->textBmp) {
+            RECT r = slider->calculateTextRect();
+            drawBitmapAlphaComposite(hdc, slider->_sliderInfo->textBmp,
+                { r.left, r.top }, nullptr, 180);
+        }
+    }
 }
 
 void VolumeApp::onResize(RECT rc)
