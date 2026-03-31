@@ -386,7 +386,8 @@ bool AudioUpdateListener::retieveWaveInfo(std::vector<WaveInfo>& waveInfo)
         pControl2->GetState(&state);
         activeAny |= (state == AudioSessionState::AudioSessionStateActive);
 
-        if (pid != 0) {
+        // if (pid != 0)
+        {
             float peak = 0.0f;
             wchar_t procName[MAX_PATH] = L"Unknown";
 
