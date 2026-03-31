@@ -30,6 +30,7 @@ public:
     float getHeight() const { return float(_rect.bottom - _rect.top); }
     bool intersects(POINT pos) const { return isValidRect(_rect) ? PtInRect(&_rect, pos) : false; }
     void draw(HDC hdc, const UIConfig& uic) const;
+    RECT calculateTextRect() const;
 };
 
 class SliderManager {

@@ -12,7 +12,7 @@ void VolumeApp::construct(HINSTANCE instance, WNDPROC wndProc)
     UIManager::get().init(_uiConfig);
 
     initWindow(instance, wndProc, rc);
-    _isAppHovered = false, updateTimerStateUI();
+    // _isAppHovered = false, updateTimerStateUI();
 
     sliderManager.getSliderFromSelect(SelectInfo(VolumeType::Master, 0))->_sliderInfo
         = UIManager::get().getIconMasterVol();
@@ -70,7 +70,9 @@ void VolumeApp::handleMMRefreshVol(WPARAM wParam, LPARAM lParam)
     SelectInfo si(info._type, info._pid);
     if (auto slider = sliderManager.getSliderFromSelect(si)) {
         slider->_val = info._vol;
-        InvalidateRect(_hWnd, &slider->_rect, FALSE);
+        RECT u = slider->calculateTextRect();
+        UnionRect(&u, &u, &slider->_rect);
+        InvalidateRect(_hWnd, &u, FALSE);
     }
 }
 
@@ -109,31 +111,37 @@ void VolumeApp::onMouseScroll(POINT cursorClientPos, float delta)
 
 void VolumeApp::onMouseLeave()
 {
-    _isAppHovered = false, updateTimerStateUI();
+    // _isAppHovered = false, updateTimerStateUI();
 
     if (auto slider = sliderManager.getSliderFromSelect(sliderInfoHovered)) {
         slider->_focused = false;
         slider->_textShift = 0;
-        InvalidateRect(_hWnd, &slider->_rect, FALSE);
+        RECT u = slider->calculateTextRect();
+        UnionRect(&u, &u, &slider->_rect);
+        InvalidateRect(_hWnd, &u, FALSE);
     }
     sliderInfoHovered = {};
 }
 
 void VolumeApp::onMouseMove(POINT cursorClientPos, bool justEntered)
 {
-    if (justEntered)
-        _isAppHovered = true, updateTimerStateUI();
+    // if (justEntered)
+    //     _isAppHovered = true, updateTimerStateUI();
 
     SelectInfo newHoverInfo = sliderManager.getSelectAtPosition(cursorClientPos);
 
     if (newHoverInfo != sliderInfoHovered) {
         if (auto slider = sliderManager.getSliderFromSelect(newHoverInfo)) {
             slider->_focused = true;
-            InvalidateRect(_hWnd, &slider->_rect, FALSE);
+            RECT u = slider->calculateTextRect();
+            UnionRect(&u, &u, &slider->_rect);
+            InvalidateRect(_hWnd, &u, FALSE);
         }
         if (auto slider = sliderManager.getSliderFromSelect(sliderInfoHovered)) {
             slider->_focused = false;
-            InvalidateRect(_hWnd, &slider->_rect, FALSE);
+            RECT u = slider->calculateTextRect();
+            UnionRect(&u, &u, &slider->_rect);
+            InvalidateRect(_hWnd, &u, FALSE);
         }
         sliderInfoHovered = newHoverInfo;
     }
@@ -141,16 +149,16 @@ void VolumeApp::onMouseMove(POINT cursorClientPos, bool justEntered)
 
 void VolumeApp::updateTimerStateUI()
 {
-    if (_isAppHovered)
+    /*if (_isAppHovered)
         SetTimer(_hWnd, WM_TIMER_UI, 100, (TIMERPROC)NULL);
     else
-        KillTimer(_hWnd, WM_TIMER_UI);
+        KillTimer(_hWnd, WM_TIMER_UI);*/
 }
 
 void VolumeApp::handleTimerUpdateUI()
 {
-    if (auto slider = sliderManager.getSliderFromSelect(sliderInfoHovered)) {
-        slider->_textShift += 6;
-        InvalidateRect(_hWnd, &slider->_rect, FALSE);
-    }
+    // if (auto slider = sliderManager.getSliderFromSelect(sliderInfoHovered)) {
+    //     slider->_textShift += 6;
+    //     InvalidateRect(_hWnd, &slider->_rect, FALSE);
+    // }
 }

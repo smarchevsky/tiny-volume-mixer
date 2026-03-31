@@ -93,34 +93,13 @@ void Slider::draw(HDC hdc, const UIConfig& uic) const
         0xAA000000 | sliderColor, border | sliderColor);
 
     if (_focused && _sliderInfo && _sliderInfo->textBmp) {
-        RECT textRegionRect = _rect;
-        LONG textRegionW = textRegionRect.right - textRegionRect.left;
 
-        POINT pos = { textRegionRect.left, _rect.top };
-
-        SIZE bitmapSize {};
-        DWORD* pixels;
-        getBitmapData(_sliderInfo->textBmp, bitmapSize, pixels);
-        LONG extend = bitmapSize.cx - textRegionW;
         const DWORD textColor = _sliderInfo->colorText;
         const DWORD textColorBack = uic.colorWindowFrame;
         constexpr BYTE customTextAlpha = 180;
 
-        if (extend <= 0) { // fits in slider
-            pos.x -= extend / 2;
-            drawBitmapAlphaComposite(hdc, _sliderInfo->textBmp, pos, nullptr, customTextAlpha);
-
-        } else {
-            constexpr int margin = 20;
-            if (bitmapSize.cx)
-                pos.x -= _textShift % (bitmapSize.cx + margin);
-
-            RECT clipRect = { textRegionRect.left, pos.y, textRegionRect.right, pos.y + bitmapSize.cy };
-            drawBitmapAlphaComposite(hdc, _sliderInfo->textBmp, pos, &clipRect, customTextAlpha);
-
-            pos.x += bitmapSize.cx + margin;
-            drawBitmapAlphaComposite(hdc, _sliderInfo->textBmp, pos, &clipRect, customTextAlpha);
-        }
+        RECT r = calculateTextRect();
+        drawBitmapAlphaComposite(hdc, _sliderInfo->textBmp, { r.left, r.top }, nullptr, customTextAlpha);
     }
 
     if (_sliderInfo && _sliderInfo->hIconLarge)
@@ -128,6 +107,20 @@ void Slider::draw(HDC hdc, const UIConfig& uic) const
             (_rect.left + _rect.right) / 2 - uic.iconSize / 2,
             _rect.bottom - uic.iconSize / 2 - (uic.sliderWidthApp - uic.sliderSpacing) / 2,
             _sliderInfo->hIconLarge, 0, 0, 0, NULL, DI_NORMAL);
+}
+
+RECT Slider::calculateTextRect() const
+{
+    SIZE bitmapSize {};
+    DWORD* pixels;
+    getBitmapData(_sliderInfo->textBmp, bitmapSize, pixels);
+
+    LONG extend = bitmapSize.cx - (_rect.right - _rect.left);
+    LONG x = _rect.left - extend / 2;
+    return RECT {
+        max(x, 0), _rect.top,
+        max(x, 0) + _rect.right - _rect.left + extend, _rect.top + bitmapSize.cy
+    };
 }
 
 Slider* SliderManager::getSliderFromSelect(SelectInfo info)

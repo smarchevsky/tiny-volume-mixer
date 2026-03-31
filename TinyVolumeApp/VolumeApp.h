@@ -11,7 +11,7 @@ class VolumeApp : public App {
     SliderManager sliderManager;
     SelectInfo sliderInfoHovered;
 
-    bool _isAppHovered;
+    // bool _isAppHovered;
 
     virtual void onPaint(HDC hdc) override;
     virtual void onResize(RECT newRect) override;
