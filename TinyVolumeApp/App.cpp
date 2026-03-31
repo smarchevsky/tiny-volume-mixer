@@ -93,6 +93,19 @@ void App::handleMouseMove(WPARAM wParam, LPARAM lParam)
     onMouseMove(cursorScreenPos, justEntered);
 }
 
+static void debugUpdateRegion(LONG w, LONG h, DWORD* pixels)
+{
+    int seed = rand();
+    for (int y = 0; y < h; ++y)
+        for (int x = 0; x < w; ++x) {
+            int hash = (x / 4) * (31 + seed % 4) + (y / 4);
+            if (hash % 12 == 0) {
+                DWORD& pixel = pixels[y * w + x];
+                pixel = (pixel & 0xFF000000) | (0xFFFFFF & ((seed << 16) + seed));
+            }
+        }
+}
+
 void App::handlePaint()
 {
     RECT r;
@@ -118,10 +131,9 @@ void App::handlePaint()
         memset(pixels, 0, width * height * sizeof(*pixels));
         onPaint(_hdcMem);
 
-        // for (int y = 0; y < height; ++y)
-        //     for (int x = 0; x < width; ++x)
-        //         if ((y * width + x) % 20 == rand() % 16)
-        //             pixels[y * width + x] = (rand() << 16) + rand();
+#if (_DEBUG)
+        // debugUpdateRegion(width, height, pixels);
+#endif
 
         BLENDFUNCTION blend = {};
         blend.BlendOp = AC_SRC_OVER;
