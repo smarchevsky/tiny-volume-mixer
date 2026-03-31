@@ -33,7 +33,6 @@ struct ExpiredSession {
 struct ActiveSession {
     IAudioSessionControl* pCtrl;
     PID pid;
-    AudioSessionState state;
 };
 
 std::vector<ExpiredSession> g_expiredSessions;
@@ -139,22 +138,10 @@ public:
             Cleanup();
 
         } else {
-            PID changedStatePID = PID(-1);
-            bool activeAny = false;
-            for (auto& s : g_trackedSessions) {
-                if (s.pCtrl == _pCtrl) {
-                    s.state = newState;
-                    changedStatePID = s.pid;
-                }
-                activeAny |= s.state == AudioSessionState::AudioSessionStateActive;
-            }
-
             ActivationChangedInfo info;
-            info.pid = changedStatePID;
+            info.pid = _pid;
             info.active = newState == AudioSessionState::AudioSessionStateActive;
-            info.activeAny = activeAny;
 
-            static_assert(sizeof(ActivationChangedInfo) <= sizeof(WPARAM));
             PostMessage(_hWnd, WM_APP_ACTIVATION_CHANGED, reinterpret_cast<WPARAM&>(info), 0);
 
             // wprintf(L"State changed: [PID %u], state: %s\n", _pid, newState == AudioSessionStateActive ? L"active" : L"inactive");
@@ -234,7 +221,7 @@ static void addSessionImpl(IAudioSessionControl* pCtrl, HWND hWnd, const wchar_t
     pEvents->Release();
 
     std::lock_guard<std::mutex> lock(g_mutex);
-    g_trackedSessions.push_back({ pCtrl, pid, audioSessionState });
+    g_trackedSessions.push_back({ pCtrl, pid });
 }
 
 class SessionNotification : public IAudioSessionNotification {
@@ -373,4 +360,46 @@ void AudioUpdateListener::setVol(SelectInfo selectInfo, float vol)
             }
         }
     }
+}
+
+bool AudioUpdateListener::retieveWaveInfo(std::vector<WaveInfo>& waveInfo)
+{
+    bool activeAny = false;
+    if (!_pSessionManager2)
+        return false;
+
+    IAudioSessionEnumerator* pSessionEnumerator = nullptr;
+    _pSessionManager2->GetSessionEnumerator(&pSessionEnumerator);
+
+    int count = 0;
+    pSessionEnumerator->GetCount(&count);
+
+    for (int i = 0; i < count; i++) {
+        IAudioSessionControl* pControl = {};
+        pSessionEnumerator->GetSession(i, &pControl);
+
+        IAudioSessionControl2* pControl2 = {};
+        pControl->QueryInterface(__uuidof(IAudioSessionControl2), (void**)&pControl2);
+        PID pid = 0;
+        pControl2->GetProcessId(&pid);
+        AudioSessionState state;
+        pControl2->GetState(&state);
+        activeAny |= (state == AudioSessionState::AudioSessionStateActive);
+
+        if (pid != 0) {
+            float peak = 0.0f;
+            wchar_t procName[MAX_PATH] = L"Unknown";
+
+            IAudioMeterInformation* pMeter = {};
+            pControl2->QueryInterface(__uuidof(IAudioMeterInformation), (void**)&pMeter);
+            pMeter->GetPeakValue(&peak);
+            pMeter->Release();
+
+            waveInfo.push_back(WaveInfo { .pid = pid, .wave = peak });
+        }
+
+        pControl2->Release();
+        pControl->Release();
+    }
+    return activeAny;
 }

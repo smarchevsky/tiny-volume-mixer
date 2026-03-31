@@ -93,14 +93,16 @@ void Slider::draw(HDC hdc, const UIConfig& uic) const
         0xAA000000 | sliderColor, border | sliderColor);
 
     if (_focused && _sliderInfo && _sliderInfo->textBmp) {
-
         const DWORD textColor = _sliderInfo->colorText;
         const DWORD textColorBack = uic.colorWindowFrame;
         constexpr BYTE customTextAlpha = 180;
-
         RECT r = calculateTextRect();
         drawBitmapAlphaComposite(hdc, _sliderInfo->textBmp, { r.left, r.top }, nullptr, customTextAlpha);
     }
+
+    RECT peakRect { roundRect.left + 6, roundRect.top + 6, roundRect.right - 6, roundRect.bottom - 6 };
+    peakRect.top += LONG((peakRect.bottom - peakRect.top) * (1.f - _peak));
+    drawBorderedRectAlphaComposite(hdc, peakRect, 3, 0, 0xFF000000 | sliderColor, 0);
 
     if (_sliderInfo && _sliderInfo->hIconLarge)
         DrawIconEx(hdc,

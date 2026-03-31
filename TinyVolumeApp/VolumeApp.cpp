@@ -35,13 +35,18 @@ void VolumeApp::destroyWindow(HWND hWnd)
     }
 }
 
+static void startTimer(HWND hwnd) { SetTimer(hwnd, WM_TIMER_UI, 100, (TIMERPROC)NULL), printf("Timer start\n"); }
+static void stopTimer(HWND hwnd) { KillTimer(hwnd, WM_TIMER_UI), printf("Timer stop\n"); };
+
 void VolumeApp::handleMMAppRegistered(AudioSessionInitInfo* sessionInitInfo)
 {
     AudioUpdateInfo& info = sessionInitInfo->updateInfo;
-
     SliderInfo* iconInfo = UIManager::get().generateSliderInfo(sessionInitInfo->iconPath, info._pid);
-
     sliderManager.appSliderAdd(info._pid, info._vol, info._isMuted, iconInfo);
+
+    if (sessionInitInfo->audioSessionState == AudioSessionState::AudioSessionStateActive)
+        startTimer(_hWnd);
+
     delete sessionInitInfo;
 
     RECT rc;
@@ -68,11 +73,13 @@ void VolumeApp::handleMMAppActivationChanged(WPARAM wParam, LPARAM lParam)
 {
     auto info = reinterpret_cast<ActivationChangedInfo&>(wParam);
 
-    printf("handleMMAppActivationChanged %d\n", info.activeAny);
-    if (info.activeAny)
-        SetTimer(_hWnd, WM_TIMER_UI, 100, (TIMERPROC)NULL);
-    else
-        KillTimer(_hWnd, WM_TIMER_UI);
+    if (Slider* slider = sliderManager.getSliderFromSelect(SelectInfo(VolumeType::App, info.pid))) {
+        slider->_peak = 0.f;
+        InvalidateRect(_hWnd, &slider->_rect, FALSE);
+    }
+
+    if (info.active)
+        startTimer(_hWnd);
 }
 
 void VolumeApp::handleMMRefreshVol(WPARAM wParam, LPARAM lParam)
@@ -160,5 +167,20 @@ void VolumeApp::onMouseMove(POINT cursorClientPos, bool justEntered)
 
 void VolumeApp::handleTimerUpdateUI()
 {
-    printf("timer\n");
+    // std::string str;
+    std::vector<WaveInfo> waveInfo;
+
+    if (!_audioAppListerner.retieveWaveInfo(waveInfo))
+        stopTimer(_hWnd);
+
+    for (const auto& w : waveInfo) {
+        if (Slider* slider = sliderManager.getSliderFromSelect(SelectInfo(VolumeType::App, w.pid))) {
+            if (slider->_peak != w.wave) {
+                slider->_peak = w.wave;
+                InvalidateRect(_hWnd, &slider->_rect, FALSE);
+            }
+        }
+        // str += "PID: " + std::to_string((int)w.pid) + ", Wave: " + std::to_string(w.wave) + "   ";
+    }
+    // printf("Wave info:\n%s", str.c_str());
 }

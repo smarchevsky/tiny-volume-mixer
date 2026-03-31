@@ -45,12 +45,6 @@ struct SelectInfo {
     VolumeType _type;
 };
 
-struct ActivationChangedInfo {
-    PID pid;
-    bool active;
-    bool activeAny;
-};
-
 struct UIConfig {
     DWORD colorWindowFrame = 0x88AAAAAA;
     DWORD colorWindowBck = 0x88333333;

@@ -5,6 +5,7 @@
 #include <AudioSessionTypes.h>
 #include <combaseapi.h>
 #include <utility> // std::forward
+#include <vector>
 
 struct AudioUpdateInfo {
 
@@ -24,9 +25,15 @@ struct AudioUpdateInfo {
     AudioUpdateInfo(WPARAM wp, LPARAM lp) { _wp = wp, _lp = lp; }
 };
 
+struct ActivationChangedInfo {
+    PID pid;
+    bool active;
+};
+
 static_assert(sizeof(WPARAM) == 8);
 static_assert(sizeof(LPARAM) == 8);
 static_assert(sizeof(AudioUpdateInfo) == 16);
+static_assert(sizeof(ActivationChangedInfo) <= sizeof(WPARAM));
 
 struct AudioSessionInitInfo {
     AudioUpdateInfo updateInfo;
@@ -51,6 +58,11 @@ public:
     ~CoinitializeWrapper();
 };
 
+struct WaveInfo {
+    PID pid;
+    float wave;
+};
+
 struct IMMDeviceEnumerator;
 struct IMMDevice;
 struct IAudioEndpointVolume; // master
@@ -71,6 +83,8 @@ public:
 
     void init(HWND hWnd);
     void uninit();
+
     void cleanupExpiredSessions();
     void setVol(SelectInfo selectInfo, float vol);
+    bool retieveWaveInfo(std::vector<WaveInfo>& waveInfo);
 };
