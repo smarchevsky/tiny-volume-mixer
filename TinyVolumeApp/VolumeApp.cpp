@@ -170,11 +170,13 @@ void VolumeApp::handleTimerUpdateUI()
     // std::string str;
     std::vector<WaveInfo> waveInfo;
 
-    if (!_audioAppListerner.retieveWaveInfo(waveInfo))
+    bool anyAppActive = _audioAppListerner.retieveWaveInfo(waveInfo);
+    if (!anyAppActive)
         stopTimer(_hWnd);
 
-    for (const auto& w : waveInfo) {
+    for (auto& w : waveInfo) {
         if (Slider* slider = sliderManager.getSliderFromSelect(SelectInfo(VolumeType::App, w.pid))) {
+            w.wave = anyAppActive ? w.wave : 0.f;
             if (slider->_peak != w.wave) {
                 slider->_peak = w.wave;
                 InvalidateRect(_hWnd, &slider->_rect, FALSE);
