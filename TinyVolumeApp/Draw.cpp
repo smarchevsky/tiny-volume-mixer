@@ -231,11 +231,11 @@ void drawBorderedRectAlphaComposite(HDC hdc, const RECT roundRect, int radius, i
 {
     DWORD* pixels {};
     SIZE canvasSize;
-    RECT clipRegion;
-    if (!validateCommon(hdc, roundRect, pixels, canvasSize, clipRegion))
+    RECT clipRect;
+    if (!validateCommon(hdc, roundRect, pixels, canvasSize, clipRect))
         return;
 
-    drawBorderedRectInternal<CompositeAlpha>(canvasSize, clipRegion, pixels, roundRect, radius, bw, bg_col, bo_col);
+    drawBorderedRectInternal<CompositeAlpha>(canvasSize, clipRect, pixels, roundRect, radius, bw, bg_col, bo_col);
 }
 
 void drawBitmapAlphaComposite(HDC hdc, HBITMAP bmp, const POINT pos, const RECT* customRect, BYTE alpha)
@@ -249,9 +249,9 @@ void drawBitmapAlphaComposite(HDC hdc, HBITMAP bmp, const POINT pos, const RECT*
     RECT bitmapRect = { pos.x, pos.y, pos.x + bitmapSize.cx, pos.y + bitmapSize.cy };
 
     SIZE canvasSize;
-    RECT drawRect;
+    RECT clipRect;
     DWORD* canvasPixels;
-    if (!validateCommon(hdc, bitmapRect, canvasPixels, canvasSize, drawRect))
+    if (!validateCommon(hdc, bitmapRect, canvasPixels, canvasSize, clipRect))
         return;
 
     if (customRect) {
@@ -261,11 +261,11 @@ void drawBitmapAlphaComposite(HDC hdc, HBITMAP bmp, const POINT pos, const RECT*
 
     int w = bitmapRect.right - bitmapRect.left;
 
-    for (int y = bitmapRect.top; y < bitmapRect.bottom; y++) {
+    for (int y = clipRect.top; y < clipRect.bottom; y++) {
         int hdcY = y * canvasSize.cx;
         int stencilY = (y - pos.y) * bitmapSize.cx - pos.x;
 
-        for (int x = bitmapRect.left; x < bitmapRect.right; x++) {
+        for (int x = clipRect.left; x < clipRect.right; x++) {
             DWORD pixelColor = bitmapPixels[stencilY + x];
             CompositeAlphaWithAlpha(canvasPixels[hdcY + x], pixelColor, alpha);
         }
