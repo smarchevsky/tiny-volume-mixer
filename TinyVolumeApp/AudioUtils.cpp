@@ -33,6 +33,7 @@ struct ExpiredSession {
 struct ActiveSession {
     IAudioSessionControl* pCtrl;
     PID pid;
+    AudioSessionState state;
 };
 
 std::vector<ExpiredSession> g_expiredSessions;
@@ -134,10 +135,29 @@ public:
     HRESULT STDMETHODCALLTYPE OnStateChanged(AudioSessionState newState) override
     { // expired when app naturally closed
         if (newState == AudioSessionStateExpired) {
-            wprintf(L"OnStateChanged, AudioSessionStateExpired [PID %u]\n", _pid);
+            // wprintf(L"OnStateChanged, AudioSessionStateExpired [PID %u]\n", _pid);
             Cleanup();
+
         } else {
-            wprintf(L"State changed: [PID %u], state: %s\n", _pid, newState == AudioSessionStateActive ? L"active" : L"inactive");
+            PID changedStatePID = PID(-1);
+            bool activeAny = false;
+            for (auto& s : g_trackedSessions) {
+                if (s.pCtrl == _pCtrl) {
+                    s.state = newState;
+                    changedStatePID = s.pid;
+                }
+                activeAny |= s.state == AudioSessionState::AudioSessionStateActive;
+            }
+
+            ActivationChangedInfo info;
+            info.pid = changedStatePID;
+            info.active = newState == AudioSessionState::AudioSessionStateActive;
+            info.activeAny = activeAny;
+
+            static_assert(sizeof(ActivationChangedInfo) <= sizeof(WPARAM));
+            PostMessage(_hWnd, WM_APP_ACTIVATION_CHANGED, reinterpret_cast<WPARAM&>(info), 0);
+
+            // wprintf(L"State changed: [PID %u], state: %s\n", _pid, newState == AudioSessionStateActive ? L"active" : L"inactive");
         }
         return S_OK;
     }
@@ -214,7 +234,7 @@ static void addSessionImpl(IAudioSessionControl* pCtrl, HWND hWnd, const wchar_t
     pEvents->Release();
 
     std::lock_guard<std::mutex> lock(g_mutex);
-    g_trackedSessions.push_back({ pCtrl, pid });
+    g_trackedSessions.push_back({ pCtrl, pid, audioSessionState });
 }
 
 class SessionNotification : public IAudioSessionNotification {

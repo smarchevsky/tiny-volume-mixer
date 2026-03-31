@@ -99,6 +99,10 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         app.handleMMAppUnegistered(wParam, lParam);
     } break;
 
+    case WM_APP_ACTIVATION_CHANGED: {
+        app.handleMMAppActivationChanged(wParam, lParam);
+    } break;
+
     case WM_REFRESH_VOL: {
         app.handleMMRefreshVol(wParam, lParam);
     } break;

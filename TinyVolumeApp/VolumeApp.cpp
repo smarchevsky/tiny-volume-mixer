@@ -64,6 +64,17 @@ void VolumeApp::handleMMAppUnegistered(WPARAM wParam, LPARAM lParam)
     _audioAppListerner.cleanupExpiredSessions();
 }
 
+void VolumeApp::handleMMAppActivationChanged(WPARAM wParam, LPARAM lParam)
+{
+    auto info = reinterpret_cast<ActivationChangedInfo&>(wParam);
+
+    printf("handleMMAppActivationChanged %d\n", info.activeAny);
+    if (info.activeAny)
+        SetTimer(_hWnd, WM_TIMER_UI, 100, (TIMERPROC)NULL);
+    else
+        KillTimer(_hWnd, WM_TIMER_UI);
+}
+
 void VolumeApp::handleMMRefreshVol(WPARAM wParam, LPARAM lParam)
 {
     AudioUpdateInfo info(wParam, lParam);
@@ -147,18 +158,7 @@ void VolumeApp::onMouseMove(POINT cursorClientPos, bool justEntered)
     }
 }
 
-void VolumeApp::updateTimerStateUI()
-{
-    /*if (_isAppHovered)
-        SetTimer(_hWnd, WM_TIMER_UI, 100, (TIMERPROC)NULL);
-    else
-        KillTimer(_hWnd, WM_TIMER_UI);*/
-}
-
 void VolumeApp::handleTimerUpdateUI()
 {
-    // if (auto slider = sliderManager.getSliderFromSelect(sliderInfoHovered)) {
-    //     slider->_textShift += 6;
-    //     InvalidateRect(_hWnd, &slider->_rect, FALSE);
-    // }
+    printf("timer\n");
 }

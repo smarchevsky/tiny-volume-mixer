@@ -25,6 +25,7 @@ enum {
     WM_REFRESH_VOL,
     WM_APP_REGISTERED,
     WM_APP_UNREGISTERED,
+    WM_APP_ACTIVATION_CHANGED,
     WM_TIMER_UI,
 };
 
@@ -42,6 +43,12 @@ struct SelectInfo {
     operator bool() const { return _type != VolumeType::Invalid; }
     PID _pid;
     VolumeType _type;
+};
+
+struct ActivationChangedInfo {
+    PID pid;
+    bool active;
+    bool activeAny;
 };
 
 struct UIConfig {

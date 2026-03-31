@@ -23,9 +23,9 @@ class VolumeApp : public App {
 public:
     void handleMMAppRegistered(AudioSessionInitInfo* sessionInitInfo);
     void handleMMAppUnegistered(WPARAM wParam, LPARAM lParam);
+    void handleMMAppActivationChanged(WPARAM wParam, LPARAM lParam);
     void handleMMRefreshVol(WPARAM wParam, LPARAM lParam);
 
-    void updateTimerStateUI();
     void handleTimerUpdateUI();
 
     virtual void construct(HINSTANCE instance, WNDPROC wndProc);
