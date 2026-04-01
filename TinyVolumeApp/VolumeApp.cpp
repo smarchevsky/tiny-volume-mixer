@@ -176,15 +176,21 @@ void VolumeApp::onMouseMove(POINT cursorClientPos, bool justEntered)
 void VolumeApp::handleTimerUpdateUI()
 {
     // std::string str;
-    std::vector<WaveInfo> waveInfo;
-
-    bool anyAppActive = _audioAppListerner.retieveWaveInfo(waveInfo);
-    if (!anyAppActive)
+    std::vector<WaveInfo> waveInfos;
+    bool anyActive = _audioAppListerner.retieveWaveInfo(waveInfos);
+    if (!anyActive) {
+        sliderManager.forEachSliderApp([&](Slider& slider) {
+            if (slider._peak != 0.f) {
+                slider._peak = 0.f;
+                InvalidateRect(_hWnd, &slider._rect, FALSE);
+            }
+        });
         stopTimer(_hWnd);
+        return;
+    }
 
-    for (auto& w : waveInfo) {
+    for (auto& w : waveInfos) {
         if (Slider* slider = sliderManager.getSliderFromSelect(SelectInfo(VolumeType::App, w.pid))) {
-            w.wave = anyAppActive ? w.wave : 0.f;
             if (slider->_peak != w.wave) {
                 slider->_peak = w.wave;
                 InvalidateRect(_hWnd, &slider->_rect, FALSE);

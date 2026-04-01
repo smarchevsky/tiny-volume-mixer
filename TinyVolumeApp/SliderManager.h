@@ -3,6 +3,7 @@
 #include "Common.h"
 
 #include <vector>
+#include <functional>
 
 struct SliderInfo;
 struct UIConfig;
@@ -44,6 +45,11 @@ public:
 
     Slider* getSliderFromSelect(SelectInfo info);
     SelectInfo getSelectAtPosition(POINT mousePos);
+    void forEachSliderApp(std::function<void(Slider&)> func)
+    {
+        for (auto& slider : _slidersApps)
+            func(slider);
+    }
 
     void recalculateSliderRects(const RECT& rect, const UIConfig& uic);
     void drawSliders(HDC hdc, const UIConfig& uic);

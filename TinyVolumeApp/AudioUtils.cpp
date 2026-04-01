@@ -32,6 +32,9 @@ struct ExpiredSession {
 
 struct ActiveSession {
     IAudioSessionControl* pCtrl;
+    ISimpleAudioVolume* pVol;
+    IAudioMeterInformation* pMeter;
+    AudioSessionState sessionState;
     PID pid;
 };
 
@@ -132,12 +135,19 @@ public:
     HRESULT STDMETHODCALLTYPE OnChannelVolumeChanged(DWORD, float[], DWORD, LPCGUID) override { return S_OK; }
     HRESULT STDMETHODCALLTYPE OnGroupingParamChanged(LPCGUID, LPCGUID) override { return S_OK; }
     HRESULT STDMETHODCALLTYPE OnStateChanged(AudioSessionState newState) override
-    { // expired when app naturally closed
-        if (newState == AudioSessionStateExpired) {
-            // wprintf(L"OnStateChanged, AudioSessionStateExpired [PID %u]\n", _pid);
-            Cleanup();
+    {
+        std::lock_guard<std::mutex> lock(g_mutex);
 
+        if (newState == AudioSessionStateExpired) { // expired when app naturally closed
+            Cleanup();
         } else {
+            for (auto& s : g_trackedSessions) {
+                if (s.pCtrl == _pCtrl) {
+                    s.sessionState = newState;
+                    break;
+                }
+            }
+
             ActivationChangedInfo info;
             info.pid = _pid;
             info.active = newState == AudioSessionState::AudioSessionStateActive;
@@ -149,20 +159,22 @@ public:
         return S_OK;
     }
 
-    HRESULT STDMETHODCALLTYPE OnSessionDisconnected(AudioSessionDisconnectReason) override
-    { // disconnected when app crashes
+    HRESULT STDMETHODCALLTYPE OnSessionDisconnected(AudioSessionDisconnectReason) override // disconnected when app crashes
+    {
+        std::lock_guard<std::mutex> lock(g_mutex);
         wprintf(L"OnSessionDisconnected [PID %u]\n", _pid);
         Cleanup();
         return S_OK;
     }
 
-    void Cleanup()
+    void Cleanup() // ensure locked by g_mutex
     {
-        std::lock_guard<std::mutex> lock(g_mutex);
         auto it = std::find_if(g_trackedSessions.begin(), g_trackedSessions.end(),
             [&](const ActiveSession& s) { return s.pCtrl == _pCtrl; });
 
         if (it != g_trackedSessions.end()) {
+            it->pVol->Release(), it->pVol = nullptr;
+            it->pMeter->Release(), it->pMeter = nullptr;
             g_trackedSessions.erase(it);
             g_expiredSessions.push_back({ _pCtrl, this });
             AddRef();
@@ -182,46 +194,58 @@ std::wstring guid2str(REFGUID guid)
 
 static void addSessionImpl(IAudioSessionControl* pCtrl, HWND hWnd, const wchar_t* dbgActionName)
 {
-    IAudioSessionControl2* pCtrl2 = nullptr;
-    pCtrl->QueryInterface(__uuidof(IAudioSessionControl2), (void**)&pCtrl2);
+    std::lock_guard<std::mutex> lock(g_mutex);
+    IAudioSessionControl2* pCtrl2 = {};
+    if (SUCCEEDED(pCtrl->QueryInterface(__uuidof(IAudioSessionControl2), (void**)&pCtrl2))) {
 
-    wchar_t *displayName {}, *iconPath {};
-    AudioSessionState audioSessionState {};
-    PID pid = 0;
-    if (pCtrl2) {
+        wchar_t *displayName {}, *iconPath {};
+        AudioSessionState sessionState {};
+        PID pid = 0;
         pCtrl2->GetProcessId(&pid);
-        pCtrl2->GetState(&audioSessionState);
+        pCtrl2->GetState(&sessionState);
         pCtrl2->GetDisplayName(&displayName);
         pCtrl2->GetIconPath(&iconPath);
 
+        ISimpleAudioVolume* pVol = {};
+        if (SUCCEEDED(pCtrl->QueryInterface(__uuidof(ISimpleAudioVolume), (void**)&pVol))) {
+            BOOL bMute;
+            float vol;
+            pVol->GetMasterVolume(&vol);
+            pVol->GetMute(&bMute);
+
+            auto audioSessionInitInfo = new AudioSessionInitInfo(VolumeType::App, pid, vol, bMute);
+            audioSessionInitInfo->audioSessionState = sessionState;
+            audioSessionInitInfo->displayName = displayName;
+            audioSessionInitInfo->iconPath = iconPath;
+
+            wprintf(L"%s [PID %u], displayName %s, iconPath %s, vol: %d\n", dbgActionName, pid,
+                displayName, iconPath, int(vol * 100));
+
+            PostMessage(hWnd, WM_APP_REGISTERED, (WPARAM)audioSessionInitInfo, 0);
+        }
+
+        IAudioMeterInformation* pMeter = {};
+        if (SUCCEEDED(pCtrl2->QueryInterface(__uuidof(IAudioMeterInformation), (void**)&pMeter))) {
+            float peak = 0.0f;
+            wchar_t procName[MAX_PATH] = L"Unknown";
+            pMeter->GetPeakValue(&peak);
+            // pMeter->Release();
+        }
+
+        AudioSessionEvents* pEvents = new AudioSessionEvents(pid, pCtrl, hWnd);
+        pCtrl->RegisterAudioSessionNotification(pEvents);
+        pEvents->Release();
+
+        g_trackedSessions.push_back(ActiveSession {
+            .pCtrl = pCtrl,
+            .pVol = pVol,
+            .pMeter = pMeter,
+            .sessionState = sessionState,
+            .pid = pid,
+        });
+
         pCtrl2->Release();
     }
-
-    ISimpleAudioVolume* pVol = NULL;
-    if (SUCCEEDED(pCtrl->QueryInterface(__uuidof(ISimpleAudioVolume), (void**)&pVol))) {
-        BOOL bMute;
-        float vol;
-        pVol->GetMasterVolume(&vol);
-        pVol->GetMute(&bMute);
-
-        auto audioSessionInitInfo = new AudioSessionInitInfo(VolumeType::App, pid, vol, bMute);
-        audioSessionInitInfo->audioSessionState = audioSessionState;
-        audioSessionInitInfo->displayName = displayName;
-        audioSessionInitInfo->iconPath = iconPath;
-
-        wprintf(L"%s [PID %u], displayName %s, iconPath %s, vol: %d\n", dbgActionName, pid,
-            displayName, iconPath, int(vol * 100));
-
-        PostMessage(hWnd, WM_APP_REGISTERED, (WPARAM)audioSessionInitInfo, 0);
-        pVol->Release();
-    }
-
-    AudioSessionEvents* pEvents = new AudioSessionEvents(pid, pCtrl, hWnd);
-    pCtrl->RegisterAudioSessionNotification(pEvents);
-    pEvents->Release();
-
-    std::lock_guard<std::mutex> lock(g_mutex);
-    g_trackedSessions.push_back({ pCtrl, pid });
 }
 
 class SessionNotification : public IAudioSessionNotification {
@@ -347,15 +371,9 @@ void AudioUpdateListener::setVol(SelectInfo selectInfo, float vol)
 
     } else if (selectInfo._type == VolumeType::App) {
         std::lock_guard<std::mutex> lock(g_mutex);
-        for (auto& trackedSession : g_trackedSessions) {
-            if (trackedSession.pid == selectInfo._pid) {
-                ISimpleAudioVolume* pVolume = nullptr;
-                trackedSession.pCtrl->QueryInterface(__uuidof(ISimpleAudioVolume), (void**)&pVolume);
-                if (pVolume) {
-                    pVolume->SetMasterVolume(vol, nullptr);
-                    pVolume->Release();
-                    // wprintf(L"Setting app vol [PID %u], vol: %d\n", selectInfo._pid, (int)(vol * 100));
-                }
+        for (auto& s : g_trackedSessions) {
+            if (s.pid == selectInfo._pid) {
+                s.pVol ? s.pVol->SetMasterVolume(vol, nullptr) : HRESULT {};
                 break;
             }
         }
@@ -368,39 +386,15 @@ bool AudioUpdateListener::retieveWaveInfo(std::vector<WaveInfo>& waveInfo)
     if (!_pSessionManager2)
         return false;
 
-    IAudioSessionEnumerator* pSessionEnumerator = nullptr;
-    _pSessionManager2->GetSessionEnumerator(&pSessionEnumerator);
+    std::lock_guard<std::mutex> lock(g_mutex);
 
-    int count = 0;
-    pSessionEnumerator->GetCount(&count);
-
-    for (int i = 0; i < count; i++) {
-        IAudioSessionControl* pControl = {};
-        pSessionEnumerator->GetSession(i, &pControl);
-
-        IAudioSessionControl2* pControl2 = {};
-        pControl->QueryInterface(__uuidof(IAudioSessionControl2), (void**)&pControl2);
-        PID pid = 0;
-        pControl2->GetProcessId(&pid);
-        AudioSessionState state;
-        pControl2->GetState(&state);
-        activeAny |= (state == AudioSessionState::AudioSessionStateActive);
-
-        // if (pid != 0)
-        {
-            float peak = 0.0f;
-            wchar_t procName[MAX_PATH] = L"Unknown";
-
-            IAudioMeterInformation* pMeter = {};
-            pControl2->QueryInterface(__uuidof(IAudioMeterInformation), (void**)&pMeter);
-            pMeter->GetPeakValue(&peak);
-            pMeter->Release();
-
-            waveInfo.push_back(WaveInfo { .pid = pid, .wave = peak });
-        }
-
-        pControl2->Release();
-        pControl->Release();
+    waveInfo.resize(0);
+    for (const auto& s : g_trackedSessions) {
+        activeAny |= (s.sessionState == AudioSessionState::AudioSessionStateActive);
+        float peakVol = 0.0f;
+        s.pMeter ? s.pMeter->GetPeakValue(&peakVol) : HRESULT {};
+        waveInfo.push_back({ s.pid, peakVol });
     }
+
     return activeAny;
 }
