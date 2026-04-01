@@ -1,3 +1,4 @@
+#define NOMINMAX
 
 #include "SliderManager.h"
 
@@ -112,11 +113,8 @@ RECT Slider::calculateTextRect() const
     getBitmapData(_sliderInfo->textBmp, bitmapSize, pixels);
 
     LONG extend = bitmapSize.cx - (_rect.right - _rect.left);
-    LONG x = _rect.left - extend / 2;
-    return RECT {
-        max(x, 0), _rect.top,
-        max(x, 0) + _rect.right - _rect.left + extend, _rect.top + bitmapSize.cy
-    };
+    LONG x = std::max(_rect.left - extend / 2, (LONG)0);
+    return RECT { x, _rect.top, x + _rect.right - _rect.left + extend, _rect.top + bitmapSize.cy };
 }
 
 Slider* SliderManager::getSliderFromSelect(SelectInfo info)

@@ -141,7 +141,6 @@ void VolumeApp::onMouseLeave()
 
     if (auto slider = sliderManager.getSliderFromSelect(sliderInfoHovered)) {
         slider->_focused = false;
-        slider->_textShift = 0;
         RECT u = slider->calculateTextRect();
         UnionRect(&u, &u, &slider->_rect);
         InvalidateRect(_hWnd, &u, FALSE);
