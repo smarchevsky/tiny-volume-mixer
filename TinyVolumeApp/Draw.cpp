@@ -144,9 +144,8 @@ void drawBorderedRectInternal(const SIZE canvasSize, const RECT& clipRegion,
     uint64_t prevIn {};
     DWORD prevResult {};
 
-#define COMPOSITE(front)                                         \
+#define CACHE_COMPOSITE_PIXEL(back, front)                       \
     {                                                            \
-        DWORD& back = pixels[y * canvasSize.cx + x];             \
         uint64_t newIn = (uint64_t)back << 32 | (uint64_t)front; \
         if (newIn == prevIn) {                                   \
             back = prevResult;                                   \
@@ -157,50 +156,57 @@ void drawBorderedRectInternal(const SIZE canvasSize, const RECT& clipRegion,
         }                                                        \
     }
 
+#define CACHE_COMPOSITE_PIXEL_INDEX(front)           \
+    {                                                \
+        DWORD& back = pixels[y * canvasSize.cx + x]; \
+        CACHE_COMPOSITE_PIXEL(back, front);          \
+    }
+
     if (rcl_minrx_start < rcr_minrx_end) {
         for (int y = rct_bwy_start; y < rct_minry_end; y++) // top section
             for (int x = rcl_minrx_start; x < rcr_minrx_end; x++)
-                COMPOSITE(bg_col);
+                CACHE_COMPOSITE_PIXEL_INDEX(bg_col);
 
         for (int y = rcb_minry_start; y < rcb_bw_end; y++) // bottom section
             for (int x = rcl_minrx_start; x < rcr_minrx_end; x++)
-                COMPOSITE(bg_col);
+                CACHE_COMPOSITE_PIXEL_INDEX(bg_col);
 
         for (int y = rct_start; y < rct_bwy_end; y++) // top border
             for (int x = rcl_minrx_start; x < rcr_minrx_end; x++)
-                COMPOSITE(bo_col);
+                CACHE_COMPOSITE_PIXEL_INDEX(bo_col);
 
         for (int y = rcb_bw_start; y < rcb_end; y++) // bottom border
             for (int x = rcl_minrx_start; x < rcr_minrx_end; x++)
-                COMPOSITE(bo_col);
+                CACHE_COMPOSITE_PIXEL_INDEX(bo_col);
     }
 
     if (rcl_bwx_start < rcr_bw_end) {
         for (int y = rct_minry_start; y < rcb_minry_end; y++) // mid section
             for (int x = rcl_bwx_start; x < rcr_bw_end; x++)
-                COMPOSITE(bg_col);
+                CACHE_COMPOSITE_PIXEL_INDEX(bg_col);
     }
 
     if (rcl_start < rcl_bwx_end) {
         for (int y = rct_minry_start; y < rcb_minry_end; y++) // left border
             for (int x = rcl_start; x < rcl_bwx_end; x++)
-                COMPOSITE(bo_col);
+                CACHE_COMPOSITE_PIXEL_INDEX(bo_col);
     }
 
     if (rcr_bw_start < rcr_end) {
         for (int y = rct_minry_start; y < rcb_minry_end; y++) // right border
             for (int x = rcr_bw_start; x < rcr_end; x++)
-                COMPOSITE(bo_col);
+                CACHE_COMPOSITE_PIXEL_INDEX(bo_col);
     }
 
-#undef COMPOSITE
+#undef CACHE_COMPOSITE_PIXEL_INDEX
+
     // corners
     auto makeDist = [](int x, int y, int r) {
         float fx = float(r - x), fy = float(r - y);
         return r - sqrtf(fx * fx + fy * fy);
     };
 
-    auto CompositeRadius = [&](DWORD& bkg, float dist) {
+    auto CompositeRadius = [&](DWORD& back, float dist) {
         dist += 1;
         float t = std::clamp(dist - bw, 0.f, 1.f);
 
@@ -211,7 +217,8 @@ void drawBorderedRectInternal(const SIZE canvasSize, const RECT& clipRegion,
         float g = (ag + t * (bg - ag));
         float b = (ab + t * (bb - ab));
 
-        Op(bkg, ARGB(a, r, g, b));
+        DWORD front = ARGB(a, r, g, b);
+        CACHE_COMPOSITE_PIXEL(back, front);
     };
 
     if (rcl_start < rcl_minrx_end) {
@@ -241,6 +248,8 @@ void drawBorderedRectInternal(const SIZE canvasSize, const RECT& clipRegion,
                 CompositeRadius(pixels[y * canvasSize.cx + x], dist);
             }
     }
+
+#undef CACHE_COMPOSITE_PIXEL
 }
 }
 
@@ -276,17 +285,33 @@ void drawBitmapAlphaComposite(HDC hdc, HBITMAP bmp, const POINT pos, const RECT*
             return;
     }
 
-    int w = bitmapRect.right - bitmapRect.left;
+    uint64_t prevIn {};
+    DWORD prevResult {};
+
+#define CACHE_COMPOSITE_PIXEL(back, front)                       \
+    {                                                            \
+        uint64_t newIn = (uint64_t)back << 32 | (uint64_t)front; \
+        if (newIn == prevIn) {                                   \
+            back = prevResult;                                   \
+        } else {                                                 \
+            prevIn = newIn;                                      \
+            CompositeAlphaWithAlpha(back, front, alpha);         \
+            prevResult = back;                                   \
+        }                                                        \
+    }
 
     for (int y = clipRect.top; y < clipRect.bottom; y++) {
         int hdcY = y * canvasSize.cx;
         int stencilY = (y - pos.y) * bitmapSize.cx - pos.x;
 
         for (int x = clipRect.left; x < clipRect.right; x++) {
-            DWORD pixelColor = bitmapPixels[stencilY + x];
-            CompositeAlphaWithAlpha(canvasPixels[hdcY + x], pixelColor, alpha);
+            DWORD front = bitmapPixels[stencilY + x];
+            DWORD& back = canvasPixels[hdcY + x];
+            CACHE_COMPOSITE_PIXEL(back, front);
         }
     }
+
+#undef CACHE_COMPOSITE_PIXEL
 }
 
 void drawRoundRectToBitmap(HBITMAP dst, RECT roundRect, int radius, DWORD col0, DWORD col1)
