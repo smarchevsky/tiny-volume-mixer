@@ -309,9 +309,11 @@ void AudioUpdateListener::init(HWND hWnd)
 {
     CoCreateInstance(__uuidof(MMDeviceEnumerator), nullptr, CLSCTX_ALL,
         __uuidof(IMMDeviceEnumerator), (void**)&_pMMDeviceEnumerator);
+
     _pMMDeviceEnumerator->GetDefaultAudioEndpoint(eRender, eConsole, &_pMMDevice);
 
     // master
+    _pMMDevice->Activate(__uuidof(IAudioMeterInformation), CLSCTX_ALL, NULL, (void**)&_pMeter);
     _pMMDevice->Activate(__uuidof(IAudioEndpointVolume), CLSCTX_ALL, nullptr, (void**)&_pEndpointVolume);
 
     // extract application vol
@@ -344,6 +346,8 @@ void AudioUpdateListener::uninit()
     _pEndpointVolume->UnregisterControlChangeNotify(_pEndpointVolumeCallback);
     _pEndpointVolumeCallback->Release();
     _pEndpointVolume->Release();
+
+    _pMeter->Release();
 
     _pMMDevice->Release();
     _pMMDeviceEnumerator->Release();
@@ -380,7 +384,7 @@ void AudioUpdateListener::setVol(SelectInfo selectInfo, float vol)
     }
 }
 
-bool AudioUpdateListener::retieveWaveInfo(std::vector<WaveInfo>& waveInfo)
+bool AudioUpdateListener::retieveWaveInfo(std::vector<WaveInfo>& waveInfo, float& masterPeak)
 {
     bool activeAny = false;
     if (!_pSessionManager2)
@@ -395,6 +399,8 @@ bool AudioUpdateListener::retieveWaveInfo(std::vector<WaveInfo>& waveInfo)
         s.pMeter ? s.pMeter->GetPeakValue(&peakVol) : HRESULT {};
         waveInfo.push_back({ s.pid, peakVol });
     }
+
+    _pMeter->GetPeakValue(&masterPeak);
 
     return activeAny;
 }

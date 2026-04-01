@@ -176,25 +176,32 @@ void VolumeApp::onMouseMove(POINT cursorClientPos, bool justEntered)
 void VolumeApp::handleTimerUpdateUI()
 {
     // std::string str;
+    float masterPeak = 0.f;
     std::vector<WaveInfo> waveInfos;
-    bool anyActive = _audioAppListerner.retieveWaveInfo(waveInfos);
+    bool anyActive = _audioAppListerner.retieveWaveInfo(waveInfos, masterPeak);
+
+    Slider* masterSlider = sliderManager.getSliderFromSelect(SelectInfo(VolumeType::Master, 0));
+
     if (!anyActive) {
         sliderManager.forEachSliderApp([&](Slider& slider) {
-            if (slider._peak != 0.f) {
-                slider._peak = 0.f;
-                InvalidateRect(_hWnd, &slider._rect, FALSE);
-            }
+            if (slider._peak != 0.f)
+                slider._peak = 0.f, InvalidateRect(_hWnd, &slider._rect, FALSE);
         });
+
+        if (masterSlider->_peak != 0.f)
+            masterSlider->_peak = 0.f, InvalidateRect(_hWnd, &masterSlider->_rect, FALSE);
+
         stopTimer(_hWnd);
         return;
     }
 
+    if (masterSlider->_peak != masterPeak)
+        masterSlider->_peak = masterPeak, InvalidateRect(_hWnd, &masterSlider->_rect, FALSE);
+
     for (auto& w : waveInfos) {
         if (Slider* slider = sliderManager.getSliderFromSelect(SelectInfo(VolumeType::App, w.pid))) {
-            if (slider->_peak != w.wave) {
-                slider->_peak = w.wave;
-                InvalidateRect(_hWnd, &slider->_rect, FALSE);
-            }
+            if (slider->_peak != w.wave)
+                slider->_peak = w.wave, InvalidateRect(_hWnd, &slider->_rect, FALSE);
         }
         // str += "PID: " + std::to_string((int)w.pid) + ", Wave: " + std::to_string(w.wave) + "   ";
     }

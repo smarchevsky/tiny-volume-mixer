@@ -65,18 +65,28 @@ struct WaveInfo {
 
 struct IMMDeviceEnumerator;
 struct IMMDevice;
-struct IAudioEndpointVolume; // master
+
+// master
+struct IAudioEndpointVolume;
 struct IAudioEndpointVolumeCallback;
-struct IAudioSessionManager2; // apps
+struct IAudioMeterInformation;
+
+// apps
+struct IAudioSessionManager2;
 struct IAudioSessionNotification;
 
 class AudioUpdateListener {
     IMMDeviceEnumerator* _pMMDeviceEnumerator {};
     IMMDevice* _pMMDevice {};
-    IAudioEndpointVolume* _pEndpointVolume {}; // master
-    IAudioEndpointVolumeCallback* _pEndpointVolumeCallback {}; // master
-    IAudioSessionManager2* _pSessionManager2 {}; // apps
-    IAudioSessionNotification* _pSessionNotification {}; // apps
+
+    // master
+    IAudioMeterInformation* _pMeter = {};
+    IAudioEndpointVolume* _pEndpointVolume {};
+    IAudioEndpointVolumeCallback* _pEndpointVolumeCallback {};
+
+    // apps
+    IAudioSessionManager2* _pSessionManager2 {};
+    IAudioSessionNotification* _pSessionNotification {};
 
 public:
     AudioUpdateListener() = default;
@@ -86,5 +96,5 @@ public:
 
     void cleanupExpiredSessions();
     void setVol(SelectInfo selectInfo, float vol);
-    bool retieveWaveInfo(std::vector<WaveInfo>& waveInfo);
+    bool retieveWaveInfo(std::vector<WaveInfo>& waveInfo, float& master);
 };
