@@ -46,8 +46,8 @@ struct SelectInfo {
 };
 
 struct UIConfig {
-    DWORD colorWindowFrame = 0x88AAAAAA;
-    DWORD colorWindowBck = 0x88333333;
+    DWORD colorWindowFrame = 0xAAAAAAAA;
+    DWORD colorWindowBck = 0xAA333333;
     uint8_t frameBorderWidth = 3;
     uint8_t sliderSpacing = 8;
     uint8_t sliderCornerRadius = 8;
