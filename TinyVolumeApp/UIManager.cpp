@@ -1,3 +1,5 @@
+#define NOMINMAX
+
 #include "UIManager.h"
 
 #include "Utils.h" // PNGLoader
@@ -19,9 +21,9 @@
 #include <winver.h>
 #pragma comment(lib, "Version.lib")
 
+#include <algorithm>
 #include <cassert>
 #include <filesystem>
-
 namespace fs = std::filesystem;
 #define CLAMP_ICON_SIZE(size) std::clamp(size, 8, 256)
 
@@ -36,21 +38,74 @@ inline void hash_combine(uint64_t& seed, const T& v)
 
 COLORREF getAvgColorARGB(int width, int height, DWORD* pixels, uint64_t& iconHash)
 {
-    uint64_t totalR = 0, totalG = 0, totalB = 0;
-    int opaquePixels = 0;
-
+    std::unordered_map<DWORD, int> colorGroups;
     const int pixelCount = width * height;
     for (int i = 0; i < pixelCount; i++) {
-        BYTE a = (pixels[i] >> 24) & 0xFF, r = (pixels[i] >> 16) & 0xFF, g = (pixels[i] >> 8) & 0xFF, b = pixels[i] & 0xFF;
-        if (a > 127)
-            totalR += r, totalG += g, totalB += b, opaquePixels++;
-        hash_combine(iconHash, pixels[i]);
+        DWORD pixel = pixels[i];
+        ARGB_SPLIT(BYTE, , pixel)
+        if (a > 127) {
+            colorGroups[pixel & 0x00F0F0F0]++;
+            hash_combine(iconHash, pixels[i]);
+        }
     }
 
-    if (opaquePixels > 0)
-        return ARGB(0, BYTE(totalR / opaquePixels), BYTE(totalG / opaquePixels), BYTE(totalB / opaquePixels));
+    if (colorGroups.empty())
+        return defaultSliderColor;
 
-    return defaultSliderColor;
+    struct ColorWeight {
+        float r, g, b, w;
+
+        ColorWeight(DWORD colorHex, float weight)
+        {
+            ARGB_SPLIT(float, c, colorHex);
+            r = cr, g = cg, b = cb;
+            // float cmax = std::max(r, std::max(g, b)) / 255.f;
+            // float cmin = std::min(r, std::min(g, b)) / 255.f;
+            // float sat = (cmax - cmin) / (1 - abs(2 * (cmax + cmin) / 2 - 1));
+            w = weight;
+        }
+        DWORD toDWORD() const { return ARGB(0,
+            std::clamp(r, 0.f, 255.f),
+            std::clamp(g, 0.f, 255.f),
+            std::clamp(b, 0.f, 255.f)); }
+
+        ColorWeight& operator+=(const ColorWeight& rhs)
+        {
+            float sumWeightRecip = 1.f / (w + rhs.w);
+            r = (r * w + rhs.r * rhs.w) * sumWeightRecip;
+            g = (g * w + rhs.g * rhs.w) * sumWeightRecip;
+            b = (b * w + rhs.b * rhs.w) * sumWeightRecip;
+            w += rhs.w;
+            return *this;
+        }
+    };
+
+    std::vector<ColorWeight> g0;
+    for (auto& [dwColor, num] : colorGroups)
+        if (num >= 10)
+            g0.push_back(ColorWeight(dwColor, (float)num));
+
+    std::sort(g0.begin(), g0.end(), [](const ColorWeight& a, const ColorWeight& b) { return a.w > b.w; });
+
+    auto getColorDistSq = [](const ColorWeight& c1, const ColorWeight& c2) {
+        float dr = c2.r - c1.r, dg = c2.g - c1.g, db = c2.b - c1.b;
+        return (dr * dr + dg * dg + db * db);
+    };
+
+    int collected = 0;
+
+    ColorWeight finalColor = g0[std::min((int)g0.size() - 1, 7)];
+    for (int i = 1; i < g0.size(); i++) {
+        float distSq = getColorDistSq(g0[i], finalColor);
+        if (distSq < powf(50.f, 2.f)) {
+            finalColor += g0[i];
+            collected++;
+        }
+    }
+
+    printf("Color: %.1f, %.1f, %.1f, collected from: %d\n", finalColor.r, finalColor.g, finalColor.b, collected);
+
+    return finalColor.toDWORD();
 }
 
 SliderInfo createIconInfo(HICON icon, bool calculateIconColor = true)
