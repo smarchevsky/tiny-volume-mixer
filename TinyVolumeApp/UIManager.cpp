@@ -36,6 +36,8 @@ inline void hash_combine(uint64_t& seed, const T& v)
     seed ^= hasher(v) + 0x9e3779b9 + (seed << 6) + (seed >> 2);
 }
 
+float lerp(float a, float b, float x) { return a + (b - a) * x; }
+
 COLORREF getAvgColorARGB(int width, int height, DWORD* pixels, uint64_t& iconHash)
 {
     std::unordered_map<DWORD, int> colorGroups;
@@ -55,14 +57,25 @@ COLORREF getAvgColorARGB(int width, int height, DWORD* pixels, uint64_t& iconHas
     struct ColorWeight {
         float r, g, b, w;
 
-        ColorWeight(DWORD colorHex, float weight)
+        static ColorWeight fromHexAndWeight(DWORD colorHex, float weight)
         {
+            ColorWeight result;
             ARGB_SPLIT(float, c, colorHex);
-            r = cr, g = cg, b = cb;
-            // float cmax = std::max(r, std::max(g, b)) / 255.f;
-            // float cmin = std::min(r, std::min(g, b)) / 255.f;
-            // float sat = (cmax - cmin) / (1 - abs(2 * (cmax + cmin) / 2 - 1));
-            w = weight;
+
+            result.r = cr, result.g = cg, result.b = cb;
+
+            const float minDistances[] = {
+                getColorDistSq(result, { 0, 148.1, 255 }) + 1000,
+                getColorDistSq(result, { 254.2, 0, 128 }) + 1000,
+                getColorDistSq(result, { 100, 255, 0 }) + 1000,
+            };
+
+            float minDist = INFINITY;
+            for (auto m : minDistances)
+                minDist = std::min(m, minDist);
+
+            result.w = weight / minDist;
+            return result;
         }
         DWORD toDWORD() const { return ARGB(0,
             std::clamp(r, 0.f, 255.f),
@@ -78,33 +91,48 @@ COLORREF getAvgColorARGB(int width, int height, DWORD* pixels, uint64_t& iconHas
             w += rhs.w;
             return *this;
         }
+
+        inline static float getColorDistSq(const ColorWeight& c1, const ColorWeight& c2)
+        {
+            float dr = c2.r - c1.r, dg = c2.g - c1.g, db = c2.b - c1.b;
+            return (dr * dr + dg * dg + db * db);
+        };
     };
 
     std::vector<ColorWeight> g0;
     for (auto& [dwColor, num] : colorGroups)
         if (num >= 10)
-            g0.push_back(ColorWeight(dwColor, (float)num));
+            g0.push_back(ColorWeight::fromHexAndWeight(dwColor, (float)num));
+
+    if (g0.size() == 0)
+        return defaultSliderColor;
 
     std::sort(g0.begin(), g0.end(), [](const ColorWeight& a, const ColorWeight& b) { return a.w > b.w; });
 
-    auto getColorDistSq = [](const ColorWeight& c1, const ColorWeight& c2) {
-        float dr = c2.r - c1.r, dg = c2.g - c1.g, db = c2.b - c1.b;
-        return (dr * dr + dg * dg + db * db);
-    };
-
     int collected = 0;
 
-    ColorWeight finalColor = g0[std::min((int)g0.size() - 1, 7)];
+    ColorWeight finalColor = g0[std::min((int)g0.size() - 1, 0)];
     for (int i = 1; i < g0.size(); i++) {
-        float distSq = getColorDistSq(g0[i], finalColor);
+        float distSq = ColorWeight::getColorDistSq(g0[i], finalColor);
         if (distSq < powf(50.f, 2.f)) {
             finalColor += g0[i];
             collected++;
         }
     }
 
-    printf("Color: %.1f, %.1f, %.1f, collected from: %d\n", finalColor.r, finalColor.g, finalColor.b, collected);
+    auto makeDesaturatedLighter = [](ColorWeight& c) {
+        float cmax = std::max(c.r, std::max(c.g, c.b)) / 255.f;
+        float cmin = std::min(c.r, std::min(c.g, c.b)) / 255.f;
+        float sat = (cmax - cmin) / (1 - abs(2 * (cmax + cmin) / 2 - 1));
+        sat = 1 - sat;
+        sat *= 0.5f;
+        c.r = lerp(c.r, 200, sat);
+        c.g = lerp(c.g, 200, sat);
+        c.b = lerp(c.b, 200, sat);
+    };
 
+    // finalColor = g0[0];
+    makeDesaturatedLighter(finalColor);
     return finalColor.toDWORD();
 }
 
