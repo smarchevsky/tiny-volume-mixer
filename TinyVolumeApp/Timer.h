@@ -101,7 +101,7 @@ public:
     ~ScopeTimer()
     {
         const float duration = std::chrono::duration<float>(clock::now() - _start).count();
-        Logger::get().log<true>("%s, finished %.3f ms", _timerName, duration * 1000);
+        Logger::get().log<true>("%s, finished %.3f ms\n", _timerName, duration * 1000);
         Logger::get()._indentation -= 2;
     }
 
