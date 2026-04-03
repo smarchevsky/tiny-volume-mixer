@@ -19,6 +19,6 @@ typedef unsigned char BYTE;
 
 class ColorUtils {
 public:
-    static bool calculatePriorityColor(DWORD* pixels, int width, int height, DWORD& outColor);
+    static bool calculatePriorityColor(DWORD* pixels, int width, int height, DWORD& outColor, DWORD& outColor2);
     static bool calculateAverage(DWORD* pixels, int width, int height, DWORD& outColor);
 };

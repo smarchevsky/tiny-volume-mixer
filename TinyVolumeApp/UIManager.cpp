@@ -60,22 +60,18 @@ SliderInfo createIconInfo(HICON icon, bool calculateIconColor = true)
 
     ii.hIconLarge = icon;
 
-    ii.colorSlider = defaultSliderColor;
+    ii.colorSlider = defaultSliderColors.first;
+    ii.colorSecondary = defaultSliderColors.second;
+
     if (calculateIconColor)
-        ColorUtils::calculatePriorityColor(&pixels[0], bmp.bmWidth, bmp.bmHeight, ii.colorSlider);
+        ColorUtils::calculatePriorityColor(&pixels[0],
+            bmp.bmWidth, bmp.bmHeight, ii.colorSlider, ii.colorSecondary);
 
     uint64_t iconHash {};
     for (int i = 0; i < pixelCount; ++i)
         hash_combine(iconHash, pixels[i]);
-
     ii.iconHash = iconHash;
 
-    {
-        ARGB_SPLIT(BYTE, a, ii.colorSlider);
-        ARGB_SPLIT(BYTE, b, 0xFFFFFFFF);
-        LERP_BYTE_COLOR(r, a, b, 200);
-        ii.colorText = ARGB(ra, rr, rg, rb);
-    }
     return ii;
 }
 

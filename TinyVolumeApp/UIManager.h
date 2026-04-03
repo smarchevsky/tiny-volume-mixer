@@ -4,14 +4,15 @@
 #include <string>
 #include <unordered_map>
 
-constexpr DWORD defaultSliderColor = 0x00AAAAAA;
+constexpr std::pair<DWORD, DWORD> defaultSliderColors = { 0x00888888, 0x00AAAAAA };
 
 struct SliderInfo {
     HBITMAP textBmp;
     HICON hIconLarge;
     uint64_t iconHash;
-    DWORD colorText;
+    std::pair<DWORD, DWORD> sliderColors;
     DWORD colorSlider;
+    DWORD colorSecondary;
 };
 
 class UIManager {

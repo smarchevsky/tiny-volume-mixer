@@ -87,17 +87,18 @@ void Slider::draw(HDC hdc, const UIConfig& uic) const
     };
 
     const DWORD border = _focused ? 0xFF000000 : 0xAA000000;
-    DWORD sliderColor = _sliderInfo ? _sliderInfo->colorSlider : defaultSliderColor;
+    DWORD sliderColor = _sliderInfo ? _sliderInfo->colorSlider : defaultSliderColors.first;
+    DWORD sliderColor2 = _sliderInfo ? _sliderInfo->colorSecondary : defaultSliderColors.second;
 
     drawBorderedRectAlphaComposite(hdc, roundRect,
         uic.sliderCornerRadius, uic.sliderBorderWidth,
-        0xAA000000 | sliderColor, border | sliderColor);
+        0xAA000000 | sliderColor, border | sliderColor2);
 
     float peak = _peak;
     peak = peak * (2 - peak);
     RECT peakRect { roundRect.left + 6, roundRect.top + 6, roundRect.right - 6, roundRect.bottom - 6 };
     peakRect.top += LONG((peakRect.bottom - peakRect.top) * (1.f - peak));
-    drawBorderedRectAlphaComposite(hdc, peakRect, 3, 0, 0xFF000000 | sliderColor, 0);
+    drawBorderedRectAlphaComposite(hdc, peakRect, 3, 0, 0xFF000000 | sliderColor2, 0);
 
     if (_sliderInfo && _sliderInfo->hIconLarge)
         DrawIconEx(hdc,

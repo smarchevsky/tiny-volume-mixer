@@ -56,7 +56,7 @@ struct ColorWeight {
 };
 }
 
-bool ColorUtils::calculatePriorityColor(DWORD* pixels, int width, int height, DWORD& outColor)
+bool ColorUtils::calculatePriorityColor(DWORD* pixels, int width, int height, DWORD& outColor, DWORD& outColor2)
 {
     std::unordered_map<DWORD, int> colorGroups;
     const int pixelCount = width * height;
@@ -71,41 +71,32 @@ bool ColorUtils::calculatePriorityColor(DWORD* pixels, int width, int height, DW
     if (colorGroups.empty())
         return false;
 
-    std::vector<ColorWeight> g0;
+    std::vector<ColorWeight> g;
     for (auto& [dwColor, num] : colorGroups)
         if (num >= 10)
-            g0.push_back(ColorWeight::fromHexAndWeight(dwColor, (float)num));
+            g.push_back(ColorWeight::fromHexAndWeight(dwColor, (float)num));
 
-    if (g0.size() == 0)
+    if (g.size() == 0)
         return false;
 
-    std::sort(g0.begin(), g0.end(), [](const ColorWeight& a, const ColorWeight& b) { return a.w > b.w; });
+    std::sort(g.begin(), g.end(), [](const ColorWeight& a, const ColorWeight& b) { return a.w > b.w; });
 
-    int collected = 0;
-
-    ColorWeight finalColor = g0[std::min((int)g0.size() - 1, 0)];
-    for (int i = 1; i < g0.size(); i++) {
-        float distSq = ColorWeight::getColorDistSq(g0[i], finalColor);
-        if (distSq < powf(50.f, 2.f)) {
-            finalColor += g0[i];
-            collected++;
-        }
-    }
-
-    auto makeDesaturatedLighter = [](ColorWeight& c) {
+    auto calculateSaturation = [](ColorWeight& c) {
         float cmax = std::max(c.r, std::max(c.g, c.b)) / 255.f;
         float cmin = std::min(c.r, std::min(c.g, c.b)) / 255.f;
         float sat = (cmax - cmin) / (1 - abs(2 * (cmax + cmin) / 2 - 1));
-        float grayness = 1 - sat;
-        grayness *= 0.5f;
-        c.r = lerp(c.r, 200, grayness);
-        c.g = lerp(c.g, 200, grayness);
-        c.b = lerp(c.b, 200, grayness);
+        return sat;
     };
 
-    // finalColor = g0[0];
-    makeDesaturatedLighter(finalColor);
-    outColor = finalColor.toDWORD();
+    auto c = g[0];
+    float sat = calculateSaturation(c);
+    float grayness = 1 - sat;
+    c.r = lerp(c.r, 128, grayness * 0.3f);
+    c.g = lerp(c.g, 128, grayness * 0.3f);
+    c.b = lerp(c.b, 128, grayness * 0.3f);
+
+    outColor = c.toDWORD();
+    outColor2 = sat > 0.5 ? outColor : g[(g.size() - 1) / 2].toDWORD();
 
     return true;
 }
