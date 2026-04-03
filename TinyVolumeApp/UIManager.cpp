@@ -1,5 +1,6 @@
 #include "UIManager.h"
 
+#include "ColorUtils.h"
 #include "Utils.h" // PNGLoader
 
 // GetPackageFullName, GetPackageFamilyName, GetPackagePathByFullName
@@ -34,25 +35,6 @@ inline void hash_combine(uint64_t& seed, const T& v)
     seed ^= hasher(v) + 0x9e3779b9 + (seed << 6) + (seed >> 2);
 }
 
-COLORREF getAvgColorARGB(int width, int height, DWORD* pixels, uint64_t& iconHash)
-{
-    uint64_t totalR = 0, totalG = 0, totalB = 0;
-    int opaquePixels = 0;
-
-    const int pixelCount = width * height;
-    for (int i = 0; i < pixelCount; i++) {
-        BYTE a = (pixels[i] >> 24) & 0xFF, r = (pixels[i] >> 16) & 0xFF, g = (pixels[i] >> 8) & 0xFF, b = pixels[i] & 0xFF;
-        if (a > 127)
-            totalR += r, totalG += g, totalB += b, opaquePixels++;
-        hash_combine(iconHash, pixels[i]);
-    }
-
-    if (opaquePixels > 0)
-        return ARGB(0, BYTE(totalR / opaquePixels), BYTE(totalG / opaquePixels), BYTE(totalB / opaquePixels));
-
-    return defaultSliderColor;
-}
-
 SliderInfo createIconInfo(HICON icon, bool calculateIconColor = true)
 {
     // calc avg color
@@ -77,10 +59,14 @@ SliderInfo createIconInfo(HICON icon, bool calculateIconColor = true)
     SliderInfo ii {};
 
     ii.hIconLarge = icon;
+
+    ii.colorSlider = defaultSliderColor;
+    if (calculateIconColor)
+        ColorUtils::calculatePriorityColor(&pixels[0], bmp.bmWidth, bmp.bmHeight, ii.colorSlider);
+
     uint64_t iconHash {};
-    ii.colorSlider = calculateIconColor
-        ? getAvgColorARGB(bmp.bmWidth, bmp.bmHeight, &pixels[0], iconHash)
-        : defaultSliderColor;
+    for (int i = 0; i < pixelCount; ++i)
+        hash_combine(iconHash, pixels[i]);
 
     ii.iconHash = iconHash;
 

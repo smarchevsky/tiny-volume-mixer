@@ -2,6 +2,7 @@
 
 #include "Draw.h"
 
+#include "ColorUtils.h"
 #include "Common.h"
 #include "Utils.h"
 
