@@ -1,6 +1,8 @@
 #pragma once
 #include <chrono>
+#include <stdarg.h>
 #include <stdio.h>
+
 class Logger {
 #ifdef _WIN32
 #define lock_stream(f) _lock_file(f)
