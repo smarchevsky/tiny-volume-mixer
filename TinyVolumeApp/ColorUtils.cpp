@@ -30,6 +30,7 @@ struct ColorWeight {
             minDist = std::min(m, minDist);
 
         result.w = weight / minDist;
+
         return result;
     }
 
@@ -46,6 +47,12 @@ struct ColorWeight {
         b = (b * w + rhs.b * rhs.w) * sumWeightRecip;
         w += rhs.w;
         return *this;
+    }
+
+    inline static ColorWeight lerp(ColorWeight c1, const ColorWeight& c2, float x)
+    {
+        c1.r = ::lerp(c1.r, c2.r, x), c1.g = ::lerp(c1.g, c2.g, x), c1.b = ::lerp(c1.b, c2.b, x);
+        return c1;
     }
 
     inline static float getColorDistSq(const ColorWeight& c1, const ColorWeight& c2)
@@ -88,19 +95,20 @@ bool ColorUtils::calculatePriorityColor(DWORD* pixels, int width, int height, DW
         return sat;
     };
 
-    auto c = groups[0];
-    float sat = calculateSaturation(c);
-    float grayness = 1 - sat;
-    c.r = lerp(c.r, 0.5f, grayness * 0.3f);
-    c.g = lerp(c.g, 0.5f, grayness * 0.3f);
-    c.b = lerp(c.b, 0.5f, grayness * 0.3f);
+    auto finalColor = groups[0];
+    float redFactor = ColorWeight::getColorDistSq(finalColor, { 1, 0, 0 });
+    redFactor = powf(1 - std::min(redFactor * 1.f, 1.f), 8);
 
-    outColor = c.toDWORD();
+    float sat = calculateSaturation(finalColor);
 
-    if (sat >= 0.5) {
-        outColor2 = outColor;
+    ColorWeight greyedDesaturatedColor = finalColor;
+    greyedDesaturatedColor = ColorWeight::lerp(greyedDesaturatedColor, { 0.5f, 0.5f, 0.5f }, (1 - sat) * 0.3f);
+    greyedDesaturatedColor = ColorWeight::lerp(greyedDesaturatedColor, { 0.2f, 0.2f, 0.2f }, redFactor);
 
-    } else { // look for saturated secondary
+    outColor = greyedDesaturatedColor.toDWORD();
+    outColor2 = finalColor.toDWORD();
+
+    if (sat < 0.5) {
         for (int i = 0; i < groups.size(); ++i) {
             auto& g = groups[i];
             if (calculateSaturation(g) > 0.5) {
@@ -108,7 +116,7 @@ bool ColorUtils::calculatePriorityColor(DWORD* pixels, int width, int height, DW
                 return true;
             }
         }
-        outColor2 = groups[(groups.size() - 1) / 2].toDWORD();
+        outColor2 = groups[(groups.size() - 1) / 4].toDWORD();
     }
 
     return true;
