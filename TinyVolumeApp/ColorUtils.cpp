@@ -17,12 +17,12 @@ struct ColorWeight {
         ColorWeight result;
         ARGB_SPLIT(float, c, colorHex);
 
-        result.r = cr, result.g = cg, result.b = cb;
+        result.r = cr / 255, result.g = cg / 255, result.b = cb / 255;
 
         const float minDistances[] = {
-            getColorDistSq(result, { 0, 148, 255 }) + 1000,
-            getColorDistSq(result, { 254, 0, 128 }) + 1000,
-            getColorDistSq(result, { 100, 255, 0 }) + 1000,
+            getColorDistSq(result, { 0.0f, 0.6f, 1.0f }) + 0.01f,
+            getColorDistSq(result, { 1.0f, 0.0f, 0.5f }) + 0.01f,
+            getColorDistSq(result, { 0.4f, 1.0f, 0.0f }) + 0.01f,
         };
 
         float minDist = INFINITY;
@@ -34,9 +34,9 @@ struct ColorWeight {
     }
 
     DWORD toDWORD() const { return ARGB(0,
-        std::clamp(r, 0.f, 255.f),
-        std::clamp(g, 0.f, 255.f),
-        std::clamp(b, 0.f, 255.f)); }
+        std::clamp<float>(r, 0, 1) * 255,
+        std::clamp<float>(g, 0, 1) * 255,
+        std::clamp<float>(b, 0, 1) * 255); }
 
     ColorWeight& operator+=(const ColorWeight& rhs)
     {
@@ -82,8 +82,8 @@ bool ColorUtils::calculatePriorityColor(DWORD* pixels, int width, int height, DW
     std::sort(groups.begin(), groups.end(), [](const ColorWeight& a, const ColorWeight& b) { return a.w > b.w; });
 
     auto calculateSaturation = [](ColorWeight& c) {
-        float cmax = std::max(c.r, std::max(c.g, c.b)) / 255.f;
-        float cmin = std::min(c.r, std::min(c.g, c.b)) / 255.f;
+        float cmax = std::max(c.r, std::max(c.g, c.b));
+        float cmin = std::min(c.r, std::min(c.g, c.b));
         float sat = (cmax - cmin) / (1 - abs(2 * (cmax + cmin) / 2 - 1));
         return sat;
     };
@@ -91,9 +91,9 @@ bool ColorUtils::calculatePriorityColor(DWORD* pixels, int width, int height, DW
     auto c = groups[0];
     float sat = calculateSaturation(c);
     float grayness = 1 - sat;
-    c.r = lerp(c.r, 128, grayness * 0.3f);
-    c.g = lerp(c.g, 128, grayness * 0.3f);
-    c.b = lerp(c.b, 128, grayness * 0.3f);
+    c.r = lerp(c.r, 0.5f, grayness * 0.3f);
+    c.g = lerp(c.g, 0.5f, grayness * 0.3f);
+    c.b = lerp(c.b, 0.5f, grayness * 0.3f);
 
     outColor = c.toDWORD();
 
