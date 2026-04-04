@@ -14,6 +14,7 @@
 #if DEBUG_ITERATE_ICONS == 1
 
 // SHDefExtractIconW, SHGetKnownFolderPath
+#include "ColorUtils.h"
 #include <shlobj.h>
 
 // Callback function that Windows calls for every resource found
@@ -46,16 +47,17 @@ void ListIconIDs(const std::wstring& dllPath)
 HICON debugUpdateIcon(int iconSize)
 {
     HICON icon {};
-    auto path = L"C:\\Windows\\System32\\mmres.dll";
+    // imageres, mmres, shell32, setupapi
+    auto path = L"C:\\Windows\\System32\\setupapi.dll";
     if (iconIDs.empty())
         ListIconIDs(path);
 
     if (iconIDs.size()) {
-        int iconIndex = iconIDs[currentIndex];
+        int iconIndex = iconIDs[currentIndex / 3];
         SHDefExtractIconW(path, -iconIndex, 0, &icon, NULL, MAKELONG(iconSize, 0));
 
         wprintf(L"iconIndex: %d\n", iconIndex);
-        currentIndex = (currentIndex + 1) % iconIDs.size();
+        currentIndex = (currentIndex + 1) % (iconIDs.size() * 3);
     }
     return icon;
 }
@@ -77,7 +79,27 @@ inline RECT operator+(RECT rc, POINT p)
 void Slider::draw(HDC hdc, const UIConfig& uic) const
 {
 #if DEBUG_ITERATE_ICONS == 1
-    const_cast<SliderInfo*>(_sliderInfo)->hIconLarge = debugUpdateIcon(_sliderInfo->width);
+    SliderInfo& mutThis = const_cast<SliderInfo&>(*_sliderInfo);
+    mutThis.hIconLarge = debugUpdateIcon(uic.iconSize);
+
+    ICONINFO iconInfo;
+    GetIconInfo(mutThis.hIconLarge, &iconInfo);
+
+    BITMAP bmp;
+    GetObject(iconInfo.hbmColor, sizeof(BITMAP), &bmp);
+
+    int pixelCount = bmp.bmWidth * bmp.bmHeight;
+    if (pixelCount <= 256 * 256) {
+        std::vector<DWORD> pixels(pixelCount);
+        HDC hdc = GetDC(NULL);
+        BITMAPINFO bmi = getBMI_ARGB({ bmp.bmWidth, bmp.bmHeight });
+        GetDIBits(hdc, iconInfo.hbmColor, 0, bmp.bmHeight, &pixels[0], (BITMAPINFO*)&bmi, DIB_RGB_COLORS);
+        ReleaseDC(NULL, hdc);
+
+        ColorUtils::calculatePriorityColor(&pixels[0],
+            bmp.bmWidth, bmp.bmHeight, mutThis.colorSlider, mutThis.colorSecondary);
+    }
+
 #endif
 
     float drawHeight = (_rect.bottom - _rect.top) * (1.f - _val);
