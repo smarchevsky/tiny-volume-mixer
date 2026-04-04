@@ -60,7 +60,7 @@ bool ColorUtils::calculatePriorityColor(DWORD* pixels, int width, int height, DW
 {
     std::unordered_map<DWORD, int> colorGroups;
     const int pixelCount = width * height;
-    for (int i = 0; i < pixelCount; i++) {
+    for (int i = 0; i < pixelCount; i += 2) {
         DWORD pixel = pixels[i];
         ARGB_SPLIT(BYTE, , pixel)
         if (a > 127) {
@@ -71,15 +71,15 @@ bool ColorUtils::calculatePriorityColor(DWORD* pixels, int width, int height, DW
     if (colorGroups.empty())
         return false;
 
-    std::vector<ColorWeight> g;
+    std::vector<ColorWeight> groups;
     for (auto& [dwColor, num] : colorGroups)
         if (num >= 10)
-            g.push_back(ColorWeight::fromHexAndWeight(dwColor, (float)num));
+            groups.push_back(ColorWeight::fromHexAndWeight(dwColor, (float)num));
 
-    if (g.size() == 0)
+    if (groups.size() == 0)
         return false;
 
-    std::sort(g.begin(), g.end(), [](const ColorWeight& a, const ColorWeight& b) { return a.w > b.w; });
+    std::sort(groups.begin(), groups.end(), [](const ColorWeight& a, const ColorWeight& b) { return a.w > b.w; });
 
     auto calculateSaturation = [](ColorWeight& c) {
         float cmax = std::max(c.r, std::max(c.g, c.b)) / 255.f;
@@ -88,7 +88,7 @@ bool ColorUtils::calculatePriorityColor(DWORD* pixels, int width, int height, DW
         return sat;
     };
 
-    auto c = g[0];
+    auto c = groups[0];
     float sat = calculateSaturation(c);
     float grayness = 1 - sat;
     c.r = lerp(c.r, 128, grayness * 0.3f);
@@ -96,7 +96,20 @@ bool ColorUtils::calculatePriorityColor(DWORD* pixels, int width, int height, DW
     c.b = lerp(c.b, 128, grayness * 0.3f);
 
     outColor = c.toDWORD();
-    outColor2 = sat > 0.5 ? outColor : g[(g.size() - 1) / 2].toDWORD();
+
+    if (sat >= 0.5) {
+        outColor2 = outColor;
+
+    } else { // look for saturated secondary
+        for (int i = 0; i < groups.size(); ++i) {
+            auto& g = groups[i];
+            if (calculateSaturation(g) > 0.5) {
+                outColor2 = g.toDWORD();
+                return true;
+            }
+        }
+        outColor2 = groups[(groups.size() - 1) / 2].toDWORD();
+    }
 
     return true;
 }
