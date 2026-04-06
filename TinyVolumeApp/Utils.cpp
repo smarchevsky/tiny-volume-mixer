@@ -11,10 +11,6 @@
 // SHDefExtractIconW, SHGetKnownFolderPath
 #include <shlobj.h>
 
-#include <algorithm>
-#include <cassert>
-#include <string>
-
 //
 // PNG LOADER
 //
@@ -128,33 +124,3 @@ void FileManager::saveWindowRect(const RECT& rect) const
     WritePrivateProfileStringW(L"Window", L"h", std::to_wstring(height).c_str(), _iniPath.c_str());
 }
 #pragma endregion
-
-HBITMAP renderTextToAlphaBitmap(const HFONT font, const std::wstring& text)
-{
-    assert(font);
-    HDC fontBufferDC = CreateCompatibleDC(NULL);
-
-    HFONT hOldFont = (HFONT)SelectObject(fontBufferDC, font);
-
-    SIZE textSize;
-    GetTextExtentPoint32(fontBufferDC, text.c_str(), (int)text.length(), &textSize);
-
-    DWORD* pixelsARGB;
-    BITMAPINFO bmi = getBMI_ARGB(textSize);
-    HBITMAP fontBufferBitmap = CreateDIBSection(fontBufferDC, &bmi, DIB_RGB_COLORS, (void**)&pixelsARGB, NULL, 0);
-
-    if (fontBufferBitmap) {
-        HBITMAP hOldBmp = (HBITMAP)SelectObject(fontBufferDC, fontBufferBitmap);
-        SetBkMode(fontBufferDC, TRANSPARENT);
-        SetTextColor(fontBufferDC, RGB(255, 255, 255)); // White text
-        TextOut(fontBufferDC, 0, 0, text.c_str(), (int)text.length());
-        for (int i = 0; i < textSize.cx * textSize.cy; ++i)
-            pixelsARGB[i] = (pixelsARGB[i] & 0xFF) << 24 | 0xFFFFFF;
-        SelectObject(fontBufferDC, hOldBmp);
-    }
-
-    SelectObject(fontBufferDC, hOldFont);
-    DeleteDC(fontBufferDC);
-
-    return fontBufferBitmap;
-}

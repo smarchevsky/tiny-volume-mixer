@@ -31,6 +31,8 @@ public:
     const SliderInfo* getIconMasterVol() const { return &_iiMasterSpeaker; }
     SliderInfo* generateSliderInfo(WCHAR* iconPath, PID pid);
 
+    HBITMAP renderTextToAlphaBitmap(const std::wstring& text);
+
     void init(const UIConfig& config);
     static UIManager& get()
     {

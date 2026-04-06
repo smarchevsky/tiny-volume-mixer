@@ -300,7 +300,7 @@ SliderInfo* UIManager::generateSliderInfo(WCHAR* iconPath, PID pid)
             iconPathStr = exePath;
             auto fileName = getFileName(exePath);
             if (pid != 0 && !fileName.empty()) {
-                textBmp = renderTextToAlphaBitmap(_hFont, fileName);
+                textBmp = renderTextToAlphaBitmap(fileName);
             }
         }
 
@@ -308,7 +308,7 @@ SliderInfo* UIManager::generateSliderInfo(WCHAR* iconPath, PID pid)
     }
 
     if (pid == 0)
-        textBmp = renderTextToAlphaBitmap(_hFont, L"System");
+        textBmp = renderTextToAlphaBitmap(L"System");
 
     if (iconPath && wcslen(iconPath)) { // retrieve from AudioSessionInfo
         iconPathStr = iconPath;
@@ -327,6 +327,36 @@ SliderInfo* UIManager::generateSliderInfo(WCHAR* iconPath, PID pid)
     sliderInfo.textBmp = textBmp;
     sliderInfo.iconHash = pid == 0 ? uint64_t(-1) : sliderInfo.iconHash; // sort system sounds first/last
     return &sliderInfo;
+}
+
+HBITMAP UIManager::renderTextToAlphaBitmap(const std::wstring& text)
+{
+    // assert(font);
+    HDC fontBufferDC = CreateCompatibleDC(NULL);
+
+    HFONT hOldFont = (HFONT)SelectObject(fontBufferDC, _hFont);
+
+    SIZE textSize;
+    GetTextExtentPoint32(fontBufferDC, text.c_str(), (int)text.length(), &textSize);
+
+    DWORD* pixelsARGB;
+    BITMAPINFO bmi = getBMI_ARGB(textSize);
+    HBITMAP fontBufferBitmap = CreateDIBSection(fontBufferDC, &bmi, DIB_RGB_COLORS, (void**)&pixelsARGB, NULL, 0);
+
+    if (fontBufferBitmap) {
+        HBITMAP hOldBmp = (HBITMAP)SelectObject(fontBufferDC, fontBufferBitmap);
+        SetBkMode(fontBufferDC, TRANSPARENT);
+        SetTextColor(fontBufferDC, RGB(255, 255, 255)); // White text
+        TextOut(fontBufferDC, 0, 0, text.c_str(), (int)text.length());
+        for (int i = 0; i < textSize.cx * textSize.cy; ++i)
+            pixelsARGB[i] = (pixelsARGB[i] & 0xFF) << 24 | 0xFFFFFF;
+        SelectObject(fontBufferDC, hOldBmp);
+    }
+
+    SelectObject(fontBufferDC, hOldFont);
+    DeleteDC(fontBufferDC);
+
+    return fontBufferBitmap;
 }
 
 void UIManager::init(const UIConfig& config)
@@ -367,7 +397,7 @@ void UIManager::init(const UIConfig& config)
         HICON icon {};
         SHDefExtractIconW(dllPath, iconIndex, 0, &icon, NULL, MAKELONG(CLAMP_ICON_SIZE(_iconSize), 0));
         auto sliderInfo = createIconInfo(icon, false);
-        sliderInfo.textBmp = renderTextToAlphaBitmap(_hFont, L"Master");
+        sliderInfo.textBmp = renderTextToAlphaBitmap(L"Master");
         return sliderInfo;
     };
 
