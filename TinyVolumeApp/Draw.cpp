@@ -127,43 +127,57 @@ void drawBorderedRectInternal(const SIZE canvasSize, const RECT& clipRegion,
     const int rcb_end = std::min(rcb, cb);
     const int rcr_end = std::min(rcr, cr);
 
-    uint64_t prevIn {};
-    DWORD prevResult {};
+    if (bg_col != bo_col) {
+        if (rcl_minrx_start < rcr_minrx_end) {
+            for (int y = rct_start; y < rct_bwy_end; y++) // top border
+                for (int x = rcl_minrx_start; x < rcr_minrx_end; x++)
+                    Op(pixels[y * canvasSize.cx + x], bo_col);
 
-    if (rcl_minrx_start < rcr_minrx_end) {
-        for (int y = rct_bwy_start; y < rct_minry_end; y++) // top section
-            for (int x = rcl_minrx_start; x < rcr_minrx_end; x++)
-                Op(pixels[y * canvasSize.cx + x], bg_col);
+            for (int y = rct_bwy_start; y < rct_minry_end; y++) // top section
+                for (int x = rcl_minrx_start; x < rcr_minrx_end; x++)
+                    Op(pixels[y * canvasSize.cx + x], bg_col);
 
-        for (int y = rcb_minry_start; y < rcb_bw_end; y++) // bottom section
-            for (int x = rcl_minrx_start; x < rcr_minrx_end; x++)
-                Op(pixels[y * canvasSize.cx + x], bg_col);
+            for (int y = rcb_minry_start; y < rcb_bw_end; y++) // bottom section
+                for (int x = rcl_minrx_start; x < rcr_minrx_end; x++)
+                    Op(pixels[y * canvasSize.cx + x], bg_col);
 
-        for (int y = rct_start; y < rct_bwy_end; y++) // top border
+            for (int y = rcb_bw_start; y < rcb_end; y++) // bottom border
+                for (int x = rcl_minrx_start; x < rcr_minrx_end; x++)
+                    Op(pixels[y * canvasSize.cx + x], bo_col);
+        }
+
+        if (rcl_bwx_start < rcr_bw_end) {
+            for (int y = rct_minry_start; y < rcb_minry_end; y++) // mid section
+                for (int x = rcl_bwx_start; x < rcr_bw_end; x++)
+                    Op(pixels[y * canvasSize.cx + x], bg_col);
+        }
+
+        if (rcl_start < rcl_bwx_end) {
+            for (int y = rct_minry_start; y < rcb_minry_end; y++) // left border
+                for (int x = rcl_start; x < rcl_bwx_end; x++)
+                    Op(pixels[y * canvasSize.cx + x], bo_col);
+        }
+
+        if (rcr_bw_start < rcr_end) {
+            for (int y = rct_minry_start; y < rcb_minry_end; y++) // right border
+                for (int x = rcr_bw_start; x < rcr_end; x++)
+                    Op(pixels[y * canvasSize.cx + x], bo_col);
+        }
+
+    } else {
+        for (int y = rct_start; y < rct_minry_end; y++) // top section & border
             for (int x = rcl_minrx_start; x < rcr_minrx_end; x++)
                 Op(pixels[y * canvasSize.cx + x], bo_col);
 
-        for (int y = rcb_bw_start; y < rcb_end; y++) // bottom border
+        for (int y = rcb_minry_start; y < rcb_end; y++) // bottom section & border
             for (int x = rcl_minrx_start; x < rcr_minrx_end; x++)
                 Op(pixels[y * canvasSize.cx + x], bo_col);
-    }
 
-    if (rcl_bwx_start < rcr_bw_end) {
-        for (int y = rct_minry_start; y < rcb_minry_end; y++) // mid section
-            for (int x = rcl_bwx_start; x < rcr_bw_end; x++)
-                Op(pixels[y * canvasSize.cx + x], bg_col);
-    }
-
-    if (rcl_start < rcl_bwx_end) {
-        for (int y = rct_minry_start; y < rcb_minry_end; y++) // left border
-            for (int x = rcl_start; x < rcl_bwx_end; x++)
-                Op(pixels[y * canvasSize.cx + x], bo_col);
-    }
-
-    if (rcr_bw_start < rcr_end) {
-        for (int y = rct_minry_start; y < rcb_minry_end; y++) // right border
-            for (int x = rcr_bw_start; x < rcr_end; x++)
-                Op(pixels[y * canvasSize.cx + x], bo_col);
+        if (rcl_start < rcr_end) {
+            for (int y = rct_minry_start; y < rcb_minry_end; y++) //  left & right & mid section
+                for (int x = rcl_start; x < rcr_end; x++)
+                    Op(pixels[y * canvasSize.cx + x], bg_col);
+        }
     }
 
     // corners
