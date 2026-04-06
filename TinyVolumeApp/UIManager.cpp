@@ -1,3 +1,5 @@
+#define NOMINMAX
+
 #include "UIManager.h"
 
 #include "ColorUtils.h"
@@ -329,15 +331,26 @@ SliderInfo* UIManager::generateSliderInfo(WCHAR* iconPath, PID pid)
     return &sliderInfo;
 }
 
+__forceinline int recipCurve(int x)
+{
+    x = 255 - x, x = x * x / 255;
+    return 255 - x;
+}
+
 HBITMAP UIManager::renderTextToAlphaBitmap(const std::wstring& text)
 {
-    // assert(font);
+    const int bkgStripExtend = 30;
+    const float bkgGradientWidth = 80.f;
+    const float bkgStripMax = 80;
+
     HDC fontBufferDC = CreateCompatibleDC(NULL);
 
     HFONT hOldFont = (HFONT)SelectObject(fontBufferDC, _hFont);
 
     SIZE textSize;
     GetTextExtentPoint32(fontBufferDC, text.c_str(), (int)text.length(), &textSize);
+    textSize.cx += bkgStripExtend * 2;
+    textSize.cy += 2;
 
     DWORD* pixelsARGB;
     BITMAPINFO bmi = getBMI_ARGB(textSize);
@@ -347,9 +360,22 @@ HBITMAP UIManager::renderTextToAlphaBitmap(const std::wstring& text)
         HBITMAP hOldBmp = (HBITMAP)SelectObject(fontBufferDC, fontBufferBitmap);
         SetBkMode(fontBufferDC, TRANSPARENT);
         SetTextColor(fontBufferDC, RGB(255, 255, 255)); // White text
-        TextOut(fontBufferDC, 0, 0, text.c_str(), (int)text.length());
-        for (int i = 0; i < textSize.cx * textSize.cy; ++i)
-            pixelsARGB[i] = (pixelsARGB[i] & 0xFF) << 24 | 0xFFFFFF;
+        TextOut(fontBufferDC, bkgStripExtend, 0, text.c_str(), (int)text.length());
+
+        float deriv = (float)bkgStripMax / bkgGradientWidth;
+        for (int y = 0; y < textSize.cy; ++y) {
+            for (int x = 0; x < textSize.cx; ++x) {
+                int i = y * textSize.cx + x;
+                ARGB_SPLIT(BYTE, , pixelsARGB[i]);
+
+                a = (BYTE)std::min((textSize.cx - x - 1) * deriv,
+                    std::min(x * deriv, bkgStripMax));
+
+                a = std::max(a, r);
+                r = recipCurve(r);
+                pixelsARGB[i] = ARGB(a, r, r, r);
+            }
+        }
         SelectObject(fontBufferDC, hOldBmp);
     }
 
