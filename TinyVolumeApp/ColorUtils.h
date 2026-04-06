@@ -11,11 +11,36 @@ typedef unsigned char BYTE;
       name##g = T((dval >> 8) & 0xFF),  \
       name##b = T((dval) & 0xFF);
 
-#define LERP_BYTE_COLOR(result, col0, col1, x)                    \
-    BYTE result##a = (col0##a + (col1##a - col0##a) * (x) / 255), \
-         result##r = (col0##r + (col1##r - col0##r) * (x) / 255), \
-         result##g = (col0##g + (col1##g - col0##g) * (x) / 255), \
-         result##b = (col0##b + (col1##b - col0##b) * (x) / 255);
+__forceinline DWORD lerpColor(DWORD a, DWORD b, BYTE alpha)
+{
+    ARGB_SPLIT(BYTE, a, a);
+    ARGB_SPLIT(BYTE, b, b);
+
+    BYTE ra = (aa + (ba - aa) * alpha / 255),
+         rr = (ar + (br - ar) * alpha / 255),
+         rg = (ag + (bg - ag) * alpha / 255),
+         rb = (ab + (bb - ab) * alpha / 255);
+
+    return ARGB(ra, rr, rg, rb);
+}
+
+__forceinline DWORD compositeAlpha(DWORD back, DWORD front)
+{
+    ARGB_SPLIT(BYTE, f, front);
+    ARGB_SPLIT(BYTE, b, back);
+
+    if (fa == 255)
+        return front;
+
+    if (fa == 0)
+        return back;
+
+    BYTE inv_a = 255 - fa;
+    return ARGB(fa + (ba * inv_a) / 255,
+        (fr * fa + br * inv_a) / 255,
+        (fg * fa + bg * inv_a) / 255,
+        (fb * fa + bb * inv_a) / 255);
+}
 
 class ColorUtils {
 public:

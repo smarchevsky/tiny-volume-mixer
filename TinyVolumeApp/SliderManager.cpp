@@ -2,6 +2,7 @@
 
 #include "SliderManager.h"
 
+#include "ColorUtils.h"
 #include "Draw.h"
 #include "UIManager.h"
 #include "Utils.h"
@@ -102,26 +103,46 @@ void Slider::draw(HDC hdc, const UIConfig& uic) const
 
 #endif
 
+#define OVERWRITE 1
+
     float drawHeight = (_rect.bottom - _rect.top) * (1.f - _val);
     const RECT roundRect {
         _rect.left + uic.getSliderOffsetL(), _rect.top + LONG(drawHeight),
         _rect.right - uic.getSliderOffsetR(), _rect.bottom
     };
 
-    const DWORD border = _focused ? 0xFF000000 : 0xAA000000;
+    const DWORD borderAlphaMask = _focused ? 0xFF000000 : 0xAA000000;
     DWORD sliderColor = _sliderInfo ? _sliderInfo->colorSlider : defaultSliderColors.first;
     DWORD sliderColor2 = _sliderInfo ? _sliderInfo->colorSecondary : defaultSliderColors.second;
 
-    drawBorderedRectAlphaComposite(hdc, roundRect,
-        uic.sliderCornerRadius, uic.sliderBorderWidth,
-        0xAA000000 | sliderColor, border | sliderColor2);
+    // VOL
+    DWORD col_bg = 0x66000000 | sliderColor;
+    DWORD col_bo = borderAlphaMask | sliderColor2;
 
+#if OVERWRITE == 1
+    DWORD bg = compositeAlpha(0, uic.colorWindowBck);
+    col_bg = compositeAlpha(bg, col_bg);
+    col_bo = compositeAlpha(bg, col_bo);
+    drawBorderedRectOverwrite(hdc, roundRect, uic.sliderCornerRadius, uic.sliderBorderWidth,
+        col_bg, col_bo);
+#else
+    drawBorderedRectAlphaComposite(hdc, roundRect, uic.sliderCornerRadius, uic.sliderBorderWidth,
+        bg_col, col_bo);
+#endif
+    // PEAK
     float peak = _peak;
     peak = peak * (2 - peak);
     RECT peakRect { roundRect.left + 6, roundRect.top + 6, roundRect.right - 6, roundRect.bottom - 6 };
     peakRect.top += LONG((peakRect.bottom - peakRect.top) * (1.f - peak));
-    drawBorderedRectAlphaComposite(hdc, peakRect, 3, 0, 0xFF000000 | sliderColor2, 0);
 
+    DWORD blendedPeakBkg = compositeAlpha(col_bg, 0xFF000000 | sliderColor2);
+#if OVERWRITE == 1
+    drawBorderedRectOverwrite(hdc, peakRect, 3, 0, blendedPeakBkg, blendedPeakBkg);
+#else
+    drawBorderedRectAlphaComposite(hdc, peakRect, 3, 0, blendedPeakBkg, blendedPeakBkg);
+#endif
+
+    // ICON
     if (_sliderInfo && _sliderInfo->hIconLarge)
         DrawIconEx(hdc,
             (_rect.left + _rect.right) / 2 - uic.iconSize / 2,

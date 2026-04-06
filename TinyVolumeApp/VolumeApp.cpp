@@ -1,5 +1,6 @@
 #include "VolumeApp.h"
 
+#include "ColorUtils.h"
 #include "UIManager.h"
 #include "Utils.h"
 
@@ -99,9 +100,21 @@ void VolumeApp::onPaint(HDC hdc)
     RECT windowRect;
     GetClientRect(_hWnd, &windowRect);
 
+    DWORD bg_col = _uiConfig.colorWindowBck;
+    DWORD bo_col = _uiConfig.colorWindowFrame;
+
+#define OVERWRITE 1
+#if OVERWRITE == 1
+    bg_col = compositeAlpha(0, bg_col);
+    bo_col = compositeAlpha(0, bo_col);
+    drawBorderedRectOverwrite(hdc, windowRect,
+        _uiConfig.frameCornerRadius, _uiConfig.frameBorderWidth,
+        bg_col, bo_col);
+#else
     drawBorderedRectAlphaComposite(hdc, windowRect,
         _uiConfig.frameCornerRadius, _uiConfig.frameBorderWidth,
-        _uiConfig.colorWindowBck, _uiConfig.colorWindowFrame);
+        bg_col, bo_col);
+#endif
 
     sliderManager.drawSliders(hdc, _uiConfig);
 
