@@ -341,7 +341,7 @@ HBITMAP UIManager::renderTextToAlphaBitmap(const std::wstring& text)
 {
     const int bkgStripExtend = 30;
     const float bkgGradientWidth = 80.f;
-    const float bkgStripMax = 80;
+    const float bkgStripOpacity = 160;
 
     HDC fontBufferDC = CreateCompatibleDC(NULL);
 
@@ -362,18 +362,20 @@ HBITMAP UIManager::renderTextToAlphaBitmap(const std::wstring& text)
         SetTextColor(fontBufferDC, RGB(255, 255, 255)); // White text
         TextOut(fontBufferDC, bkgStripExtend, 0, text.c_str(), (int)text.length());
 
-        float deriv = (float)bkgStripMax / bkgGradientWidth;
+        float deriv = (float)bkgStripOpacity / bkgGradientWidth;
         for (int y = 0; y < textSize.cy; ++y) {
             for (int x = 0; x < textSize.cx; ++x) {
                 int i = y * textSize.cx + x;
                 ARGB_SPLIT(BYTE, , pixelsARGB[i]);
 
                 a = (BYTE)std::min((textSize.cx - x - 1) * deriv,
-                    std::min(x * deriv, bkgStripMax));
+                    std::min(x * deriv, bkgStripOpacity));
 
                 a = std::max(a, r);
                 r = recipCurve(r);
-                pixelsARGB[i] = ARGB(a, r, r, r);
+                DWORD color = lerpColor(0x333333, 0xFFFFFF, r);
+
+                pixelsARGB[i] = a << 24 | color;
             }
         }
         SelectObject(fontBufferDC, hOldBmp);
