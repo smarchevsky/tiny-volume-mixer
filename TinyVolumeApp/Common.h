@@ -30,3 +30,8 @@ struct SelectInfo {
     PID _pid;
     VolumeType _type;
 };
+
+struct ImageBuffer8 {
+    LONG w, h;
+    BYTE* data;
+};

@@ -4,6 +4,10 @@
 #include "UIManager.h"
 #include "Utils.h"
 
+#include "resource.h"
+
+ImageBuffer8 imageClose, imageSettings;
+
 void VolumeApp::construct(HINSTANCE instance, WNDPROC wndProc)
 {
     RECT rc;
@@ -18,6 +22,10 @@ void VolumeApp::construct(HINSTANCE instance, WNDPROC wndProc)
         = UIManager::get().getIconMasterVol();
 
     _audioAppListerner.init(_hWnd);
+
+    int customSize { 64 };
+    imageClose = PNGLoader::get().getGrayscalePngFromResource(IDB_PNG_CLOSE, &customSize);
+    imageSettings = PNGLoader::get().getGrayscalePngFromResource(IDB_PNG_SETTINGS, &customSize);
 }
 
 void VolumeApp::destroyWindow(HWND hWnd)
@@ -124,6 +132,9 @@ void VolumeApp::onPaint(HDC hdc)
                 { r.left, r.top }, nullptr, 180);
         }
     }
+
+    drawGrayscaleMask(hdc, imageClose, POINT { windowRect.right - imageClose.w , 0 }, nullptr, 0x88AA0033);
+    drawGrayscaleMask(hdc, imageSettings, POINT { windowRect.right - imageSettings.w , imageSettings.h }, nullptr, 0x88888888);
 }
 
 void VolumeApp::onResize(RECT rc)

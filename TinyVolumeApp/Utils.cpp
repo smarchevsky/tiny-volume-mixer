@@ -15,50 +15,103 @@
 // PNG LOADER
 //
 
-PNGLoader::PNGLoader() { CoCreateInstance(CLSID_WICImagingFactory, nullptr, CLSCTX_INPROC_SERVER, IID_PPV_ARGS(&pFactory)); }
-PNGLoader::~PNGLoader() { pFactory->Release(); }
-HBITMAP PNGLoader::getBitmapFromPng(const std::wstring& pngPath, int* customIconSize)
-{
-    IWICBitmapDecoder* pDecoder = nullptr;
-    pFactory->CreateDecoderFromFilename(pngPath.c_str(), nullptr,
-        GENERIC_READ, WICDecodeMetadataCacheOnLoad, &pDecoder);
+namespace {
+struct PngLoaderData {
+    IWICBitmapDecoder* pDecoder {};
+    IWICBitmapFrameDecode* pFrame {};
+    IWICBitmapScaler* pScaler {};
+    IWICFormatConverter* pConverter {};
+    WICPixelFormatGUID srcFormat {};
 
-    IWICBitmapFrameDecode* pFrame = nullptr;
-    pDecoder->GetFrame(0, &pFrame);
+    // decoder already initialized
+    void initInternal(IWICImagingFactory* pFactory, int* customImageSize, bool grayscale)
+    {
+        pDecoder->GetFrame(0, &pFrame);
 
-    IWICBitmapScaler* pScaler = nullptr;
-    if (customIconSize) {
-        pFactory->CreateBitmapScaler(&pScaler);
-        pScaler->Initialize(pFrame, *customIconSize, *customIconSize, WICBitmapInterpolationModeHighQualityCubic);
+        if (customImageSize) {
+            pFactory->CreateBitmapScaler(&pScaler);
+            pScaler->Initialize(pFrame, *customImageSize, *customImageSize,
+                WICBitmapInterpolationModeHighQualityCubic);
+        }
+
+        pFactory->CreateFormatConverter(&pConverter);
+        pFrame->GetPixelFormat(&srcFormat);
+
+        pConverter->Initialize(pScaler ? pScaler : (IWICBitmapSource*)pFrame,
+            grayscale
+                ? GUID_WICPixelFormat8bppGray
+                : GUID_WICPixelFormat32bppPBGRA,
+            WICBitmapDitherTypeNone, nullptr, 0.0, WICBitmapPaletteTypeCustom);
     }
 
-    IWICFormatConverter* pConverter = nullptr;
-    pFactory->CreateFormatConverter(&pConverter);
+    PngLoaderData(IWICImagingFactory* pFactory, const std::wstring& pngPath, int* customImageSize, bool grayscale)
+    {
+        pFactory->CreateDecoderFromFilename(pngPath.c_str(), nullptr,
+            GENERIC_READ, WICDecodeMetadataCacheOnLoad, &pDecoder);
+        initInternal(pFactory, customImageSize, grayscale);
+    }
 
-    WICPixelFormatGUID srcFormat;
-    pFrame->GetPixelFormat(&srcFormat);
+    PngLoaderData(IWICImagingFactory* pFactory, int resourceID, int* customImageSize, bool grayscale)
+    {
+        HRSRC hRes = FindResource(NULL, MAKEINTRESOURCE(resourceID), L"PNG");
+        if (hRes) {
+            HGLOBAL hData = LoadResource(NULL, hRes);
+            void* pMem = LockResource(hData);
+            DWORD size = SizeofResource(NULL, hRes);
 
-    pConverter->Initialize(pScaler ? pScaler : (IWICBitmapSource*)pFrame, GUID_WICPixelFormat32bppPBGRA,
-        WICBitmapDitherTypeNone, nullptr, 0.0, WICBitmapPaletteTypeCustom);
+            if (IStream* pStream = SHCreateMemStream((BYTE*)pMem, size)) {
+                if (SUCCEEDED(pFactory->CreateDecoderFromStream(pStream, NULL,
+                        WICDecodeMetadataCacheOnLoad, &pDecoder))) {
+                    initInternal(pFactory, customImageSize, grayscale);
+                    pStream->Release();
+                }
+            }
+        }
+    }
+
+    ~PngLoaderData()
+    {
+        pConverter->Release();
+        if (pScaler)
+            pScaler->Release();
+        pFrame->Release();
+        pDecoder->Release();
+    }
+};
+} // namespace
+
+PNGLoader::PNGLoader() { CoCreateInstance(CLSID_WICImagingFactory, nullptr, CLSCTX_INPROC_SERVER, IID_PPV_ARGS(&_pFactory)); }
+PNGLoader::~PNGLoader() { _pFactory->Release(); }
+
+HBITMAP PNGLoader::getBitmapFromPng(const std::wstring& pngPath, int* customImageSize)
+{
+    PngLoaderData plData(_pFactory, pngPath, customImageSize, false);
 
     UINT w = 0, h = 0;
-    pConverter->GetSize(&w, &h);
+    plData.pConverter->GetSize(&w, &h);
 
     void* pBits = nullptr;
-
-    HDC hdc = GetDC(nullptr);
     BITMAPINFO bmi = getBMI_ARGB({ (LONG)w, (LONG)h });
+    HDC hdc = GetDC(nullptr);
     HBITMAP hBmp = CreateDIBSection(hdc, &bmi, DIB_RGB_COLORS, &pBits, nullptr, 0);
     ReleaseDC(nullptr, hdc);
 
-    pConverter->CopyPixels(nullptr, w * 4, w * h * 4, (BYTE*)pBits);
+    constexpr UINT numChannels = 4;
+    plData.pConverter->CopyPixels(nullptr, w * numChannels, w * h * numChannels, (BYTE*)pBits);
 
-    pConverter->Release();
-    if (pScaler)
-        pScaler->Release();
-    pFrame->Release();
-    pDecoder->Release();
     return hBmp;
+}
+
+ImageBuffer8 PNGLoader::getGrayscalePngFromResource(int resourceID, int* customImageSize)
+{
+    PngLoaderData plData(_pFactory, resourceID, customImageSize, true);
+
+    UINT w = 0, h = 0;
+    plData.pConverter->GetSize(&w, &h);
+    ImageBuffer8 imageBuffer { .w = (LONG)w, .h = (LONG)h, .data = new BYTE[w * h] };
+    plData.pConverter->CopyPixels(nullptr, w, w * h, imageBuffer.data);
+
+    return imageBuffer;
 }
 
 //

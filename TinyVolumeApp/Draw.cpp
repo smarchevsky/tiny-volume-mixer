@@ -256,8 +256,34 @@ void drawBitmapAlphaComposite(HDC hdc, HBITMAP bmp, const POINT pos, const RECT*
             compositeAlphaWithAlpha(back, front, alpha);
         }
     }
+}
 
-    //std::is_same<int, int>();
+void drawGrayscaleMask(HDC hdc, const ImageBuffer8 img, const POINT pos, const RECT* customRect, DWORD color)
+{
+    if (!img.data)
+        return;
+
+    SIZE canvasSize;
+    RECT clipRect;
+    DWORD* canvasPixels;
+    RECT bitmapRect = { pos.x, pos.y, pos.x + img.w, pos.y + img.h };
+
+    if (!validateCommon(hdc, bitmapRect, canvasPixels, canvasSize, clipRect))
+        return;
+
+    if (customRect && !IntersectRect(&bitmapRect, &bitmapRect, customRect))
+        return;
+
+    for (int y = clipRect.top; y < clipRect.bottom; y++) {
+        int hdcY = y * canvasSize.cx;
+        int stencilY = (y - pos.y) * img.w - pos.x;
+
+        for (int x = clipRect.left; x < clipRect.right; x++) {
+            const BYTE pixelGrayscale = img.data[stencilY + x];
+            DWORD& back = canvasPixels[hdcY + x];
+            compositeAlphaWithAlpha(back, color, pixelGrayscale);
+        }
+    }
 }
 
 void drawRoundRectToBitmap(HBITMAP dst, RECT roundRect, int radius, DWORD col0, DWORD col1)

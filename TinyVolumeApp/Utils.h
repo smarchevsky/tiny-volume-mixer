@@ -39,13 +39,14 @@ HBITMAP renderTextToAlphaBitmap(const HFONT font, const std::wstring& text);
 
 struct IWICImagingFactory;
 class PNGLoader {
-    IWICImagingFactory* pFactory = nullptr;
+    IWICImagingFactory* _pFactory {};
 
     PNGLoader();
     ~PNGLoader();
 
 public:
-    HBITMAP getBitmapFromPng(const std::wstring& pngPath, int* customIconSize);
+    HBITMAP getBitmapFromPng(const std::wstring& pngPath, int* customImageSize);
+    ImageBuffer8 getGrayscalePngFromResource(int resourceID, int* customImageSize);
 
     static PNGLoader& get()
     {
