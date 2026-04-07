@@ -68,10 +68,11 @@ bool validateCommon(HDC hdc, RECT renderableRect, DWORD*& pixels, SIZE& canvasSi
     return true;
 }
 
-template <void (*Op)(DWORD&, DWORD)>
+// template <void (*Op)(DWORD&, DWORD)>
 void drawBorderedRectInternal(const SIZE canvasSize, const RECT& clipRegion,
     DWORD* pixels, const RECT roundRect, LONG radius, LONG bw, DWORD bg_col, DWORD bo_col)
 {
+#define Op compositeOverwrite
     const LONG width = roundRect.right - roundRect.left;
     const LONG height = roundRect.bottom - roundRect.top;
 
@@ -83,17 +84,10 @@ void drawBorderedRectInternal(const SIZE canvasSize, const RECT& clipRegion,
     const LONG half_height = height / 2;
     const LONG half_height1 = (height + 1) / 2;
 
-    const LONG minrx = std::min(radius, half_width);
-    const LONG minrx_right = std::min(radius, half_width1);
-    const LONG minry = std::min(radius, half_height);
-    const LONG minry_bottom = std::min(radius, half_height1);
-
-    const LONG bwx = std::min(bw, minrx);
-    const LONG bwy = std::min(bw, minry);
-    const LONG bwy_bottom = std::min(bw, minry_bottom);
-
-    const LONG rcr_minrx_start = std::max(roundRect.right - minrx, clipRegion.left);
-    const LONG rcr_minrx_end = std::min(roundRect.right - minrx_right, clipRegion.right);
+    const LONG bwx = std::min(bw, half_width);
+    const LONG bwx_right = std::min(bw, half_width1);
+    const LONG bwy = std::min(bw, half_height);
+    const LONG bwy_bottom = std::min(bw, half_height1);
 
     const LONG rcl_start = std::max(roundRect.left, clipRegion.left);
     const LONG rct_start = std::max(roundRect.top, clipRegion.top);
@@ -103,83 +97,74 @@ void drawBorderedRectInternal(const SIZE canvasSize, const RECT& clipRegion,
     const LONG rct_bwy_end = std::min(rct_bwy, clipRegion.bottom);
 
     const LONG rcr_bwx = roundRect.right - bwx;
-    const LONG rcr_bw_start = std::max(rcr_bwx, clipRegion.left);
-    const LONG rcr_bw_end = std::min(rcr_bwx, clipRegion.right);
+    const LONG rcr_bwx_start = std::max(rcr_bwx, clipRegion.left);
+    const LONG rcr_bwx_end = std::min(rcr_bwx, clipRegion.right);
 
     const LONG rcb_bwy = roundRect.bottom - bwy_bottom;
-    const LONG rcb_bw_start = std::max(rcb_bwy, clipRegion.top);
-    const LONG rcb_bw_end = std::min(rcb_bwy, clipRegion.bottom);
-
-    const LONG rcb_minry = roundRect.bottom - minry_bottom;
-    const LONG rcb_minry_start = std::max(rcb_minry, clipRegion.top);
-    const LONG rcb_minry_end = std::min(rcb_minry, clipRegion.bottom);
-
-    const LONG rct_minry = roundRect.top + minry;
-    const LONG rct_minry_start = std::max(rct_minry, clipRegion.top);
-    const LONG rct_minry_end = std::min(rct_minry, clipRegion.bottom);
+    const LONG rcb_bwy_start = std::max(rcb_bwy, clipRegion.top);
+    const LONG rcb_bwy_end = std::min(rcb_bwy, clipRegion.bottom);
 
     const LONG rcl_bwx = roundRect.left + bwx;
     const LONG rcl_bwx_start = std::max(rcl_bwx, clipRegion.left);
     const LONG rcl_bwx_end = std::min(rcl_bwx, clipRegion.right);
 
-    const LONG rcl_minrx_start = std::max(roundRect.left + minrx, clipRegion.left);
-    const LONG rcl_minrx_end = std::min(roundRect.left + minrx_right, clipRegion.right);
-
     const LONG rcb_end = std::min(roundRect.bottom, clipRegion.bottom);
     const LONG rcr_end = std::min(roundRect.right, clipRegion.right);
 
     if (bg_col != bo_col) {
-        if (rcl_minrx_start < rcr_minrx_end) {
+        if (rcl_bwx_start < rcr_bwx_end) {
             for (LONG y = rct_start; y < rct_bwy_end; y++) // top border
-                for (LONG x = rcl_minrx_start; x < rcr_minrx_end; x++)
+                for (LONG x = rcl_bwx_start; x < rcr_bwx_end; x++)
                     Op(pixels[y * canvasSize.cx + x], bo_col);
 
-            for (LONG y = rct_bwy_start; y < rct_minry_end; y++) // top section
-                for (LONG x = rcl_minrx_start; x < rcr_minrx_end; x++)
+            for (LONG y = rct_bwy_start; y < rct_bwy_end; y++) // top section
+                for (LONG x = rcl_bwx_start; x < rcr_bwx_end; x++)
                     Op(pixels[y * canvasSize.cx + x], bg_col);
 
-            for (LONG y = rcb_minry_start; y < rcb_bw_end; y++) // bottom section
-                for (LONG x = rcl_minrx_start; x < rcr_minrx_end; x++)
+            for (LONG y = rcb_bwy_start; y < rcb_bwy_end; y++) // bottom section
+                for (LONG x = rcl_bwx_start; x < rcr_bwx_end; x++)
                     Op(pixels[y * canvasSize.cx + x], bg_col);
 
-            for (LONG y = rcb_bw_start; y < rcb_end; y++) // bottom border
-                for (LONG x = rcl_minrx_start; x < rcr_minrx_end; x++)
+            for (LONG y = rcb_bwy_start; y < rcb_end; y++) // bottom border
+                for (LONG x = rcl_bwx_start; x < rcr_bwx_end; x++)
                     Op(pixels[y * canvasSize.cx + x], bo_col);
         }
 
-        if (rcl_bwx_start < rcr_bw_end) {
-            for (LONG y = rct_minry_start; y < rcb_minry_end; y++) // mid section
-                for (LONG x = rcl_bwx_start; x < rcr_bw_end; x++)
+        if (rcl_bwx_start < rcr_bwx_end) {
+            for (LONG y = rct_bwy_start; y < rcb_bwy_end; y++) // mid section
+                for (LONG x = rcl_bwx_start; x < rcr_bwx_end; x++)
                     Op(pixels[y * canvasSize.cx + x], bg_col);
         }
 
         if (rcl_start < rcl_bwx_end) {
-            for (LONG y = rct_minry_start; y < rcb_minry_end; y++) // left border
+            for (LONG y = rct_bwy_start; y < rcb_bwy_end; y++) // left border
                 for (LONG x = rcl_start; x < rcl_bwx_end; x++)
                     Op(pixels[y * canvasSize.cx + x], bo_col);
         }
 
-        if (rcr_bw_start < rcr_end) {
-            for (LONG y = rct_minry_start; y < rcb_minry_end; y++) // right border
-                for (LONG x = rcr_bw_start; x < rcr_end; x++)
+        if (rcr_bwx_start < rcr_end) {
+            for (LONG y = rct_bwy_start; y < rcb_bwy_end; y++) // right border
+                for (LONG x = rcr_bwx_start; x < rcr_end; x++)
                     Op(pixels[y * canvasSize.cx + x], bo_col);
         }
 
     } else {
-        for (LONG y = rct_start; y < rct_minry_end; y++) // top section & border
-            for (LONG x = rcl_minrx_start; x < rcr_minrx_end; x++)
+        for (LONG y = rct_start; y < rct_bwy_end; y++) // top section & border
+            for (LONG x = rcl_bwx_start; x < rcr_bwx_end; x++)
                 Op(pixels[y * canvasSize.cx + x], bo_col);
 
-        for (LONG y = rcb_minry_start; y < rcb_end; y++) // bottom section & border
-            for (LONG x = rcl_minrx_start; x < rcr_minrx_end; x++)
+        for (LONG y = rcb_bwy_start; y < rcb_end; y++) // bottom section & border
+            for (LONG x = rcl_bwx_start; x < rcr_bwx_end; x++)
                 Op(pixels[y * canvasSize.cx + x], bo_col);
 
         if (rcl_start < rcr_end) {
-            for (LONG y = rct_minry_start; y < rcb_minry_end; y++) //  left & right & mid section
+            for (LONG y = rct_bwy_start; y < rcb_bwy_end; y++) //  left & right & mid section
                 for (LONG x = rcl_start; x < rcr_end; x++)
                     Op(pixels[y * canvasSize.cx + x], bg_col);
         }
     }
+
+    // return;
 
     // corners
     auto makeDist = [](LONG x, LONG y, LONG r) {
@@ -202,6 +187,25 @@ void drawBorderedRectInternal(const SIZE canvasSize, const RECT& clipRegion,
             // Op(back, col);
         }
     };
+
+    const LONG minrx = std::min(radius, half_width);
+    const LONG minrx_right = std::min(radius, half_width1);
+    const LONG minry = std::min(radius, half_height);
+    const LONG minry_bottom = std::min(radius, half_height1);
+
+    const LONG rcb_minry = roundRect.bottom - minry_bottom;
+    const LONG rcb_minry_start = std::max(rcb_minry, clipRegion.top);
+    const LONG rcb_minry_end = std::min(rcb_minry, clipRegion.bottom);
+
+    const LONG rct_minry = roundRect.top + minry;
+    const LONG rct_minry_start = std::max(rct_minry, clipRegion.top);
+    const LONG rct_minry_end = std::min(rct_minry, clipRegion.bottom);
+
+    const LONG rcl_minrx_start = std::max(roundRect.left + minrx, clipRegion.left);
+    const LONG rcl_minrx_end = std::min(roundRect.left + minrx_right, clipRegion.right);
+
+    const LONG rcr_minrx_start = std::max(roundRect.right - minrx, clipRegion.left);
+    const LONG rcr_minrx_end = std::min(roundRect.right - minrx_right, clipRegion.right);
 
     if (rcl_start < rcl_minrx_end) {
         for (LONG y = rct_start; y < rct_minry_end; y++) // top left
@@ -241,7 +245,8 @@ void drawBorderedRectAlphaComposite(HDC hdc, const RECT roundRect, int radius, i
     if (!validateCommon(hdc, roundRect, pixels, canvasSize, clipRect))
         return;
 
-    drawBorderedRectInternal<compositeAlphaInternal>(canvasSize, clipRect, pixels, roundRect, radius, bw, bg_col, bo_col);
+    // <compositeAlphaInternal>
+    drawBorderedRectInternal(canvasSize, clipRect, pixels, roundRect, radius, bw, bg_col, bo_col);
 }
 
 void drawBorderedRectOverwrite(HDC hdc, const RECT roundRect, int radius, int bw, DWORD bg_col, DWORD bo_col)
@@ -252,7 +257,8 @@ void drawBorderedRectOverwrite(HDC hdc, const RECT roundRect, int radius, int bw
     if (!validateCommon(hdc, roundRect, pixels, canvasSize, clipRect))
         return;
 
-    drawBorderedRectInternal<compositeOverwrite>(canvasSize, clipRect, pixels, roundRect, radius, bw, bg_col, bo_col);
+    // <compositeOverwrite>
+    drawBorderedRectInternal(canvasSize, clipRect, pixels, roundRect, radius, bw, bg_col, bo_col);
 }
 
 void drawBitmapAlphaComposite(HDC hdc, HBITMAP bmp, const POINT pos, const RECT* customRect, BYTE alpha)
@@ -299,6 +305,7 @@ void drawRoundRectToBitmap(HBITMAP dst, RECT roundRect, int radius, DWORD col0, 
     for (int i = 0; i < bitmapSize.cx * bitmapSize.cy; ++i)
         pixels[i] = (pixels[i] & 0xFF000000) | (col0 & 0x00FFFFFF);
 
-    drawBorderedRectInternal<replaceRGB>(bitmapSize, { 0, 0, bitmapSize.cx, bitmapSize.cy },
+    // <replaceRGB>
+    drawBorderedRectInternal(bitmapSize, { 0, 0, bitmapSize.cx, bitmapSize.cy },
         pixels, roundRect, radius, 0, 0xFF000000 | col1, 0xFF000000 | col1);
 }
