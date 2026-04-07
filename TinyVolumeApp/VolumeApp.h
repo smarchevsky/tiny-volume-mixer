@@ -4,10 +4,11 @@
 
 #include "AudioUtils.h"
 #include "SliderManager.h"
+#include "UIManager.h"
 
 class VolumeApp : public App {
     AudioUpdateListener _audioAppListerner;
-    UIConfig _uiConfig = UIConfig::get();
+    UIConfig _uiConfig;
     SliderManager sliderManager;
     SelectInfo sliderInfoHovered;
 

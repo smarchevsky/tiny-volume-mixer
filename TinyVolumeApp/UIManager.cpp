@@ -455,3 +455,19 @@ void UIManager::uninit()
 }
 
 #pragma endregion
+
+UIConfig::UIConfig()
+{
+    memset(this, 0, sizeof(*this));
+    colorWindowFrame = 0xAAAAAAAA;
+    colorWindowBck = 0xAA333333;
+    frameBorderWidth = 3;
+    sliderSpacing = 8;
+    sliderCornerRadius = 8;
+    sliderWidthApp = 80;
+    sliderWidthMaster = 100;
+    sliderBorderWidth = frameBorderWidth;
+    frameCornerRadius = sliderCornerRadius + sliderSpacing + frameBorderWidth;
+    iconSize = 48;
+    fontSize = 28;
+}

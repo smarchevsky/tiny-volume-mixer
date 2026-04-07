@@ -30,29 +30,3 @@ struct SelectInfo {
     PID _pid;
     VolumeType _type;
 };
-
-struct UIConfig {
-    DWORD colorWindowFrame = 0xAAAAAAAA;
-    DWORD colorWindowBck = 0xAA333333;
-    uint8_t frameBorderWidth = 3;
-    uint8_t sliderSpacing = 8;
-    uint8_t sliderCornerRadius = 8;
-    uint8_t sliderWidthApp = 80;
-    uint8_t sliderWidthMaster = 100;
-    uint8_t sliderBorderWidth = frameBorderWidth;
-    uint8_t frameCornerRadius = sliderCornerRadius + sliderSpacing + frameBorderWidth;
-    uint8_t iconSize = 48;
-    uint8_t fontSize = 28;
-
-    int getSliderOffsetL() const { return sliderSpacing / 2; }
-    int getSliderOffsetR() const { return sliderSpacing - getSliderOffsetL(); }
-
-    static UIConfig get()
-    {
-        UIConfig config;
-        return config;
-    }
-
-private:
-    UIConfig() = default;
-};

@@ -9,7 +9,6 @@ void VolumeApp::construct(HINSTANCE instance, WNDPROC wndProc)
     RECT rc;
     FileManager::get().loadWindowRect(rc);
 
-    _uiConfig = UIConfig::get();
     UIManager::get().init(_uiConfig);
 
     initWindow(instance, wndProc, rc);
