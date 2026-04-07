@@ -6,7 +6,7 @@
 
 #include "resource.h"
 
-ImageBuffer8 imageClose, imageSettings;
+ImageBufferRLE imageClose, imageSettings;
 
 void VolumeApp::construct(HINSTANCE instance, WNDPROC wndProc)
 {
@@ -133,8 +133,8 @@ void VolumeApp::onPaint(HDC hdc)
         }
     }
 
-    drawGrayscaleMask(hdc, imageClose, POINT { windowRect.right - imageClose.w , 0 }, nullptr, 0x88AA0033);
-    drawGrayscaleMask(hdc, imageSettings, POINT { windowRect.right - imageSettings.w , imageSettings.h }, nullptr, 0x88888888);
+    drawGrayscaleMask(hdc, imageClose, POINT { windowRect.right - imageClose.w, 0 }, nullptr, 0x88AA0033);
+    drawGrayscaleMask(hdc, imageSettings, POINT { windowRect.right - imageSettings.w, imageSettings.h }, nullptr, 0x88888888);
 }
 
 void VolumeApp::onResize(RECT rc)

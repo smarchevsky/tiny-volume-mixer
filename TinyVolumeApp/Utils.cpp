@@ -11,6 +11,8 @@
 // SHDefExtractIconW, SHGetKnownFolderPath
 #include <shlobj.h>
 
+#include <vector>
+
 //
 // PNG LOADER
 //
@@ -102,16 +104,39 @@ HBITMAP PNGLoader::getBitmapFromPng(const std::wstring& pngPath, int* customImag
     return hBmp;
 }
 
-ImageBuffer8 PNGLoader::getGrayscalePngFromResource(int resourceID, int* customImageSize)
+ImageBufferRLE PNGLoader::getGrayscalePngFromResource(int resourceID, int* customImageSize)
 {
     PngLoaderData plData(_pFactory, resourceID, customImageSize, true);
 
     UINT w = 0, h = 0;
     plData.pConverter->GetSize(&w, &h);
-    ImageBuffer8 imageBuffer { .w = (LONG)w, .h = (LONG)h, .data = new BYTE[w * h] };
-    plData.pConverter->CopyPixels(nullptr, w, w * h, imageBuffer.data);
+    std::vector<BYTE> rawData(w * h);
 
-    return imageBuffer;
+    plData.pConverter->CopyPixels(nullptr, w, w * h, rawData.data());
+
+    ImageBufferRLE result { .w = (LONG)w, .h = (LONG)h };
+    if (rawData.empty())
+        return result;
+
+    std::vector<std::pair<BYTE, BYTE>> compressedData;
+    compressedData.push_back({ 1, rawData[0] });
+
+    BYTE current = rawData[0];
+    int seqLength = 1;
+    for (int i = 1; i < rawData.size(); ++i) {
+        if (rawData[i] != current || seqLength >= 255) {
+            current = rawData[i];
+            compressedData.push_back({ 1, current });
+            seqLength = 1;
+        } else {
+            compressedData.back().first++;
+            seqLength++;
+        }
+    }
+
+    result.data = std::move(compressedData);
+
+    return result;
 }
 
 //

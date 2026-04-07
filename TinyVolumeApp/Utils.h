@@ -46,7 +46,7 @@ class PNGLoader {
 
 public:
     HBITMAP getBitmapFromPng(const std::wstring& pngPath, int* customImageSize);
-    ImageBuffer8 getGrayscalePngFromResource(int resourceID, int* customImageSize);
+    ImageBufferRLE getGrayscalePngFromResource(int resourceID, int* customImageSize);
 
     static PNGLoader& get()
     {

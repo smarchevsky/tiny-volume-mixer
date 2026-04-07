@@ -3,6 +3,7 @@
 #include <Windows.h>
 
 #include <stdint.h>
+#include <vector>
 
 typedef DWORD PID;
 
@@ -31,7 +32,8 @@ struct SelectInfo {
     VolumeType _type;
 };
 
-struct ImageBuffer8 {
+// run length encoded data
+struct ImageBufferRLE {
     LONG w, h;
-    BYTE* data;
+    std::vector<std::pair<BYTE, BYTE>> data;
 };

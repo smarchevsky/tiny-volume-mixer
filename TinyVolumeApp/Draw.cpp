@@ -258,9 +258,9 @@ void drawBitmapAlphaComposite(HDC hdc, HBITMAP bmp, const POINT pos, const RECT*
     }
 }
 
-void drawGrayscaleMask(HDC hdc, const ImageBuffer8 img, const POINT pos, const RECT* customRect, DWORD color)
+void drawGrayscaleMask(HDC hdc, const ImageBufferRLE img, const POINT pos, const RECT* customRect, DWORD color)
 {
-    if (!img.data)
+    if (img.data.empty())
         return;
 
     SIZE canvasSize;
@@ -274,16 +274,30 @@ void drawGrayscaleMask(HDC hdc, const ImageBuffer8 img, const POINT pos, const R
     if (customRect && !IntersectRect(&bitmapRect, &bitmapRect, customRect))
         return;
 
+    int readIndex = 0;
+    BYTE readRemain = img.data[0].first;
+    BYTE value = img.data[0].second;
+
     for (int y = clipRect.top; y < clipRect.bottom; y++) {
         int hdcY = y * canvasSize.cx;
         int stencilY = (y - pos.y) * img.w - pos.x;
 
         for (int x = clipRect.left; x < clipRect.right; x++) {
-            const BYTE pixelGrayscale = img.data[stencilY + x];
+            readRemain--;
+            const BYTE pixelGrayscale = value; // img.data[stencilY + x];
             DWORD& back = canvasPixels[hdcY + x];
             compositeAlphaWithAlpha(back, color, pixelGrayscale);
+
+            if (readRemain == 0) {
+                readRemain = img.data[readIndex].first;
+                value = img.data[readIndex].second;
+                readIndex++;
+                if (readIndex == img.data.size())
+                    goto exit_loop;
+            }
         }
     }
+exit_loop:;
 }
 
 void drawRoundRectToBitmap(HBITMAP dst, RECT roundRect, int radius, DWORD col0, DWORD col1)
