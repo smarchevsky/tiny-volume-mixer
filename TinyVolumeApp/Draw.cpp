@@ -7,6 +7,7 @@
 #include "Utils.h"
 
 #include <algorithm>
+#include <cassert>
 #include <math.h>
 
 namespace {
@@ -68,15 +69,13 @@ bool validateCommon(HDC hdc, RECT renderableRect, DWORD*& pixels, SIZE& canvasSi
     return true;
 }
 
-// template <void (*Op)(DWORD&, DWORD)>
+template <void (*Op)(DWORD&, DWORD)>
 void drawBorderedRectInternal(const SIZE canvasSize, const RECT& clipRegion,
     DWORD* pixels, const RECT roundRect, LONG radius, LONG bw, DWORD bg_col, DWORD bo_col)
 {
     using std::clamp;
     using std::max;
     using std::min;
-
-#define Op compositeOverwrite
 
     const LONG width = roundRect.right - roundRect.left;
     const LONG height = roundRect.bottom - roundRect.top;
@@ -157,8 +156,6 @@ void drawBorderedRectInternal(const SIZE canvasSize, const RECT& clipRegion,
                 Op(pixels[y * canvasSize.cx + x], bo_col);
     }
 
-    // return;
-
     // corners
     auto makeDist = [](LONG x, LONG y, LONG r) {
         float fx = float(r - x), fy = float(r - y);
@@ -172,12 +169,12 @@ void drawBorderedRectInternal(const SIZE canvasSize, const RECT& clipRegion,
 
         if (a > 0.f) {
             DWORD col = lerpColor(bo_col, bg_col, BYTE(t * 255));
-            // OVERWRITE
-            back = lerpColor(back, col, BYTE(a * 255));
-
-            // ALPHA BLEND
-            // col = setAlpha(col, BYTE((col >> 24) * a));
-            // Op(back, col);
+            if constexpr (Op == compositeOverwrite) {
+                back = lerpColor(back, col, BYTE(a * 255));
+            } else {
+                col = setAlpha(col, BYTE((col >> 24) * a));
+                Op(back, col);
+            }
         }
     };
 
@@ -213,8 +210,8 @@ void drawBorderedRectAlphaComposite(HDC hdc, const RECT roundRect, int radius, i
     if (!validateCommon(hdc, roundRect, pixels, canvasSize, clipRect))
         return;
 
-    // <compositeAlphaInternal>
-    drawBorderedRectInternal(canvasSize, clipRect, pixels, roundRect, radius, bw, bg_col, bo_col);
+    assert(false);
+    // drawBorderedRectInternal<compositeAlphaInternal>(canvasSize, clipRect, pixels, roundRect, radius, bw, bg_col, bo_col);
 }
 
 void drawBorderedRectOverwrite(HDC hdc, const RECT roundRect, int radius, int bw, DWORD bg_col, DWORD bo_col)
@@ -225,8 +222,7 @@ void drawBorderedRectOverwrite(HDC hdc, const RECT roundRect, int radius, int bw
     if (!validateCommon(hdc, roundRect, pixels, canvasSize, clipRect))
         return;
 
-    // <compositeOverwrite>
-    drawBorderedRectInternal(canvasSize, clipRect, pixels, roundRect, radius, bw, bg_col, bo_col);
+    drawBorderedRectInternal<compositeOverwrite>(canvasSize, clipRect, pixels, roundRect, radius, bw, bg_col, bo_col);
 }
 
 void drawBitmapAlphaComposite(HDC hdc, HBITMAP bmp, const POINT pos, const RECT* customRect, BYTE alpha)
@@ -260,6 +256,8 @@ void drawBitmapAlphaComposite(HDC hdc, HBITMAP bmp, const POINT pos, const RECT*
             compositeAlphaWithAlpha(back, front, alpha);
         }
     }
+
+    //std::is_same<int, int>();
 }
 
 void drawRoundRectToBitmap(HBITMAP dst, RECT roundRect, int radius, DWORD col0, DWORD col1)
@@ -273,7 +271,7 @@ void drawRoundRectToBitmap(HBITMAP dst, RECT roundRect, int radius, DWORD col0, 
     for (int i = 0; i < bitmapSize.cx * bitmapSize.cy; ++i)
         pixels[i] = (pixels[i] & 0xFF000000) | (col0 & 0x00FFFFFF);
 
-    // <replaceRGB>
-    drawBorderedRectInternal(bitmapSize, { 0, 0, bitmapSize.cx, bitmapSize.cy },
-        pixels, roundRect, radius, 0, 0xFF000000 | col1, 0xFF000000 | col1);
+    assert(false);
+    //     drawBorderedRectInternal<replaceRGB>(bitmapSize, { 0, 0, bitmapSize.cx, bitmapSize.cy },
+    //         pixels, roundRect, radius, 0, 0xFF000000 | col1, 0xFF000000 | col1);
 }
