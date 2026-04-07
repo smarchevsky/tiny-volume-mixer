@@ -4,20 +4,23 @@
 #include <string>
 #include <unordered_map>
 
-constexpr std::pair<DWORD, DWORD> defaultSliderColors = { 0x00888888, 0x00AAAAAA };
-
 struct UIConfig {
-    DWORD colorWindowFrame;
-    DWORD colorWindowBck;
-    uint8_t frameBorderWidth;
-    uint8_t sliderSpacing;
-    uint8_t sliderCornerRadius;
-    uint8_t sliderWidthApp;
-    uint8_t sliderWidthMaster;
-    uint8_t sliderBorderWidth;
-    uint8_t frameCornerRadius;
-    uint8_t iconSize;
-    uint8_t fontSize;
+    DWORD windowBackgroundRGBA;
+    DWORD windowBorderRGBA;
+    DWORD sliderDefaultBackgroundRGB;
+    DWORD sliderDefaultBorderRGB;
+
+    BYTE windowBorderWidth;
+    BYTE windowCornerRadius;
+
+    BYTE sliderWidthApp;
+    BYTE sliderWidthMaster;
+    BYTE sliderSpacing;
+    BYTE sliderCornerRadius;
+    BYTE sliderBorderWidth;
+
+    BYTE fontSize;
+    BYTE iconSize;
 
     int getSliderOffsetL() const { return sliderSpacing / 2; }
     int getSliderOffsetR() const { return sliderSpacing - getSliderOffsetL(); }
@@ -29,9 +32,9 @@ struct SliderInfo {
     HBITMAP textBmp;
     HICON hIconLarge;
     uint64_t iconHash;
-    std::pair<DWORD, DWORD> sliderColors;
     DWORD colorSlider;
     DWORD colorSecondary;
+    bool colorsInitialized;
 };
 
 class UIManager {

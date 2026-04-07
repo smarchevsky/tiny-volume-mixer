@@ -99,19 +99,19 @@ void VolumeApp::onPaint(HDC hdc)
     RECT windowRect;
     GetClientRect(_hWnd, &windowRect);
 
-    DWORD bg_col = _uiConfig.colorWindowBck;
-    DWORD bo_col = _uiConfig.colorWindowFrame;
+    DWORD bg_col = _uiConfig.windowBackgroundRGBA;
+    DWORD bo_col = _uiConfig.windowBorderRGBA;
 
 #define OVERWRITE 1
 #if OVERWRITE == 1
     bg_col = compositeAlpha(0, bg_col);
     bo_col = compositeAlpha(0, bo_col);
     drawBorderedRectOverwrite(hdc, windowRect,
-        _uiConfig.frameCornerRadius, _uiConfig.frameBorderWidth,
+        _uiConfig.windowCornerRadius, _uiConfig.windowBorderWidth,
         bg_col, bo_col);
 #else
     drawBorderedRectAlphaComposite(hdc, windowRect,
-        _uiConfig.frameCornerRadius, _uiConfig.frameBorderWidth,
+        _uiConfig.windowCornerRadius, _uiConfig.windowBorderWidth,
         bg_col, bo_col);
 #endif
 

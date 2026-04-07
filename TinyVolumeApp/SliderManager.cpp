@@ -112,15 +112,17 @@ void Slider::draw(HDC hdc, const UIConfig& uic) const
     };
 
     const DWORD borderAlphaMask = _focused ? 0xFF000000 : 0xAA000000;
-    DWORD sliderColor = _sliderInfo ? _sliderInfo->colorSlider : defaultSliderColors.first;
-    DWORD sliderColor2 = _sliderInfo ? _sliderInfo->colorSecondary : defaultSliderColors.second;
+    bool colorsValid = _sliderInfo && _sliderInfo->colorsInitialized;
+
+    DWORD sliderColor = colorsValid ? _sliderInfo->colorSlider : uic.sliderDefaultBackgroundRGB;
+    DWORD sliderColor2 = colorsValid ? _sliderInfo->colorSecondary : uic.sliderDefaultBorderRGB;
 
     // VOL
     DWORD col_bg = 0x66000000 | sliderColor;
     DWORD col_bo = borderAlphaMask | sliderColor2;
 
 #if OVERWRITE == 1
-    DWORD bg = compositeAlpha(0, uic.colorWindowBck);
+    DWORD bg = compositeAlpha(0, uic.windowBackgroundRGBA);
     col_bg = compositeAlpha(bg, col_bg);
     col_bo = compositeAlpha(bg, col_bo);
     drawBorderedRectOverwrite(hdc, roundRect, uic.sliderCornerRadius, uic.sliderBorderWidth,
@@ -202,9 +204,9 @@ SelectInfo SliderManager::getSelectAtPosition(POINT mousePos)
 
 void SliderManager::recalculateSliderRects(const RECT& r, const UIConfig& uic)
 {
-    int offset = r.left + uic.getSliderOffsetR() + uic.frameBorderWidth;
-    auto top = r.top + uic.sliderSpacing + uic.frameBorderWidth;
-    auto bottom = r.bottom - uic.sliderSpacing - uic.frameBorderWidth;
+    LONG offset = r.left + uic.getSliderOffsetR() + uic.windowBorderWidth;
+    LONG top = r.top + uic.sliderSpacing + uic.windowBorderWidth;
+    LONG bottom = r.bottom - uic.sliderSpacing - uic.windowBorderWidth;
 
     _sliderMaster._rect = { offset, top, offset += uic.sliderWidthMaster, bottom };
 

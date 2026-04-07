@@ -62,11 +62,8 @@ SliderInfo createIconInfo(HICON icon, bool calculateIconColor = true)
 
     ii.hIconLarge = icon;
 
-    ii.colorSlider = defaultSliderColors.first;
-    ii.colorSecondary = defaultSliderColors.second;
-
     if (calculateIconColor)
-        ColorUtils::calculatePriorityColor(&pixels[0],
+        ii.colorsInitialized = ColorUtils::calculatePriorityColor(&pixels[0],
             bmp.bmWidth, bmp.bmHeight, ii.colorSlider, ii.colorSecondary);
 
     uint64_t iconHash {};
@@ -459,15 +456,21 @@ void UIManager::uninit()
 UIConfig::UIConfig()
 {
     memset(this, 0, sizeof(*this));
-    colorWindowFrame = 0xAAAAAAAA;
-    colorWindowBck = 0xAA333333;
-    frameBorderWidth = 3;
+    windowBorderRGBA = 0xAAAAAAAA;
+    windowBackgroundRGBA = 0xAA333333;
+    sliderDefaultBackgroundRGB = 0x888888;
+    sliderDefaultBorderRGB = 0xAAAAAA;
+
+    windowBorderWidth = 3;
+
     sliderSpacing = 8;
     sliderCornerRadius = 8;
     sliderWidthApp = 80;
     sliderWidthMaster = 100;
-    sliderBorderWidth = frameBorderWidth;
-    frameCornerRadius = sliderCornerRadius + sliderSpacing + frameBorderWidth;
-    iconSize = 48;
+    sliderBorderWidth = windowBorderWidth;
+
+    windowCornerRadius = sliderCornerRadius + sliderSpacing + windowBorderWidth;
+
     fontSize = 28;
+    iconSize = 48;
 }
