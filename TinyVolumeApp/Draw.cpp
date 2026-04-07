@@ -72,10 +72,6 @@ template <void (*Op)(DWORD&, DWORD)>
 void drawBorderedRectInternal(const SIZE canvasSize, const RECT& clipRegion,
     DWORD* pixels, const RECT roundRect, LONG radius, LONG bw, DWORD bg_col, DWORD bo_col)
 {
-    const LONG rcl = roundRect.left;
-    const LONG rcr = roundRect.right;
-    const LONG rct = roundRect.top;
-    const LONG rcb = roundRect.bottom;
     const LONG rcw = roundRect.right - roundRect.left;
     const LONG rch = roundRect.bottom - roundRect.top;
 
@@ -89,41 +85,41 @@ void drawBorderedRectInternal(const SIZE canvasSize, const RECT& clipRegion,
     const LONG bwy = std::min(bw, minry);
     const LONG bwy_bottom = std::min(bw, minry_bottom);
 
-    const LONG rcr_minrx_start = std::max(rcr - minrx, clipRegion.left);
-    const LONG rcr_minrx_end = std::min(rcr - minrx_right, clipRegion.right);
+    const LONG rcr_minrx_start = std::max(roundRect.right - minrx, clipRegion.left);
+    const LONG rcr_minrx_end = std::min(roundRect.right - minrx_right, clipRegion.right);
 
-    const LONG rcl_start = std::max(rcl, clipRegion.left);
-    const LONG rct_start = std::max(rct, clipRegion.top);
+    const LONG rcl_start = std::max(roundRect.left, clipRegion.left);
+    const LONG rct_start = std::max(roundRect.top, clipRegion.top);
 
-    const LONG rct_bwy = rct + bwy;
+    const LONG rct_bwy = roundRect.top + bwy;
     const LONG rct_bwy_start = std::max(rct_bwy, clipRegion.top);
     const LONG rct_bwy_end = std::min(rct_bwy, clipRegion.bottom);
 
-    const LONG rcr_bwx = rcr - bwx;
+    const LONG rcr_bwx = roundRect.right - bwx;
     const LONG rcr_bw_start = std::max(rcr_bwx, clipRegion.left);
     const LONG rcr_bw_end = std::min(rcr_bwx, clipRegion.right);
 
-    const LONG rcb_bwy = rcb - bwy_bottom;
+    const LONG rcb_bwy = roundRect.bottom - bwy_bottom;
     const LONG rcb_bw_start = std::max(rcb_bwy, clipRegion.top);
     const LONG rcb_bw_end = std::min(rcb_bwy, clipRegion.bottom);
 
-    const LONG rcb_minry = rcb - minry_bottom;
+    const LONG rcb_minry = roundRect.bottom - minry_bottom;
     const LONG rcb_minry_start = std::max(rcb_minry, clipRegion.top);
     const LONG rcb_minry_end = std::min(rcb_minry, clipRegion.bottom);
 
-    const LONG rct_minry = rct + minry;
+    const LONG rct_minry = roundRect.top + minry;
     const LONG rct_minry_start = std::max(rct_minry, clipRegion.top);
     const LONG rct_minry_end = std::min(rct_minry, clipRegion.bottom);
 
-    const LONG rcl_bwx = rcl + bwx;
+    const LONG rcl_bwx = roundRect.left + bwx;
     const LONG rcl_bwx_start = std::max(rcl_bwx, clipRegion.left);
     const LONG rcl_bwx_end = std::min(rcl_bwx, clipRegion.right);
 
-    const LONG rcl_minrx_start = std::max(rcl + minrx, clipRegion.left);
-    const LONG rcl_minrx_end = std::min(rcl + minrx_right, clipRegion.right);
+    const LONG rcl_minrx_start = std::max(roundRect.left + minrx, clipRegion.left);
+    const LONG rcl_minrx_end = std::min(roundRect.left + minrx_right, clipRegion.right);
 
-    const LONG rcb_end = std::min(rcb, clipRegion.bottom);
-    const LONG rcr_end = std::min(rcr, clipRegion.right);
+    const LONG rcb_end = std::min(roundRect.bottom, clipRegion.bottom);
+    const LONG rcr_end = std::min(roundRect.right, clipRegion.right);
 
     if (bg_col != bo_col) {
         if (rcl_minrx_start < rcr_minrx_end) {
@@ -203,13 +199,13 @@ void drawBorderedRectInternal(const SIZE canvasSize, const RECT& clipRegion,
     if (rcl_start < rcl_minrx_end) {
         for (LONG y = rct_start; y < rct_minry_end; y++) // top left
             for (LONG x = rcl_start; x < rcl_minrx_end; x++) {
-                float dist = makeDist(x - rcl, y - rct, radius);
+                float dist = makeDist(x - roundRect.left, y - roundRect.top, radius);
                 CompositeRadius(pixels[y * canvasSize.cx + x], dist);
             }
 
         for (LONG y = rcb_minry_start; y < rcb_end; y++) // bottom left
             for (LONG x = rcl_start; x < rcl_minrx_end; x++) {
-                float dist = makeDist(x - rcl, rch - y - 1 + rct, radius);
+                float dist = makeDist(x - roundRect.left, rch - y - 1 + roundRect.top, radius);
                 CompositeRadius(pixels[y * canvasSize.cx + x], dist);
             }
     }
@@ -217,13 +213,13 @@ void drawBorderedRectInternal(const SIZE canvasSize, const RECT& clipRegion,
     if (rcr_minrx_start < rcr_end) {
         for (LONG y = rct_start; y < rct_minry_end; y++) // top right
             for (LONG x = rcr_minrx_start; x < rcr_end; x++) {
-                float dist = makeDist(rcw - x - 1 + rcl, y - rct, radius);
+                float dist = makeDist(rcw - x - 1 + roundRect.left, y - roundRect.top, radius);
                 CompositeRadius(pixels[y * canvasSize.cx + x], dist);
             }
 
         for (LONG y = rcb_minry_start; y < rcb_end; y++) // bottom right
             for (LONG x = rcr_minrx_start; x < rcr_end; x++) {
-                float dist = makeDist(rcw - x - 1 + rcl, rch - y - 1 + rct, radius);
+                float dist = makeDist(rcw - x - 1 + roundRect.left, rch - y - 1 + roundRect.top, radius);
                 CompositeRadius(pixels[y * canvasSize.cx + x], dist);
             }
     }
