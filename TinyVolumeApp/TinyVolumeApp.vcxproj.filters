@@ -96,5 +96,11 @@
     <Image Include="IconMultires.ico">
       <Filter>Resource Files</Filter>
     </Image>
+    <Image Include="..\Resources\close.png">
+      <Filter>Resource Files</Filter>
+    </Image>
+    <Image Include="..\Resources\settings.png">
+      <Filter>Resource Files</Filter>
+    </Image>
   </ItemGroup>
 </Project>

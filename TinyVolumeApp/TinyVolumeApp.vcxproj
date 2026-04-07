@@ -156,6 +156,8 @@
     <ResourceCompile Include="TinyVolumeApp.rc" />
   </ItemGroup>
   <ItemGroup>
+    <Image Include="..\Resources\close.png" />
+    <Image Include="..\Resources\settings.png" />
     <Image Include="IconMultires.ico" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
