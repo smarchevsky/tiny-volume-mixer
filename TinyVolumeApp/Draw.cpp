@@ -84,109 +84,77 @@ void drawBorderedRectInternal(const SIZE canvasSize, const RECT& clipRegion,
     if (width <= 0 || height <= 0)
         return;
 
+    const LONG left = max(roundRect.left, clipRegion.left);
+    const LONG top = max(roundRect.top, clipRegion.top);
+    const LONG right = min(roundRect.right, clipRegion.right);
+    const LONG bottom = min(roundRect.bottom, clipRegion.bottom);
+
     const LONG half_width = width / 2;
     const LONG half_width1 = (width + 1) / 2;
     const LONG half_height = height / 2;
     const LONG half_height1 = (height + 1) / 2;
 
-    const LONG bwx = min(bw, half_width);
-    const LONG bwx_right = min(bw, half_width1);
-    const LONG bwy = min(bw, half_height);
-    const LONG bwy_bottom = min(bw, half_height1);
-
-    const LONG rcl_start = max(roundRect.left, clipRegion.left);
-    const LONG rct_start = max(roundRect.top, clipRegion.top);
-
-    const LONG rct_bwy = roundRect.top + bwy;
-    const LONG rct_bwy_start = max(rct_bwy, clipRegion.top);
-    const LONG rct_bwy_end = min(rct_bwy, clipRegion.bottom);
-
-    const LONG rcr_bwx = roundRect.right - bwx;
-    const LONG rcr_bwx_start = max(rcr_bwx, clipRegion.left);
-    const LONG rcr_bwx_end = min(rcr_bwx, clipRegion.right);
-
-    const LONG rcb_bwy = roundRect.bottom - bwy_bottom;
-    const LONG rcb_bwy_start = max(rcb_bwy, clipRegion.top);
-    const LONG rcb_bwy_end = min(rcb_bwy, clipRegion.bottom);
-
-    const LONG rcl_bwx = roundRect.left + bwx;
-    const LONG rcl_bwx_start = max(rcl_bwx, clipRegion.left);
-    const LONG rcl_bwx_end = min(rcl_bwx, clipRegion.right);
-
-    const LONG rcb_end = min(roundRect.bottom, clipRegion.bottom);
-    const LONG rcr_end = min(roundRect.right, clipRegion.right);
+    const LONG left_border = max(roundRect.left + min(bw, half_width), clipRegion.left);
+    const LONG top_border = max(roundRect.top + min(bw, half_height), clipRegion.top);
+    const LONG right_border = min(roundRect.right - min(bw, half_width1), clipRegion.right);
+    const LONG bottom_border = min(roundRect.bottom - min(bw, half_height1), clipRegion.bottom);
 
     // circle related
-    const LONG minrx = min(radius, half_width);
-    const LONG minrx_right = min(radius, half_width1);
-    const LONG minry = min(radius, half_height);
-    const LONG minry_bottom = min(radius, half_height1);
+    const LONG left_radius = max(roundRect.left + min(radius, half_width), clipRegion.left);
+    const LONG top_radius = max(roundRect.top + min(radius, half_height), clipRegion.top);
+    const LONG right_radius = min(roundRect.right - min(radius, half_width1), clipRegion.right);
+    const LONG bottom_radius = min(roundRect.bottom - min(radius, half_height1), clipRegion.bottom);
 
-    const LONG rcb_bry = roundRect.bottom - minry_bottom;
-    const LONG rcb_bry_start = max(rcb_bry, clipRegion.top);
-    const LONG rcb_bry_end = min(rcb_bry, clipRegion.bottom);
-
-    const LONG rct_bry = roundRect.top + minry;
-    const LONG rct_bry_start = max(rct_bry, clipRegion.top);
-    const LONG rct_bry_end = min(rct_bry, clipRegion.bottom);
-
-    const LONG rcl_brx_start = max(roundRect.left + minrx, clipRegion.left);
-    const LONG rcl_brx_end = min(roundRect.left + minrx_right, clipRegion.right);
-
-    const LONG rcr_brx_start = max(roundRect.right - minrx, clipRegion.left);
-    const LONG rcr_brx_end = min(roundRect.right - minrx_right, clipRegion.right);
+    const LONG top_min_border_radius = min(top_border, top_radius);
+    const LONG top_max_border_radius = max(top_border, top_radius);
+    const LONG bottom_min_border_radius = min(bottom_border, bottom_radius);
+    const LONG bottom_max_border_radius = max(bottom_border, bottom_radius);
 
     if (bg_col != bo_col) {
-        if (rcl_bwx_start < rcr_bwx_end) {
-            for (LONG y = rct_start; y < rct_bwy_end; y++) // top border
-                for (LONG x = rcl_bwx_start; x < rcr_bwx_end; x++)
-                    Op(pixels[y * canvasSize.cx + x], bo_col);
+        // top
+        for (LONG y = top; y < top_min_border_radius; y++) // border
+            for (LONG x = left_radius; x < right_radius; x++)
+                Op(pixels[y * canvasSize.cx + x], bo_col);
+        for (LONG y = top_border; y < top_radius; y++) // bg radius > border
+            for (LONG x = left_radius; x < right_radius; x++)
+                Op(pixels[y * canvasSize.cx + x], bg_col);
+        for (LONG y = top_radius; y < top_border; y++) // border strip if radius < border
+            for (LONG x = left; x < right; x++)
+                Op(pixels[y * canvasSize.cx + x], bo_col);
 
-            for (LONG y = rct_bwy_start; y < rct_bwy_end; y++) // top section
-                for (LONG x = rcl_bwx_start; x < rcr_bwx_end; x++)
-                    Op(pixels[y * canvasSize.cx + x], bg_col);
-
-            for (LONG y = rcb_bwy_start; y < rcb_bwy_end; y++) // bottom section
-                for (LONG x = rcl_bwx_start; x < rcr_bwx_end; x++)
-                    Op(pixels[y * canvasSize.cx + x], bg_col);
-
-            for (LONG y = rcb_bwy_start; y < rcb_end; y++) // bottom border
-                for (LONG x = rcl_bwx_start; x < rcr_bwx_end; x++)
-                    Op(pixels[y * canvasSize.cx + x], bo_col);
+        // mid
+        for (LONG y = top_max_border_radius; y < bottom_min_border_radius; y++) {
+            for (LONG x = left; x < left_border; x++)
+                Op(pixels[y * canvasSize.cx + x], bo_col);
+            for (LONG x = left_border; x < right_border; x++)
+                Op(pixels[y * canvasSize.cx + x], bg_col);
+            for (LONG x = right_border; x < right; x++)
+                Op(pixels[y * canvasSize.cx + x], bo_col);
         }
 
-        if (rcl_bwx_start < rcr_bwx_end) {
-            for (LONG y = rct_bwy_start; y < rcb_bwy_end; y++) // mid section
-                for (LONG x = rcl_bwx_start; x < rcr_bwx_end; x++)
-                    Op(pixels[y * canvasSize.cx + x], bg_col);
-        }
-
-        if (rcl_start < rcl_bwx_end) {
-            for (LONG y = rct_bwy_start; y < rcb_bwy_end; y++) // left border
-                for (LONG x = rcl_start; x < rcl_bwx_end; x++)
-                    Op(pixels[y * canvasSize.cx + x], bo_col);
-        }
-
-        if (rcr_bwx_start < rcr_end) {
-            for (LONG y = rct_bwy_start; y < rcb_bwy_end; y++) // right border
-                for (LONG x = rcr_bwx_start; x < rcr_end; x++)
-                    Op(pixels[y * canvasSize.cx + x], bo_col);
-        }
+        // bottom
+        for (LONG y = bottom_border; y < bottom_radius; y++) // border strip if radius < border
+            for (LONG x = left; x < right; x++)
+                Op(pixels[y * canvasSize.cx + x], bo_col);
+        for (LONG y = bottom_radius; y < bottom_border; y++) // bg radius > border
+            for (LONG x = left_radius; x < right_radius; x++)
+                Op(pixels[y * canvasSize.cx + x], bg_col);
+        for (LONG y = bottom_max_border_radius; y < bottom; y++) // border
+            for (LONG x = left_radius; x < right_radius; x++)
+                Op(pixels[y * canvasSize.cx + x], bo_col);
 
     } else {
-        for (LONG y = rct_start; y < rct_bwy_end; y++) // top section & border
-            for (LONG x = rcl_bwx_start; x < rcr_bwx_end; x++)
+        for (LONG y = top; y < top_radius; y++)
+            for (LONG x = left_radius; x < right_radius; x++)
                 Op(pixels[y * canvasSize.cx + x], bo_col);
 
-        for (LONG y = rcb_bwy_start; y < rcb_end; y++) // bottom section & border
-            for (LONG x = rcl_bwx_start; x < rcr_bwx_end; x++)
+        for (LONG y = top_radius; y < bottom_radius; y++)
+            for (LONG x = left; x < right; x++)
                 Op(pixels[y * canvasSize.cx + x], bo_col);
 
-        if (rcl_start < rcr_end) {
-            for (LONG y = rct_bwy_start; y < rcb_bwy_end; y++) //  left & right & mid section
-                for (LONG x = rcl_start; x < rcr_end; x++)
-                    Op(pixels[y * canvasSize.cx + x], bg_col);
-        }
+        for (LONG y = bottom_radius; y < bottom; y++)
+            for (LONG x = left_radius; x < right_radius; x++)
+                Op(pixels[y * canvasSize.cx + x], bo_col);
     }
 
     // return;
@@ -213,32 +181,26 @@ void drawBorderedRectInternal(const SIZE canvasSize, const RECT& clipRegion,
         }
     };
 
-    if (rcl_start < rcl_brx_end) {
-        for (LONG y = rct_start; y < rct_bry_end; y++) // top left
-            for (LONG x = rcl_start; x < rcl_brx_end; x++) {
-                float dist = makeDist(x - roundRect.left, y - roundRect.top, radius);
-                CompositeRadius(pixels[y * canvasSize.cx + x], dist);
-            }
-
-        for (LONG y = rcb_bry_start; y < rcb_end; y++) // bottom left
-            for (LONG x = rcl_start; x < rcl_brx_end; x++) {
-                float dist = makeDist(x - roundRect.left, height - y - 1 + roundRect.top, radius);
-                CompositeRadius(pixels[y * canvasSize.cx + x], dist);
-            }
+    for (LONG y = top; y < top_radius; y++) { // top left
+        for (LONG x = left; x < left_radius; x++) {
+            float dist = makeDist(x - roundRect.left, y - roundRect.top, radius);
+            CompositeRadius(pixels[y * canvasSize.cx + x], dist);
+        }
+        for (LONG x = right_radius; x < right; x++) {
+            float dist = makeDist(width - x - 1 + roundRect.left, y - roundRect.top, radius);
+            CompositeRadius(pixels[y * canvasSize.cx + x], dist);
+        }
     }
 
-    if (rcr_brx_start < rcr_end) {
-        for (LONG y = rct_start; y < rct_bry_end; y++) // top right
-            for (LONG x = rcr_brx_start; x < rcr_end; x++) {
-                float dist = makeDist(width - x - 1 + roundRect.left, y - roundRect.top, radius);
-                CompositeRadius(pixels[y * canvasSize.cx + x], dist);
-            }
-
-        for (LONG y = rcb_bry_start; y < rcb_end; y++) // bottom right
-            for (LONG x = rcr_brx_start; x < rcr_end; x++) {
-                float dist = makeDist(width - x - 1 + roundRect.left, height - y - 1 + roundRect.top, radius);
-                CompositeRadius(pixels[y * canvasSize.cx + x], dist);
-            }
+    for (LONG y = bottom_radius; y < bottom; y++) { // bottom left
+        for (LONG x = left; x < left_radius; x++) {
+            float dist = makeDist(x - roundRect.left, height - y - 1 + roundRect.top, radius);
+            CompositeRadius(pixels[y * canvasSize.cx + x], dist);
+        }
+        for (LONG x = right_radius; x < right; x++) {
+            float dist = makeDist(width - x - 1 + roundRect.left, height - y - 1 + roundRect.top, radius);
+            CompositeRadius(pixels[y * canvasSize.cx + x], dist);
+        }
     }
 }
 }
