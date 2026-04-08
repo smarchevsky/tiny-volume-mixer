@@ -278,22 +278,44 @@ void drawGrayscaleMask(HDC hdc, const ImageBufferRLE img, const POINT pos, const
     BYTE readRemain = img.data[0].first;
     BYTE value = img.data[0].second;
 
+    auto skip = [&](int readOffset) {
+        if (readOffset < 0) {
+            while (readIndex < img.data.size() - 1) {
+                int delta = readOffset + readRemain;
+                if (delta < 0) {
+                    readOffset += readRemain;
+                    readRemain = img.data[++readIndex].first;
+                    value = img.data[readIndex].second;
+                } else {
+                    readRemain = delta;
+                    break;
+                }
+            }
+        }
+    };
+
+    skip((bitmapRect.top - clipRect.top) * img.w);
+
     for (int y = clipRect.top; y < clipRect.bottom; y++) {
         int hdcY = y * canvasSize.cx;
-        // int stencilY = (y - pos.y) * img.w - pos.x;
+
+        skip(bitmapRect.left - clipRect.left);
 
         for (int x = clipRect.left; x < clipRect.right; x++) {
-            compositeAlphaWithAlpha(canvasPixels[hdcY + x], color, 255 - value);
+            if (readIndex < img.data.size())
+                compositeAlphaWithAlpha(canvasPixels[hdcY + x], color, 255 - value);
 
-            readRemain--;
             if (readRemain == 0) {
-                readIndex++;
-                if (readIndex == img.data.size())
+                ++readIndex;
+                if (readIndex >= img.data.size())
                     goto exit_loop;
                 readRemain = img.data[readIndex].first;
                 value = img.data[readIndex].second;
             }
+            readRemain--;
         }
+
+        skip(clipRect.right - bitmapRect.right);
     }
 exit_loop:;
 }
