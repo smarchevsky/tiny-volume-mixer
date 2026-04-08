@@ -280,20 +280,18 @@ void drawGrayscaleMask(HDC hdc, const ImageBufferRLE img, const POINT pos, const
 
     for (int y = clipRect.top; y < clipRect.bottom; y++) {
         int hdcY = y * canvasSize.cx;
-        int stencilY = (y - pos.y) * img.w - pos.x;
+        // int stencilY = (y - pos.y) * img.w - pos.x;
 
         for (int x = clipRect.left; x < clipRect.right; x++) {
-            readRemain--;
-            const BYTE pixelGrayscale = value; // img.data[stencilY + x];
-            DWORD& back = canvasPixels[hdcY + x];
-            compositeAlphaWithAlpha(back, color, pixelGrayscale);
+            compositeAlphaWithAlpha(canvasPixels[hdcY + x], color, 255 - value);
 
+            readRemain--;
             if (readRemain == 0) {
-                readRemain = img.data[readIndex].first;
-                value = img.data[readIndex].second;
                 readIndex++;
                 if (readIndex == img.data.size())
                     goto exit_loop;
+                readRemain = img.data[readIndex].first;
+                value = img.data[readIndex].second;
             }
         }
     }

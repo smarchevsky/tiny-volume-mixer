@@ -119,20 +119,27 @@ ImageBufferRLE PNGLoader::getGrayscalePngFromResource(int resourceID, int* custo
         return result;
 
     std::vector<std::pair<BYTE, BYTE>> compressedData;
-    compressedData.push_back({ 1, rawData[0] });
 
     BYTE current = rawData[0];
-    int seqLength = 1;
+    int count = 1;
+
     for (int i = 1; i < rawData.size(); ++i) {
-        if (rawData[i] != current || seqLength >= 255) {
-            current = rawData[i];
-            compressedData.push_back({ 1, current });
-            seqLength = 1;
+        if (rawData[i] == current && count < 255) {
+            count++;
         } else {
-            compressedData.back().first++;
-            seqLength++;
+            compressedData.push_back({ count, current });
+            current = rawData[i];
+            count = 1;
         }
     }
+
+    compressedData.push_back({ 255, current });
+
+    printf("ResourceID: %d imageSize: %d\n", resourceID, *customImageSize);
+    for (auto& d : compressedData) {
+        printf("\\%o\\%o", d.first, d.second); // "\\%o" or "\\x%02x"
+    }
+    printf("\n");
 
     result.data = std::move(compressedData);
 
