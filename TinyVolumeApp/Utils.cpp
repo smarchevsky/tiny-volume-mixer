@@ -126,9 +126,10 @@ ImageBufferRLE PNGLoader::getGrayscalePngFromResource(int resourceID, int* custo
     {
         std::vector<DWORD> pixels(size.cx * size.cy);
         auto rc = RECT { 0, 0, size.cx, size.cy };
-        drawBorderedRectOverwrite(size, rc, pixels.data(), rc, 8, 3, 0xFFFFFFFF, 0xFFFFFFFF);
+        drawBorderedRectOverwrite(size, rc, pixels.data(), rc, 8, 3, 0xFFFFFF88, 0xFFFFFFFF);
         for (int i = 0; i < size.cx * size.cy; ++i) {
-            rawData[i] = 255 - std::max((BYTE)(255 - pixels[i]), rawData[i]);
+            BYTE pixelB = 255 - (BYTE)pixels[i];
+            rawData[i] = 255 - std::max<BYTE>(pixelB, rawData[i]);
         }
     }
 
