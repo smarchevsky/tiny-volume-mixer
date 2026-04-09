@@ -1,3 +1,5 @@
+#define NOMINMAX
+
 #include "Utils.h"
 
 // SHLoadIndirectString, PathFindFileNameW, SHCreateStreamOnFileW, StrStrW
@@ -106,17 +108,29 @@ HBITMAP PNGLoader::getBitmapFromPng(const std::wstring& pngPath, int* customImag
 
 ImageBufferRLE PNGLoader::getGrayscalePngFromResource(int resourceID, int* customImageSize)
 {
+    ImageBufferRLE result {};
     PngLoaderData plData(_pFactory, resourceID, customImageSize, true);
 
-    UINT w = 0, h = 0;
-    plData.pConverter->GetSize(&w, &h);
-    std::vector<BYTE> rawData(w * h);
+    SIZE size {};
+    if (!SUCCEEDED(plData.pConverter->GetSize((UINT*)&size.cx, (UINT*)&size.cy)))
+        return result;
 
-    plData.pConverter->CopyPixels(nullptr, w, w * h, rawData.data());
+    std::vector<BYTE> rawData(size.cx * size.cy);
+    plData.pConverter->CopyPixels(nullptr, size.cx, size.cx * size.cy, rawData.data());
 
-    ImageBufferRLE result { .w = (LONG)w, .h = (LONG)h };
     if (rawData.empty())
         return result;
+
+    result.w = size.cx, result.h = size.cy;
+
+    {
+        std::vector<DWORD> pixels(size.cx * size.cy);
+        auto rc = RECT { 0, 0, size.cx, size.cy };
+        drawBorderedRectOverwrite(size, rc, pixels.data(), rc, 8, 3, 0xFFFFFFFF, 0xFFFFFFFF);
+        for (int i = 0; i < size.cx * size.cy; ++i) {
+            rawData[i] = 255 - std::max((BYTE)(255 - pixels[i]), rawData[i]);
+        }
+    }
 
     std::vector<std::pair<BYTE, BYTE>> compressedData;
 
@@ -135,9 +149,9 @@ ImageBufferRLE PNGLoader::getGrayscalePngFromResource(int resourceID, int* custo
 
     compressedData.push_back({ 255, current });
 
-    printf("ResourceID: %d imageSize: %d\n", resourceID, *customImageSize);
+    printf("ResourceID: %d, imageSize: %d, dataSize: %d\n", resourceID, *customImageSize, (int)compressedData.size());
     for (auto& d : compressedData) {
-        printf("\\%o\\%o", d.first, d.second); // "\\%o" or "\\x%02x"
+        // printf("\\%o\\%o", d.first, d.second); // "\\%o" or "\\x%02x"
     }
     printf("\n");
 

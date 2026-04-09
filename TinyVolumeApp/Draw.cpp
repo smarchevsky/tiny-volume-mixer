@@ -172,8 +172,7 @@ void drawBorderedRectInternal(const SIZE canvasSize, const RECT& clipRegion,
             if constexpr (Op == compositeOverwrite) {
                 back = lerpColor(back, col, BYTE(a * 255));
             } else {
-                col = setAlpha(col, BYTE((col >> 24) * a));
-                Op(back, col);
+                Op(back, setAlpha(col, BYTE((col >> 24) * a)));
             }
         }
     };
@@ -222,6 +221,11 @@ void drawBorderedRectOverwrite(HDC hdc, const RECT roundRect, int radius, int bw
     if (!validateCommon(hdc, roundRect, pixels, canvasSize, clipRect))
         return;
 
+    drawBorderedRectInternal<compositeOverwrite>(canvasSize, clipRect, pixels, roundRect, radius, bw, bg_col, bo_col);
+}
+
+void drawBorderedRectOverwrite(const SIZE canvasSize, const RECT& clipRect, DWORD* pixels, const RECT roundRect, LONG radius, LONG bw, DWORD bg_col, DWORD bo_col)
+{
     drawBorderedRectInternal<compositeOverwrite>(canvasSize, clipRect, pixels, roundRect, radius, bw, bg_col, bo_col);
 }
 
@@ -303,7 +307,7 @@ void drawGrayscaleMask(HDC hdc, const ImageBufferRLE img, const POINT pos, const
 
         for (int x = clipRect.left; x < clipRect.right; x++) {
             if (readIndex < img.data.size())
-                compositeAlphaWithAlpha(canvasPixels[hdcY + x], color, 255 - value);
+                compositeAlphaWithAlpha(canvasPixels[hdcY + x], color, value);
 
             if (readRemain == 0) {
                 ++readIndex;
