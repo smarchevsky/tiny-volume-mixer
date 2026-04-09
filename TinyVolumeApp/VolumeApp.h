@@ -11,8 +11,7 @@ class VolumeApp : public App {
     UIConfig _uic;
     SliderManager _sliderManager;
     SelectInfo _sliderInfoHovered;
-
-    // bool _isAppHovered;
+    bool _isAppHovered;
 
     virtual void onPaint(HDC hdc) override;
     virtual void onResize(RECT newRect) override;
@@ -26,8 +25,8 @@ public:
     void handleMMAppUnegistered(WPARAM wParam, LPARAM lParam);
     void handleMMAppActivationChanged(WPARAM wParam, LPARAM lParam);
     void handleMMRefreshVol(WPARAM wParam, LPARAM lParam);
-
     void handleTimerUpdateUI();
+    bool handleHoverChanged(bool isHovered);
 
     virtual void construct(HINSTANCE instance, WNDPROC wndProc);
     virtual void destroyWindow(HWND hWnd) override;

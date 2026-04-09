@@ -16,7 +16,7 @@ void VolumeApp::construct(HINSTANCE instance, WNDPROC wndProc)
     UIManager::get().init(_uic);
 
     initWindow(instance, wndProc, rc);
-    // _isAppHovered = false, updateTimerStateUI();
+    handleHoverChanged(false);
 
     _sliderManager.getSliderFromSelect(SelectInfo(VolumeType::Master, 0))->_sliderInfo
         = UIManager::get().getIconMasterVol();
@@ -129,13 +129,15 @@ void VolumeApp::onPaint(HDC hdc)
     // GetCursorPos(&p);
     // ScreenToClient(_hWnd, &p);
 
-    int bd = _uic.sliderSpacing + _uic.windowBorderWidth;
-    drawGrayscaleMask(hdc, imageClose,
-        POINT { windowRect.right - imageClose.w - bd, bd },
-        nullptr, 0x88AA0033);
-    drawGrayscaleMask(hdc, imageSettings,
-        POINT { windowRect.right - imageSettings.w - bd, imageSettings.h + _uic.sliderSpacing + bd },
-        nullptr, 0x88888888);
+    if (_isAppHovered) {
+        int bd = _uic.sliderSpacing + _uic.windowBorderWidth;
+        drawGrayscaleMask(hdc, imageClose,
+            POINT { windowRect.right - imageClose.w - bd, bd },
+            nullptr, 0x88AA0033);
+        drawGrayscaleMask(hdc, imageSettings,
+            POINT { windowRect.right - imageSettings.w - bd, imageSettings.h + _uic.sliderSpacing + bd },
+            nullptr, 0x88888888);
+    }
 
     // overlay text
     if (auto slider = _sliderManager.getSliderFromSelect(_sliderInfoHovered)) {
@@ -170,7 +172,7 @@ void VolumeApp::onMouseScroll(POINT cursorClientPos, float delta)
 
 void VolumeApp::onMouseLeave()
 {
-    // _isAppHovered = false, updateTimerStateUI();
+    handleHoverChanged(false);
 
     if (auto slider = _sliderManager.getSliderFromSelect(_sliderInfoHovered)) {
         slider->_focused = false;
@@ -183,8 +185,8 @@ void VolumeApp::onMouseLeave()
 
 void VolumeApp::onMouseMove(POINT cursorClientPos, bool justEntered)
 {
-    // if (justEntered)
-    //     _isAppHovered = true, updateTimerStateUI();
+    if (justEntered)
+        handleHoverChanged(true);
 
     SelectInfo newHoverInfo = _sliderManager.getSelectAtPosition(cursorClientPos);
 
@@ -238,4 +240,11 @@ void VolumeApp::handleTimerUpdateUI()
         // str += "PID: " + std::to_string((int)w.pid) + ", Wave: " + std::to_string(w.wave) + "   ";
     }
     // printf("Wave info:\n%s", str.c_str());
+}
+
+bool VolumeApp::handleHoverChanged(bool isHovered)
+{
+    _isAppHovered = isHovered;
+    InvalidateRect(_hWnd, NULL, FALSE);
+    return false;
 }
