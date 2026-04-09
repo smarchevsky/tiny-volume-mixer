@@ -66,12 +66,12 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
     } break;
 
     case WM_LBUTTONDOWN: {
-        app.handleLMB(wParam, lParam, true);
+        app.handleLMBDown(wParam, lParam);
         return 0;
     } break;
 
     case WM_RBUTTONUP: {
-        app.handleRMB(wParam, lParam, false);
+        app.handleRMBUp(wParam, lParam);
         return 0;
     } break;
 
