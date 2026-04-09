@@ -23,7 +23,7 @@ void VolumeApp::construct(HINSTANCE instance, WNDPROC wndProc)
 
     _audioAppListerner.init(_hWnd);
 
-    int customSize { 80 - _uic.sliderSpacing };
+    int customSize { 40 - _uic.sliderSpacing };
     imageClose = PNGLoader::get().getGrayscalePngFromResource(IDB_PNG_CLOSE, &customSize);
     imageSettings = PNGLoader::get().getGrayscalePngFromResource(IDB_PNG_SETTINGS, &customSize);
 }
@@ -125,11 +125,17 @@ void VolumeApp::onPaint(HDC hdc)
 
     _sliderManager.drawSliders(hdc, _uic);
 
-    POINT p;
-    GetCursorPos(&p);
-    ScreenToClient(_hWnd, &p);
-    drawGrayscaleMask(hdc, imageClose, POINT { windowRect.right - imageClose.w - 10, 10 }, nullptr, 0x88AA0033);
-    drawGrayscaleMask(hdc, imageSettings, POINT { windowRect.right - imageSettings.w - 10, imageSettings.h + 18 }, nullptr, 0x88888888);
+    // POINT p;
+    // GetCursorPos(&p);
+    // ScreenToClient(_hWnd, &p);
+
+    int bd = _uic.sliderSpacing + _uic.windowBorderWidth;
+    drawGrayscaleMask(hdc, imageClose,
+        POINT { windowRect.right - imageClose.w - bd, bd },
+        nullptr, 0x88AA0033);
+    drawGrayscaleMask(hdc, imageSettings,
+        POINT { windowRect.right - imageSettings.w - bd, imageSettings.h + _uic.sliderSpacing + bd },
+        nullptr, 0x88888888);
 
     // overlay text
     if (auto slider = _sliderManager.getSliderFromSelect(_sliderInfoHovered)) {
