@@ -274,7 +274,7 @@ void drawGrayscaleMask(HDC hdc, const ImageBufferRLE img, const POINT pos, const
     if (customRect && !IntersectRect(&bitmapRect, &bitmapRect, customRect))
         return;
 
-    int readIndex = 0;
+    int readIndex = 1;
     BYTE readRemain = img.data[0].first;
     BYTE value = img.data[0].second;
 
