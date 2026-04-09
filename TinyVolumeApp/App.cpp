@@ -1,6 +1,7 @@
 #include "App.h"
 
 #include "Resource.h"
+#include "Utils.h"
 // #include <cassert>
 
 HCURSOR cursorDefault = LoadCursor(nullptr, IDC_ARROW);
@@ -167,32 +168,16 @@ void App::handlePaint()
 
 void App::handleResize(WPARAM wParam, LPARAM lParam)
 {
-    int width = LOWORD(lParam);
-    int height = HIWORD(lParam);
+    SIZE size { LOWORD(lParam), HIWORD(lParam) };
 
     DeleteObject(_hbm);
     DeleteDC(_hdcMem);
 
-    HDC hdcScreen = GetDC(_hWnd);
-    _hdcMem = CreateCompatibleDC(hdcScreen);
-    ReleaseDC(_hWnd, hdcScreen);
+    _hdcMem = CreateCompatibleDC(NULL);
+    BITMAPINFO bi = getBMI_ARGB(size);
+    _hbm = CreateDIBSection(_hdcMem, &bi, DIB_RGB_COLORS, (void**)0, NULL, 0);
 
-    // Create a 32-bit DIB (ARGB)
-    BITMAPINFOHEADER bih = {};
-    bih.biSize = sizeof(bih);
-    bih.biWidth = width;
-    bih.biHeight = -height; // top-down
-    bih.biPlanes = 1;
-    bih.biBitCount = 32;
-    bih.biCompression = BI_RGB;
-
-    BITMAPINFO bi = {};
-    bi.bmiHeader = bih;
-
-    DWORD* pixels = nullptr;
-    _hbm = CreateDIBSection(hdcScreen, &bi, DIB_RGB_COLORS, (void**)&pixels, NULL, 0);
-
-    onResize({ 0, 0, width, height });
+    onResize({ 0, 0, size.cx, size.cy });
 }
 
 LRESULT App::handleNCAHitTest(HWND hWnd, LPARAM lParam)
