@@ -106,7 +106,7 @@ HBITMAP PNGLoader::getBitmapFromPng(const std::wstring& pngPath, int* customImag
     return hBmp;
 }
 
-ImageBufferRLE PNGLoader::getGrayscalePngFromResource(int resourceID, int* customImageSize)
+ImageBufferRLE PNGLoader::getGrayscalePngFromResource(int resourceID, int cornerRadius, int borderWidth, int* customImageSize)
 {
     ImageBufferRLE result {};
     PngLoaderData plData(_pFactory, resourceID, customImageSize, true);
@@ -126,7 +126,7 @@ ImageBufferRLE PNGLoader::getGrayscalePngFromResource(int resourceID, int* custo
     {
         std::vector<DWORD> pixels(size.cx * size.cy);
         auto rc = RECT { 0, 0, size.cx, size.cy };
-        drawBorderedRectOverwrite(size, rc, pixels.data(), rc, 8, 3, 0xFFFFFF88, 0xFFFFFFFF);
+        drawBorderedRectOverwrite(size, rc, pixels.data(), rc, cornerRadius, borderWidth, 0xFFFFFF88, 0xFFFFFFFF);
         for (int i = 0; i < size.cx * size.cy; ++i) {
             BYTE pixelB = 255 - (BYTE)pixels[i];
             rawData[i] = 255 - std::max<BYTE>(pixelB, rawData[i]);
