@@ -13,17 +13,17 @@ void VolumeApp::construct(HINSTANCE instance, WNDPROC wndProc)
     RECT rc;
     FileManager::get().loadWindowRect(rc);
 
-    UIManager::get().init(_uiConfig);
+    UIManager::get().init(_uic);
 
     initWindow(instance, wndProc, rc);
     // _isAppHovered = false, updateTimerStateUI();
 
-    sliderManager.getSliderFromSelect(SelectInfo(VolumeType::Master, 0))->_sliderInfo
+    _sliderManager.getSliderFromSelect(SelectInfo(VolumeType::Master, 0))->_sliderInfo
         = UIManager::get().getIconMasterVol();
 
     _audioAppListerner.init(_hWnd);
 
-    int customSize { 80 - _uiConfig.sliderSpacing };
+    int customSize { 80 - _uic.sliderSpacing };
     imageClose = PNGLoader::get().getGrayscalePngFromResource(IDB_PNG_CLOSE, &customSize);
     imageSettings = PNGLoader::get().getGrayscalePngFromResource(IDB_PNG_SETTINGS, &customSize);
 }
@@ -50,7 +50,7 @@ void VolumeApp::handleMMAppRegistered(AudioSessionInitInfo* sessionInitInfo)
 {
     AudioUpdateInfo& info = sessionInitInfo->updateInfo;
     SliderInfo* iconInfo = UIManager::get().generateSliderInfo(sessionInitInfo->iconPath, info._pid);
-    sliderManager.appSliderAdd(info._pid, info._vol, info._isMuted, iconInfo);
+    _sliderManager.appSliderAdd(info._pid, info._vol, info._isMuted, iconInfo);
 
     if (sessionInitInfo->audioSessionState == AudioSessionState::AudioSessionStateActive)
         startTimer(_hWnd);
@@ -59,7 +59,7 @@ void VolumeApp::handleMMAppRegistered(AudioSessionInitInfo* sessionInitInfo)
 
     RECT rc;
     GetClientRect(_hWnd, &rc);
-    sliderManager.recalculateSliderRects(rc, _uiConfig);
+    _sliderManager.recalculateSliderRects(rc, _uic);
 
     InvalidateRect(_hWnd, NULL, FALSE);
 }
@@ -70,8 +70,8 @@ void VolumeApp::handleMMAppUnegistered(WPARAM wParam, LPARAM lParam)
     GetClientRect(_hWnd, &rc);
 
     AudioUpdateInfo info(wParam, lParam);
-    sliderManager.appSliderRemove(info._pid);
-    sliderManager.recalculateSliderRects(rc, _uiConfig);
+    _sliderManager.appSliderRemove(info._pid);
+    _sliderManager.recalculateSliderRects(rc, _uic);
 
     InvalidateRect(_hWnd, NULL, FALSE);
     _audioAppListerner.cleanupExpiredSessions();
@@ -81,7 +81,7 @@ void VolumeApp::handleMMAppActivationChanged(WPARAM wParam, LPARAM lParam)
 {
     auto info = reinterpret_cast<ActivationChangedInfo&>(wParam);
 
-    if (Slider* slider = sliderManager.getSliderFromSelect(SelectInfo(VolumeType::App, info.pid))) {
+    if (Slider* slider = _sliderManager.getSliderFromSelect(SelectInfo(VolumeType::App, info.pid))) {
         slider->_peak = 0.f;
         InvalidateRect(_hWnd, &slider->_rect, FALSE);
     }
@@ -94,7 +94,7 @@ void VolumeApp::handleMMRefreshVol(WPARAM wParam, LPARAM lParam)
 {
     AudioUpdateInfo info(wParam, lParam);
     SelectInfo si(info._type, info._pid);
-    if (auto slider = sliderManager.getSliderFromSelect(si)) {
+    if (auto slider = _sliderManager.getSliderFromSelect(si)) {
         slider->_val = info._vol;
         RECT u = slider->calculateTextRect();
         UnionRect(&u, &u, &slider->_rect);
@@ -107,23 +107,23 @@ void VolumeApp::onPaint(HDC hdc)
     RECT windowRect;
     GetClientRect(_hWnd, &windowRect);
 
-    DWORD bg_col = _uiConfig.windowBackgroundRGBA;
-    DWORD bo_col = _uiConfig.windowBorderRGBA;
+    DWORD bg_col = _uic.windowBackgroundRGBA;
+    DWORD bo_col = _uic.windowBorderRGBA;
 
 #define OVERWRITE 1
 #if OVERWRITE == 1
     bg_col = compositeAlpha(0, bg_col);
     bo_col = compositeAlpha(0, bo_col);
     drawBorderedRectOverwrite(hdc, windowRect,
-        _uiConfig.windowCornerRadius, _uiConfig.windowBorderWidth,
+        _uic.windowCornerRadius, _uic.windowBorderWidth,
         bg_col, bo_col);
 #else
     drawBorderedRectAlphaComposite(hdc, windowRect,
-        _uiConfig.windowCornerRadius, _uiConfig.windowBorderWidth,
+        _uic.windowCornerRadius, _uic.windowBorderWidth,
         bg_col, bo_col);
 #endif
 
-    sliderManager.drawSliders(hdc, _uiConfig);
+    _sliderManager.drawSliders(hdc, _uic);
 
     POINT p;
     GetCursorPos(&p);
@@ -132,7 +132,7 @@ void VolumeApp::onPaint(HDC hdc)
     drawGrayscaleMask(hdc, imageSettings, POINT { windowRect.right - imageSettings.w - 10, imageSettings.h + 18 }, nullptr, 0x88888888);
 
     // overlay text
-    if (auto slider = sliderManager.getSliderFromSelect(sliderInfoHovered)) {
+    if (auto slider = _sliderManager.getSliderFromSelect(_sliderInfoHovered)) {
         if (slider && slider->_sliderInfo && slider->_sliderInfo->textBmp) {
             RECT r = slider->calculateTextRect();
             drawBitmapAlphaComposite(hdc, slider->_sliderInfo->textBmp,
@@ -143,16 +143,16 @@ void VolumeApp::onPaint(HDC hdc)
 
 void VolumeApp::onResize(RECT rc)
 {
-    sliderManager.recalculateSliderRects(rc, _uiConfig);
+    _sliderManager.recalculateSliderRects(rc, _uic);
     InvalidateRect(_hWnd, NULL, FALSE);
 }
 
 void VolumeApp::onMouseScroll(POINT cursorClientPos, float delta)
 {
-    auto hoverInfo = sliderManager.getSelectAtPosition(cursorClientPos);
-    if (auto slider = sliderManager.getSliderFromSelect(hoverInfo)) {
+    auto hoverInfo = _sliderManager.getSelectAtPosition(cursorClientPos);
+    if (auto slider = _sliderManager.getSliderFromSelect(hoverInfo)) {
         float sliderHeight = slider->getHeight();
-        // slider->debugUpdateIcon(_uiConfig.iconSize);
+        // slider->debugUpdateIcon(_uic.iconSize);
 
         float oldVal = powf(slider->_val, .5f);
         float newVal = std::clamp(oldVal + delta / 16, 0.f, 1.f);
@@ -166,13 +166,13 @@ void VolumeApp::onMouseLeave()
 {
     // _isAppHovered = false, updateTimerStateUI();
 
-    if (auto slider = sliderManager.getSliderFromSelect(sliderInfoHovered)) {
+    if (auto slider = _sliderManager.getSliderFromSelect(_sliderInfoHovered)) {
         slider->_focused = false;
         RECT u = slider->calculateTextRect();
         UnionRect(&u, &u, &slider->_rect);
         InvalidateRect(_hWnd, &u, FALSE);
     }
-    sliderInfoHovered = {};
+    _sliderInfoHovered = {};
 }
 
 void VolumeApp::onMouseMove(POINT cursorClientPos, bool justEntered)
@@ -180,22 +180,22 @@ void VolumeApp::onMouseMove(POINT cursorClientPos, bool justEntered)
     // if (justEntered)
     //     _isAppHovered = true, updateTimerStateUI();
 
-    SelectInfo newHoverInfo = sliderManager.getSelectAtPosition(cursorClientPos);
+    SelectInfo newHoverInfo = _sliderManager.getSelectAtPosition(cursorClientPos);
 
-    if (newHoverInfo != sliderInfoHovered) {
-        if (auto slider = sliderManager.getSliderFromSelect(newHoverInfo)) {
+    if (newHoverInfo != _sliderInfoHovered) {
+        if (auto slider = _sliderManager.getSliderFromSelect(newHoverInfo)) {
             slider->_focused = true;
             RECT u = slider->calculateTextRect();
             UnionRect(&u, &u, &slider->_rect);
             InvalidateRect(_hWnd, &u, FALSE);
         }
-        if (auto slider = sliderManager.getSliderFromSelect(sliderInfoHovered)) {
+        if (auto slider = _sliderManager.getSliderFromSelect(_sliderInfoHovered)) {
             slider->_focused = false;
             RECT u = slider->calculateTextRect();
             UnionRect(&u, &u, &slider->_rect);
             InvalidateRect(_hWnd, &u, FALSE);
         }
-        sliderInfoHovered = newHoverInfo;
+        _sliderInfoHovered = newHoverInfo;
     }
 }
 
@@ -206,10 +206,10 @@ void VolumeApp::handleTimerUpdateUI()
     std::vector<WaveInfo> waveInfos;
     bool anyActive = _audioAppListerner.retieveWaveInfo(waveInfos, masterPeak);
 
-    Slider* masterSlider = sliderManager.getSliderFromSelect(SelectInfo(VolumeType::Master, 0));
+    Slider* masterSlider = _sliderManager.getSliderFromSelect(SelectInfo(VolumeType::Master, 0));
 
     if (!anyActive) {
-        sliderManager.forEachSliderApp([&](Slider& slider) {
+        _sliderManager.forEachSliderApp([&](Slider& slider) {
             if (slider._peak != 0.f)
                 slider._peak = 0.f, InvalidateRect(_hWnd, &slider._rect, FALSE);
         });
@@ -225,7 +225,7 @@ void VolumeApp::handleTimerUpdateUI()
         masterSlider->_peak = masterPeak, InvalidateRect(_hWnd, &masterSlider->_rect, FALSE);
 
     for (auto& w : waveInfos) {
-        if (Slider* slider = sliderManager.getSliderFromSelect(SelectInfo(VolumeType::App, w.pid))) {
+        if (Slider* slider = _sliderManager.getSliderFromSelect(SelectInfo(VolumeType::App, w.pid))) {
             if (slider->_peak != w.wave)
                 slider->_peak = w.wave, InvalidateRect(_hWnd, &slider->_rect, FALSE);
         }

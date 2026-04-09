@@ -8,9 +8,9 @@
 
 class VolumeApp : public App {
     AudioUpdateListener _audioAppListerner;
-    UIConfig _uiConfig;
-    SliderManager sliderManager;
-    SelectInfo sliderInfoHovered;
+    UIConfig _uic;
+    SliderManager _sliderManager;
+    SelectInfo _sliderInfoHovered;
 
     // bool _isAppHovered;
 
