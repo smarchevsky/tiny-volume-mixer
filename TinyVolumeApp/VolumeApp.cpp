@@ -23,7 +23,7 @@ void VolumeApp::construct(HINSTANCE instance, WNDPROC wndProc)
 
     _audioAppListerner.init(_hWnd);
 
-    int customSize { 64 };
+    int customSize { 80 - _uiConfig.sliderSpacing };
     imageClose = PNGLoader::get().getGrayscalePngFromResource(IDB_PNG_CLOSE, &customSize);
     imageSettings = PNGLoader::get().getGrayscalePngFromResource(IDB_PNG_SETTINGS, &customSize);
 }
@@ -125,6 +125,13 @@ void VolumeApp::onPaint(HDC hdc)
 
     sliderManager.drawSliders(hdc, _uiConfig);
 
+    POINT p;
+    GetCursorPos(&p);
+    ScreenToClient(_hWnd, &p);
+    drawGrayscaleMask(hdc, imageClose, POINT { windowRect.right - imageClose.w - 10, 10 }, nullptr, 0x88AA0033);
+    drawGrayscaleMask(hdc, imageSettings, POINT { windowRect.right - imageSettings.w - 10, imageSettings.h + 18 }, nullptr, 0x88888888);
+
+    // overlay text
     if (auto slider = sliderManager.getSliderFromSelect(sliderInfoHovered)) {
         if (slider && slider->_sliderInfo && slider->_sliderInfo->textBmp) {
             RECT r = slider->calculateTextRect();
@@ -132,9 +139,6 @@ void VolumeApp::onPaint(HDC hdc)
                 { r.left, r.top }, nullptr, 180);
         }
     }
-
-    drawGrayscaleMask(hdc, imageClose, POINT { windowRect.right - imageClose.w, 0 }, nullptr, 0x88AA0033);
-    drawGrayscaleMask(hdc, imageSettings, POINT { windowRect.right - imageSettings.w, imageSettings.h }, nullptr, 0x88888888);
 }
 
 void VolumeApp::onResize(RECT rc)
