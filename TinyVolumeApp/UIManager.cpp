@@ -457,11 +457,17 @@ UIConfig::UIConfig()
 {
     memset(this, 0, sizeof(*this));
     windowBorderRGBA = 0xAAAAAAAA;
-    windowBackgroundRGBA = 0xAA333333;
-    sliderDefaultBackgroundRGB = 0x888888;
-    sliderDefaultBorderRGB = 0xAAAAAA;
+    windowBackgroundRGBA = 0xAA444444;
 
     windowBorderWidth = 3;
+
+    sliderDefaultBackgroundRGB = 0xAAAAAA;
+    sliderDefaultBorderRGB = 0xAAAAAA;
+
+    sliderTransparencyBackground = 0xAA;
+    sliderTransparencyBorder = 0xAA;
+    sliderTransparencyBorderHovered = 0xFF;
+    sliderTransparencyPeak = 0xFF;
 
     sliderSpacing = 8;
     sliderCornerRadius = 8;

@@ -7,11 +7,16 @@
 struct UIConfig {
     DWORD windowBackgroundRGBA;
     DWORD windowBorderRGBA;
-    DWORD sliderDefaultBackgroundRGB;
-    DWORD sliderDefaultBorderRGB;
 
     BYTE windowBorderWidth;
     BYTE windowCornerRadius;
+
+    DWORD sliderDefaultBackgroundRGB;
+    DWORD sliderDefaultBorderRGB;
+    BYTE sliderTransparencyBackground;
+    BYTE sliderTransparencyBorder;
+    BYTE sliderTransparencyBorderHovered;
+    BYTE sliderTransparencyPeak;
 
     BYTE sliderWidthApp;
     BYTE sliderWidthMaster;

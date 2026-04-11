@@ -96,14 +96,10 @@ bool ColorUtils::calculatePriorityColor(DWORD* pixels, int width, int height, DW
     };
 
     auto finalColor = groups[0];
-    float redFactor = ColorWeight::getColorDistSq(finalColor, { 1, 0, 0 });
-    redFactor = powf(1 - std::min(redFactor * 1.f, 1.f), 8);
-
     float sat = calculateSaturation(finalColor);
 
     ColorWeight greyedDesaturatedColor = finalColor;
     greyedDesaturatedColor = ColorWeight::lerp(greyedDesaturatedColor, { 0.5f, 0.5f, 0.5f }, (1 - sat) * 0.3f);
-    greyedDesaturatedColor = ColorWeight::lerp(greyedDesaturatedColor, { 0.2f, 0.2f, 0.2f }, redFactor);
 
     outColor = greyedDesaturatedColor.toDWORD();
     outColor2 = finalColor.toDWORD();

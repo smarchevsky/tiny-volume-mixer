@@ -111,15 +111,15 @@ void Slider::draw(HDC hdc, const UIConfig& uic) const
         _rect.right - uic.getSliderOffsetR(), _rect.bottom
     };
 
-    const DWORD borderAlphaMask = _focused ? 0xFF000000 : 0xAA000000;
+    const BYTE borderAlphaMask = _focused ? uic.sliderTransparencyBorderHovered : uic.sliderTransparencyBorder;
     bool colorsValid = _sliderInfo && _sliderInfo->colorsInitialized;
 
     DWORD sliderColor = colorsValid ? _sliderInfo->colorSlider : uic.sliderDefaultBackgroundRGB;
     DWORD sliderColor2 = colorsValid ? _sliderInfo->colorSecondary : uic.sliderDefaultBorderRGB;
 
     // VOL
-    DWORD col_bg = 0x66000000 | sliderColor;
-    DWORD col_bo = borderAlphaMask | sliderColor2;
+    DWORD col_bg = (uic.sliderTransparencyBackground << 24) | sliderColor;
+    DWORD col_bo = (borderAlphaMask << 24) | sliderColor2;
 
 #if OVERWRITE == 1
     DWORD bg = compositeAlpha(0, uic.windowBackgroundRGBA);
@@ -137,7 +137,7 @@ void Slider::draw(HDC hdc, const UIConfig& uic) const
     RECT peakRect { roundRect.left + 6, roundRect.top + 6, roundRect.right - 6, roundRect.bottom - 6 };
     peakRect.top += LONG((peakRect.bottom - peakRect.top) * (1.f - peak));
 
-    DWORD blendedPeakBkg = compositeAlpha(col_bg, 0xFF000000 | sliderColor2);
+    DWORD blendedPeakBkg = compositeAlpha(col_bg, (uic.sliderTransparencyPeak << 24) | sliderColor2);
 #if OVERWRITE == 1
     drawBorderedRectOverwrite(hdc, peakRect, 3, 0, blendedPeakBkg, blendedPeakBkg);
 #else
