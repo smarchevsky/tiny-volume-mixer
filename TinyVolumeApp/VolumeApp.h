@@ -3,6 +3,7 @@
 #include "App.h"
 
 #include "AudioUtils.h"
+#include "HitDetector.h"
 #include "SliderManager.h"
 #include "UIManager.h"
 
@@ -10,7 +11,8 @@ class VolumeApp : public App {
     AudioUpdateListener _audioAppListerner;
     UIConfig _uic;
     SliderManager _sliderManager;
-    SelectInfo _sliderInfoHovered;
+    HitDetector _hitDetector;
+    HitUID _hitHovered = HitUID_invalid;
     bool _isAppHovered;
 
     virtual void onPaint(HDC hdc) override;

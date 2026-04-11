@@ -2,6 +2,8 @@
 
 #include "Common.h"
 
+#include "HitDetector.h"
+
 #include <functional>
 #include <vector>
 
@@ -16,6 +18,7 @@ class Slider {
 public:
     const SliderInfo* _sliderInfo {};
     RECT _rect {};
+    HitUID _hitUID {};
     float _val {};
     float _peak {};
     bool _focused {};
@@ -41,14 +44,16 @@ public:
     void appSliderAdd(PID pid, float vol, bool muted, const SliderInfo* sliderInfo);
     void appSliderRemove(PID pid);
 
-    Slider* getSliderFromSelect(SelectInfo info);
-    SelectInfo getSelectAtPosition(POINT mousePos);
+    Slider* getSliderFromHitUID(HitUID hitUID);
+    Slider* getSliderAppByPID(PID pid);
+    Slider& getSliderMaster() { return _sliderMaster; }
+
     void forEachSliderApp(std::function<void(Slider&)> func)
     {
         for (auto& slider : _slidersApps)
             func(slider);
     }
 
-    void recalculateSliderRects(const RECT& rect, const UIConfig& uic);
+    void recalculateSliderRects(HitDetector& hitDetector, const RECT& windowRect, const UIConfig& uic);
     void drawSliders(HDC hdc, const UIConfig& uic);
 };

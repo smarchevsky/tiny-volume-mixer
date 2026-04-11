@@ -365,21 +365,19 @@ void AudioUpdateListener::cleanupExpiredSessions()
     printf("Cleanup session, g_trackedSessions num %llu\n", g_trackedSessions.size());
 }
 
-void AudioUpdateListener::setVol(SelectInfo selectInfo, float vol)
+void AudioUpdateListener::setVolMaster(float vol)
 {
-    if (selectInfo._type == VolumeType::Master) {
-        if (_pEndpointVolume) {
-            _pEndpointVolume->SetMasterVolumeLevelScalar(vol, nullptr);
-            // wprintf(L"Setting master vol: %d\n", (int)(vol * 100));
-        }
+    if (_pEndpointVolume)
+        _pEndpointVolume->SetMasterVolumeLevelScalar(vol, nullptr);
+}
 
-    } else if (selectInfo._type == VolumeType::App) {
-        std::lock_guard<std::mutex> lock(g_mutex);
-        for (auto& s : g_trackedSessions) {
-            if (s.pid == selectInfo._pid) {
-                s.pVol ? s.pVol->SetMasterVolume(vol, nullptr) : HRESULT {};
-                break;
-            }
+void AudioUpdateListener::setVolApp(PID pid, float vol)
+{
+    std::lock_guard<std::mutex> lock(g_mutex);
+    for (auto& s : g_trackedSessions) {
+        if (s.pid == pid) {
+            s.pVol ? s.pVol->SetMasterVolume(vol, nullptr) : HRESULT {};
+            break;
         }
     }
 }

@@ -7,6 +7,12 @@
 #include <utility> // std::forward
 #include <vector>
 
+enum class VolumeType : uint8_t {
+    Invalid,
+    Master,
+    App
+};
+
 struct AudioUpdateInfo {
 
     union {
@@ -95,6 +101,7 @@ public:
     void uninit();
 
     void cleanupExpiredSessions();
-    void setVol(SelectInfo selectInfo, float vol);
+    void setVolMaster(float vol);
+    void setVolApp(PID pid, float vol);
     bool retieveWaveInfo(std::vector<WaveInfo>& waveInfo, float& master);
 };

@@ -163,17 +163,21 @@ RECT Slider::calculateTextRect() const
     return RECT { x, _rect.top, x + _rect.right - _rect.left + extend, _rect.top + bitmapSize.cy };
 }
 
-Slider* SliderManager::getSliderFromSelect(SelectInfo info)
+Slider* SliderManager::getSliderFromHitUID(HitUID hitUID)
 {
-    if (info._type == VolumeType::Master)
+    if (_sliderMaster._hitUID == hitUID)
         return &_sliderMaster;
+    auto it = std::find_if(_slidersApps.begin(), _slidersApps.end(), [&](const Slider& s) { return s._hitUID == hitUID; });
+    if (it != _slidersApps.end())
+        return &*it;
+    return nullptr;
+}
 
-    else if (info._type == VolumeType::App) {
-        auto it = std::find_if(_slidersApps.begin(), _slidersApps.end(), [&](const Slider& s) { return s.getPID() == info._pid; });
-        if (it != _slidersApps.end())
-            return &*it;
-    }
-
+Slider* SliderManager::getSliderAppByPID(PID pid)
+{
+    auto it = std::find_if(_slidersApps.begin(), _slidersApps.end(), [&](const Slider& s) { return s.getPID() == pid; });
+    if (it != _slidersApps.end())
+        return &*it;
     return nullptr;
 }
 
@@ -184,47 +188,33 @@ void SliderManager::appSliderAdd(PID pid, float vol, bool muted, const SliderInf
 
 void SliderManager::appSliderRemove(PID pid)
 {
-    auto it = std::find_if(_slidersApps.begin(), _slidersApps.end(), [&](const Slider& s) { return s.getPID() == pid; });
-    _slidersApps.erase(it);
+    std::erase_if(_slidersApps, [&](const Slider& s) { return s.getPID() == pid; });
 }
 
-SelectInfo SliderManager::getSelectAtPosition(POINT mousePos)
+void SliderManager::recalculateSliderRects(HitDetector& hitDetector, const RECT& windowRect, const UIConfig& uic)
 {
-    if (_sliderMaster.intersects(mousePos)) {
-        return SelectInfo(VolumeType::Master, (PID)0);
-    }
+    LONG offset = windowRect.left + uic.getSliderOffsetR() + uic.windowBorderWidth;
+    LONG top = windowRect.top + uic.sliderSpacing + uic.windowBorderWidth;
+    LONG bottom = windowRect.bottom - uic.sliderSpacing - uic.windowBorderWidth;
 
-    for (int i = 0; i < _slidersApps.size(); ++i)
-        if (_slidersApps.at(i).intersects(mousePos)) {
-            return SelectInfo(VolumeType::App, _slidersApps.at(i).getPID());
-        }
-
-    return {};
-}
-
-void SliderManager::recalculateSliderRects(const RECT& r, const UIConfig& uic)
-{
-    LONG offset = r.left + uic.getSliderOffsetR() + uic.windowBorderWidth;
-    LONG top = r.top + uic.sliderSpacing + uic.windowBorderWidth;
-    LONG bottom = r.bottom - uic.sliderSpacing - uic.windowBorderWidth;
-
-    _sliderMaster._rect = { offset, top, offset += uic.sliderWidthMaster, bottom };
-
-    /*for (int i = 1; i < _slidersApps.size(); ++i) {
-        if (_slidersApps[i].getPID() == 0) {
-            std::swap(_slidersApps[i], _slidersApps[0]);
-            std::swap(_slidersApps[i]._focused, _slidersApps[0]._focused);
-        }
-    }*/
-
+    // sort sliders by icon hash
     std::sort(_slidersApps.begin(), _slidersApps.end(), [](const Slider& s0, const Slider& s1) {
         if (s0._sliderInfo && s1._sliderInfo)
             return s0._sliderInfo->iconHash < s1._sliderInfo->iconHash;
         return false;
     });
 
+    hitDetector.removeGroup(HitGroupType::Slider);
+    {
+        RECT rc = RECT { offset, top, offset += uic.sliderWidthMaster, bottom };
+        _sliderMaster._hitUID = hitDetector.addRect(rc, HitGroupType::Slider);
+        _sliderMaster._rect = rc;
+    }
+
     for (auto& slider : _slidersApps) {
-        slider._rect = { offset, top, offset += uic.sliderWidthApp, bottom };
+        RECT rc = RECT { offset, top, offset += uic.sliderWidthApp, bottom };
+        slider._hitUID = hitDetector.addRect(rc, HitGroupType::Slider);
+        slider._rect = rc;
     }
 }
 
