@@ -60,8 +60,7 @@ void VolumeApp::handleMMAppRegistered(AudioSessionInitInfo* sessionInitInfo)
 
     RECT rc;
     GetClientRect(_hWnd, &rc);
-    _sliderManager.recalculateSliderRects(_hitDetector, rc, _uic);
-
+    recalculateHitRects(rc);
     InvalidateRect(_hWnd, NULL, FALSE);
 }
 
@@ -72,8 +71,7 @@ void VolumeApp::handleMMAppUnegistered(WPARAM wParam, LPARAM lParam)
 
     AudioUpdateInfo info(wParam, lParam);
     _sliderManager.appSliderRemove(info._pid);
-    _sliderManager.recalculateSliderRects(_hitDetector, rc, _uic);
-
+    recalculateHitRects(rc);
     InvalidateRect(_hWnd, NULL, FALSE);
     _audioAppListerner.cleanupExpiredSessions();
 }
@@ -94,8 +92,10 @@ void VolumeApp::handleMMAppActivationChanged(WPARAM wParam, LPARAM lParam)
 void VolumeApp::handleMMRefreshVol(WPARAM wParam, LPARAM lParam)
 {
     AudioUpdateInfo info(wParam, lParam);
-    Slider* slider = &_sliderManager.getSliderMaster();
-    if (info._type == VolumeType::App)
+    Slider* slider = {};
+    if (info._type == VolumeType::Master)
+        slider = &_sliderManager.getSliderMaster();
+    else if (info._type == VolumeType::App)
         slider = _sliderManager.getSliderAppByPID(info._pid);
 
     if (slider) {
@@ -155,7 +155,7 @@ void VolumeApp::onPaint(HDC hdc)
 
 void VolumeApp::onResize(RECT rc)
 {
-    _sliderManager.recalculateSliderRects(_hitDetector, rc, _uic);
+    recalculateHitRects(rc);
     InvalidateRect(_hWnd, NULL, FALSE);
 }
 
@@ -177,6 +177,14 @@ void VolumeApp::onMouseScroll(POINT cursorClientPos, float delta)
     }
 }
 
+void VolumeApp::recalculateHitRects(const RECT& rc)
+{
+    _hitDetector.clear();
+    _sliderManager.recalculateSliderRects(rc, _uic);
+    _sliderManager.getSliderMaster()._hitUID = _hitDetector.addRect(_sliderManager.getSliderMaster()._rect);
+    _sliderManager.forEachSliderApp([&](Slider& s) { s._hitUID = _hitDetector.addRect(s._rect); });
+}
+
 void VolumeApp::onMouseLeave()
 {
     handleHoverChanged(false);
@@ -188,7 +196,7 @@ void VolumeApp::onMouseLeave()
         InvalidateRect(_hWnd, &u, FALSE);
     }
 
-    _hitHovered = HitUID_invalid;
+    _hitHovered = HitUID_none;
 }
 
 void VolumeApp::onMouseMove(POINT cursorClientPos, bool justEntered)

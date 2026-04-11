@@ -2,8 +2,6 @@
 
 #include "Common.h"
 
-#include "HitDetector.h"
-
 #include <functional>
 #include <vector>
 
@@ -54,6 +52,6 @@ public:
             func(slider);
     }
 
-    void recalculateSliderRects(HitDetector& hitDetector, const RECT& windowRect, const UIConfig& uic);
+    void recalculateSliderRects(const RECT& windowRect, const UIConfig& uic);
     void drawSliders(HDC hdc, const UIConfig& uic);
 };

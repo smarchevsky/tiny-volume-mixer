@@ -191,7 +191,7 @@ void SliderManager::appSliderRemove(PID pid)
     std::erase_if(_slidersApps, [&](const Slider& s) { return s.getPID() == pid; });
 }
 
-void SliderManager::recalculateSliderRects(HitDetector& hitDetector, const RECT& windowRect, const UIConfig& uic)
+void SliderManager::recalculateSliderRects(const RECT& windowRect, const UIConfig& uic)
 {
     LONG offset = windowRect.left + uic.getSliderOffsetR() + uic.windowBorderWidth;
     LONG top = windowRect.top + uic.sliderSpacing + uic.windowBorderWidth;
@@ -204,17 +204,12 @@ void SliderManager::recalculateSliderRects(HitDetector& hitDetector, const RECT&
         return false;
     });
 
-    hitDetector.removeGroup(HitGroupType::Slider);
-    {
-        RECT rc = RECT { offset, top, offset += uic.sliderWidthMaster, bottom };
-        _sliderMaster._hitUID = hitDetector.addRect(rc, HitGroupType::Slider);
-        _sliderMaster._rect = rc;
-    }
+    _sliderMaster._rect = RECT { offset, top, offset += uic.sliderWidthMaster, bottom };
+    _sliderMaster._hitUID = HitUID_invalid;
 
     for (auto& slider : _slidersApps) {
-        RECT rc = RECT { offset, top, offset += uic.sliderWidthApp, bottom };
-        slider._hitUID = hitDetector.addRect(rc, HitGroupType::Slider);
-        slider._rect = rc;
+        slider._rect = RECT { offset, top, offset += uic.sliderWidthApp, bottom };
+        slider._hitUID = HitUID_invalid;
     }
 }
 

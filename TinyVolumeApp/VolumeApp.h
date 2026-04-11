@@ -12,7 +12,7 @@ class VolumeApp : public App {
     UIConfig _uic;
     SliderManager _sliderManager;
     HitDetector _hitDetector;
-    HitUID _hitHovered = HitUID_invalid;
+    HitUID _hitHovered = HitUID_none;
     bool _isAppHovered;
 
     virtual void onPaint(HDC hdc) override;
@@ -21,6 +21,8 @@ class VolumeApp : public App {
     virtual void onMouseLeave() override;
     virtual void onMouseMove(POINT cursorClientPos, bool justEntered) override;
     virtual void onMouseScroll(POINT cursorClientPos, float delta) override;
+
+    void recalculateHitRects(const RECT& rc);
 
 public:
     void handleMMAppRegistered(AudioSessionInitInfo* sessionInitInfo);

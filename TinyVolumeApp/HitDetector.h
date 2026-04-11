@@ -2,20 +2,13 @@
 
 #include <Windows.h>
 
+#include "Common.h"
+
 #include <vector>
-
-typedef uint32_t HitUID;
-constexpr HitUID HitUID_invalid = HitUID(-1);
-
-enum class HitGroupType : uint8_t {
-    Slider,
-    Button
-};
 
 struct HitRect {
     RECT rect;
     HitUID ownerId;
-    HitGroupType groupID;
 };
 
 class HitDetector {
@@ -23,9 +16,9 @@ class HitDetector {
     HitUID _UID = 0;
 
 public:
-    HitUID addRect(RECT rect, HitGroupType groupID)
+    HitUID addRect(RECT rect)
     {
-        _hitRects.push_back({ rect, ++_UID, groupID });
+        _hitRects.push_back({ rect, ++_UID });
         return _UID;
     }
 
@@ -34,10 +27,7 @@ public:
         std::erase_if(_hitRects, [&](const HitRect& hr) { return hr.ownerId == hitUID; });
     }
 
-    void removeGroup(HitGroupType groupID)
-    {
-        std::erase_if(_hitRects, [groupID](const HitRect& hr) { return hr.groupID == groupID; });
-    }
+    void clear() { _hitRects.clear(), _UID = 0; }
 
     HitUID testHit(POINT p)
     {
@@ -47,6 +37,6 @@ public:
             }
         }
 
-        return HitUID_invalid;
+        return HitUID_none;
     }
 };

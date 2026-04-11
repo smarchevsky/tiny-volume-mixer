@@ -7,6 +7,10 @@
 
 typedef DWORD PID;
 
+typedef uint32_t HitUID;
+constexpr HitUID HitUID_invalid = HitUID(0);
+constexpr HitUID HitUID_none = HitUID(-1);
+
 enum {
     _____WM_APP = WM_APP,
     WM_REFRESH_VOL,
