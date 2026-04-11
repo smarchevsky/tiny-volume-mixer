@@ -142,7 +142,6 @@
     <ClInclude Include="Timer.h" />
     <ClInclude Include="Utils.h" />
     <ClInclude Include="VolumeApp.h" />
-    <ClInclude Include="TinyVolumeApp.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="App.cpp" />

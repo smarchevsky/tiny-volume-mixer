@@ -1,6 +1,6 @@
 // TinyVolumeApp.cpp : Defines the entry point for the application.
 
-#include "TinyVolumeApp.h"
+#include "Resource.h"
 
 #include "VolumeApp.h"
 
