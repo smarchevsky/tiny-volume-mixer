@@ -279,21 +279,20 @@ void drawGrayscaleMask(HDC hdc, const ImageBufferRLE img, const POINT pos, const
         return;
 
     int readIndex = 0;
-    BYTE readRemain = img.data[0].first;
+    int readRemain = img.data[0].first;
     BYTE value = img.data[0].second;
 
     auto skip = [&](int readOffset) {
         if (readOffset < 0) {
             while (readIndex < img.data.size() - 1) {
                 int delta = readOffset + readRemain;
-                if (delta < 0) {
-                    readOffset += readRemain;
-                    readRemain = img.data[++readIndex].first;
-                    value = img.data[readIndex].second;
-                } else {
+                if (delta > 0) {
                     readRemain = delta;
                     break;
                 }
+                readOffset += readRemain;
+                readRemain = img.data[++readIndex].first;
+                value = img.data[readIndex].second;
             }
         }
     };
@@ -309,15 +308,12 @@ void drawGrayscaleMask(HDC hdc, const ImageBufferRLE img, const POINT pos, const
             goto exit_loop;
 
         for (int x = clipRect.left; x < clipRect.right; x++) {
-            if (readRemain == 0) {
-                ++readIndex; // it never reaches img.data.size(), no reason to check
-                // as this loop ends before last index (added compressedData.push_back({ 255, current }) in the end)
-                readRemain = img.data.at(readIndex).first;
+            compositeAlphaWithAlpha(canvasPixels[hdcY + x], color, value);
+
+            if (--readRemain == 0) {
+                readRemain = img.data.at(++readIndex).first;
                 value = img.data.at(readIndex).second;
             }
-            readRemain--;
-
-            compositeAlphaWithAlpha(canvasPixels[hdcY + x], color, value);
         }
 
         skip(clipRect.right - bitmapRect.right);
