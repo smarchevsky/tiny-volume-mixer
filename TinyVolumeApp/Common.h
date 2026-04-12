@@ -20,6 +20,13 @@ enum {
     WM_TIMER_UI,
 };
 
+enum class AlignUI : uint8_t {
+    LeftTop,
+    RightTop,
+    LeftBottom,
+    RightBottom
+};
+
 // run length encoded data
 struct BufferRLE {
     std::vector<std::pair<BYTE, BYTE>> data;

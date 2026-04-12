@@ -22,7 +22,23 @@ public:
         Pressed
     } _currentState;
 
-    void setPos(POINT pos) { _pos = pos; }
+    SIZE getSize() const { return _imageSize; }
+    void setPos(POINT pos, AlignUI align)
+    {
+        switch (align) {
+        case AlignUI::LeftTop:
+            _pos = pos;
+            return;
+        case AlignUI::RightTop:
+            _pos = { pos.x - _imageSize.cx, pos.y };
+            return;
+        case AlignUI::LeftBottom:
+            _pos = { pos.x, pos.y - _imageSize.cy };
+            return;
+        case AlignUI::RightBottom:
+            _pos = { pos.x - _imageSize.cx, pos.y - _imageSize.cy };
+        }
+    }
     void draw(HDC hdc);
     void initialize(std::vector<DWORD>& pixels, int resourceID, SIZE size, int cr, int bw);
 };

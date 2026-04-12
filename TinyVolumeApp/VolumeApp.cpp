@@ -8,15 +8,13 @@
 
 void Button::draw(HDC hdc)
 {
-    // int bd = _uic.sliderSpacing + _uic.windowBorderWidth;
     auto& currentRLE = _currentState == Hovered ? _rleBordered : _rleSolid;
-    auto& currentColor = _currentState == Default ? _colorSemiTransparent  : _colorDefault;
+    auto& currentColor = _currentState == Default ? _colorSemiTransparent : _colorDefault;
     drawGrayscaleMask(hdc, currentRLE, _imageSize, _pos, nullptr, currentColor);
 }
 
 void Button::initialize(std::vector<DWORD>& pixels, int resourceID, SIZE size, int cr, int bw)
 {
-    //_pos = POINT { windowRect.right - imageClose.w - bd, bd };
     auto rect = RECT { 0, 0, size.cx, size.cy };
     drawBorderedRectOverwrite(size, rect, pixels.data(), rect, cr, bw, 0xFF, 0xFF);
     _rleSolid = PNGLoader::get().createRLEImageMaskFromResource(pixels, resourceID, &size);
@@ -37,17 +35,18 @@ void VolumeApp::construct(HINSTANCE instance, WNDPROC wndProc)
 
     UIManager::get().init(_uic);
 
+    // better initialize buttons before window creation
+    SIZE size { 40 - _uic.sliderSpacing, 40 - _uic.sliderSpacing };
+    std::vector<DWORD> pixels(size.cx * size.cy);
+    _btnClose.initialize(pixels, IDB_PNG_CLOSE, size, _uic.sliderCornerRadius, _uic.sliderBorderWidth);
+    pixels.clear();
+
     initWindow(instance, wndProc, rc);
     handleHoverChanged(false);
 
     _sliderManager.getSliderMaster()._sliderInfo = UIManager::get().getIconMasterVol();
 
     _audioAppListerner.init(_hWnd);
-
-    SIZE size { 40 - _uic.sliderSpacing, 40 - _uic.sliderSpacing };
-    std::vector<DWORD> pixels(size.cx * size.cy);
-
-    _btnClose.initialize(pixels, IDB_PNG_CLOSE, size, _uic.sliderCornerRadius, _uic.sliderBorderWidth);
 }
 
 void VolumeApp::destroyWindow(HWND hWnd)
@@ -173,6 +172,9 @@ void VolumeApp::onPaint(HDC hdc)
 
 void VolumeApp::onResize(RECT rc)
 {
+    int bd = _uic.sliderSpacing + _uic.windowBorderWidth;
+
+    _btnClose.setPos(POINT { rc.right - bd, bd }, AlignUI::RightTop);
     recalculateHitRects(rc);
     InvalidateRect(_hWnd, NULL, FALSE);
 }
