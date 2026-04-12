@@ -205,11 +205,12 @@ void VolumeApp::onMouseMove(POINT cursorClientPos, bool justEntered)
 
     if (newHit != _hitHovered) {
         if (newHit == _btnClose._hitUID) {
-            _btnClose._currentState = Button::Hovered;
+            _btnClose._isHovered = true;
             RECT bRect = _btnClose.getRectDraw();
             InvalidateRect(_hWnd, &bRect, FALSE);
-        } else {
-            _btnClose._currentState = Button::Default;
+        }
+        if (_hitHovered == _btnClose._hitUID) {
+            _btnClose._isHovered = false;
             RECT bRect = _btnClose.getRectDraw();
             InvalidateRect(_hWnd, &bRect, FALSE);
         }
