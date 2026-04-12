@@ -8,9 +8,10 @@
 #include "UIManager.h"
 
 class Button {
-    ImageBufferRLE _rleSolid;
-    ImageBufferRLE _rleBordered;
+    BufferRLE _rleSolid;
+    BufferRLE _rleBordered;
     DWORD _colorDefault, _colorSemiTransparent;
+    SIZE _imageSize;
     POINT _pos;
 
 public:

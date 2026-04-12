@@ -262,15 +262,16 @@ void drawBitmapAlphaComposite(HDC hdc, HBITMAP bmp, const POINT pos, const RECT*
     }
 }
 
-void drawGrayscaleMask(HDC hdc, const ImageBufferRLE img, const POINT pos, const RECT* customRect, DWORD color)
+void drawGrayscaleMask(HDC hdc, const BufferRLE img, const SIZE& size, const POINT& pos, const RECT* customRect, DWORD color)
 {
     if (img.data.empty())
         return;
 
+    const LONG w = size.cx, h = size.cy;
     SIZE canvasSize;
     RECT clipRect;
     DWORD* canvasPixels;
-    RECT bitmapRect = { pos.x, pos.y, pos.x + img.w, pos.y + img.h };
+    RECT bitmapRect = { pos.x, pos.y, pos.x + w, pos.y + h };
 
     if (!validateCommon(hdc, bitmapRect, canvasPixels, canvasSize, clipRect))
         return;
@@ -297,7 +298,7 @@ void drawGrayscaleMask(HDC hdc, const ImageBufferRLE img, const POINT pos, const
         }
     };
 
-    skip((bitmapRect.top - clipRect.top) * img.w);
+    skip((bitmapRect.top - clipRect.top) * w);
 
     for (int y = clipRect.top; y < clipRect.bottom; y++) {
         int hdcY = y * canvasSize.cx;

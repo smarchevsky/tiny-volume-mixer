@@ -106,10 +106,10 @@ HBITMAP PNGLoader::getBitmapFromPng(const std::wstring& pngPath, const SIZE* cus
     return hBmp;
 }
 
-ImageBufferRLE PNGLoader::createRLEImageMaskFromResource(std::vector<DWORD>& dst,
+BufferRLE PNGLoader::createRLEImageMaskFromResource(std::vector<DWORD>& dst,
     int resourceID, const SIZE* customImageSize)
 {
-    ImageBufferRLE result {};
+    BufferRLE result {};
     PngLoaderData plData(_pFactory, resourceID, customImageSize, true);
 
     SIZE size {};
@@ -121,8 +121,6 @@ ImageBufferRLE PNGLoader::createRLEImageMaskFromResource(std::vector<DWORD>& dst
 
     if (rawData.empty())
         return result;
-
-    result.w = size.cx, result.h = size.cy;
 
     for (int i = 0; i < size.cx * size.cy; ++i) {
         BYTE pixelB = 255 - (BYTE)dst[i];

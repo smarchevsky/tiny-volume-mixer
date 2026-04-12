@@ -47,7 +47,7 @@ class PNGLoader {
 public:
     HBITMAP getBitmapFromPng(const std::wstring& pngPath, const SIZE* customImageSize);
 
-    ImageBufferRLE createRLEImageMaskFromResource(std::vector<DWORD>& dst,
+    BufferRLE createRLEImageMaskFromResource(std::vector<DWORD>& dst,
         int resourceID, const SIZE* customImageSize);
 
     static PNGLoader& get()

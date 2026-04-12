@@ -11,7 +11,7 @@ void Button::draw(HDC hdc)
     // int bd = _uic.sliderSpacing + _uic.windowBorderWidth;
     auto& currentRLE = _currentState == Hovered ? _rleBordered : _rleSolid;
     auto& currentColor = _currentState == Default ? _colorSemiTransparent  : _colorDefault;
-    drawGrayscaleMask(hdc, currentRLE, _pos, nullptr, currentColor);
+    drawGrayscaleMask(hdc, currentRLE, _imageSize, _pos, nullptr, currentColor);
 }
 
 void Button::initialize(std::vector<DWORD>& pixels, int resourceID, SIZE size, int cr, int bw)
@@ -27,7 +27,7 @@ void Button::initialize(std::vector<DWORD>& pixels, int resourceID, SIZE size, i
     _colorDefault = 0xFFAA0033;
     _colorSemiTransparent = 0xAAAA0033;
 
-    _rleSolid.w = size.cx, _rleSolid.h = size.cy;
+    _imageSize = size;
 }
 
 void VolumeApp::construct(HINSTANCE instance, WNDPROC wndProc)

@@ -21,7 +21,6 @@ enum {
 };
 
 // run length encoded data
-struct ImageBufferRLE {
-    LONG w, h;
+struct BufferRLE {
     std::vector<std::pair<BYTE, BYTE>> data;
 };
