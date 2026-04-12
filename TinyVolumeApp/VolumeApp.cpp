@@ -22,7 +22,7 @@ void VolumeApp::construct(HINSTANCE instance, WNDPROC wndProc)
 
     _audioAppListerner.init(_hWnd);
 
-    int customSize { 40 - _uic.sliderSpacing };
+    SIZE customSize { 40 - _uic.sliderSpacing, 40 - _uic.sliderSpacing };
     int r = _uic.sliderCornerRadius;
     int bw = _uic.sliderBorderWidth;
     imageClose = PNGLoader::get().getGrayscalePngFromResource(IDB_PNG_CLOSE, r, bw, &customSize);

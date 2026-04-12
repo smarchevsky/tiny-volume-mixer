@@ -28,14 +28,14 @@ struct PngLoaderData {
     WICPixelFormatGUID srcFormat {};
 
     // decoder already initialized
-    void initInternal(IWICImagingFactory* pFactory, int* customImageSize, bool grayscale)
+    void initInternal(IWICImagingFactory* pFactory, const SIZE* customImageSize, bool grayscale)
     {
         pDecoder->GetFrame(0, &pFrame);
 
         if (customImageSize) {
             pFactory->CreateBitmapScaler(&pScaler);
-            pScaler->Initialize(pFrame, *customImageSize, *customImageSize,
-                WICBitmapInterpolationModeHighQualityCubic);
+            UINT w = (UINT)customImageSize->cx, h = (UINT)customImageSize->cy;
+            pScaler->Initialize(pFrame, w, h, WICBitmapInterpolationModeHighQualityCubic);
         }
 
         pFactory->CreateFormatConverter(&pConverter);
@@ -48,14 +48,14 @@ struct PngLoaderData {
             WICBitmapDitherTypeNone, nullptr, 0.0, WICBitmapPaletteTypeCustom);
     }
 
-    PngLoaderData(IWICImagingFactory* pFactory, const std::wstring& pngPath, int* customImageSize, bool grayscale)
+    PngLoaderData(IWICImagingFactory* pFactory, const std::wstring& pngPath, const SIZE* customImageSize, bool grayscale)
     {
         pFactory->CreateDecoderFromFilename(pngPath.c_str(), nullptr,
             GENERIC_READ, WICDecodeMetadataCacheOnLoad, &pDecoder);
         initInternal(pFactory, customImageSize, grayscale);
     }
 
-    PngLoaderData(IWICImagingFactory* pFactory, int resourceID, int* customImageSize, bool grayscale)
+    PngLoaderData(IWICImagingFactory* pFactory, int resourceID, const SIZE* customImageSize, bool grayscale)
     {
         HRSRC hRes = FindResource(NULL, MAKEINTRESOURCE(resourceID), L"PNG");
         if (hRes) {
@@ -87,7 +87,7 @@ struct PngLoaderData {
 PNGLoader::PNGLoader() { CoCreateInstance(CLSID_WICImagingFactory, nullptr, CLSCTX_INPROC_SERVER, IID_PPV_ARGS(&_pFactory)); }
 PNGLoader::~PNGLoader() { _pFactory->Release(); }
 
-HBITMAP PNGLoader::getBitmapFromPng(const std::wstring& pngPath, int* customImageSize)
+HBITMAP PNGLoader::getBitmapFromPng(const std::wstring& pngPath, const SIZE* customImageSize)
 {
     PngLoaderData plData(_pFactory, pngPath, customImageSize, false);
 
@@ -106,7 +106,7 @@ HBITMAP PNGLoader::getBitmapFromPng(const std::wstring& pngPath, int* customImag
     return hBmp;
 }
 
-ImageBufferRLE PNGLoader::getGrayscalePngFromResource(int resourceID, int cornerRadius, int borderWidth, int* customImageSize)
+ImageBufferRLE PNGLoader::getGrayscalePngFromResource(int resourceID, int cornerRadius, int borderWidth, const SIZE* customImageSize)
 {
     ImageBufferRLE result {};
     PngLoaderData plData(_pFactory, resourceID, customImageSize, true);

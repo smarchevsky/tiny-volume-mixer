@@ -189,9 +189,12 @@ std::wstring GetLogoPathFromManifest(const std::wstring& installPath)
     return logoPath;
 }
 
-HICON createIconFromPng(const std::wstring& pngPath, int* customIconSize)
+HICON createIconFromPng(const std::wstring& pngPath, const int* customIconSize)
 {
-    HBITMAP hBmp = PNGLoader::get().getBitmapFromPng(pngPath, customIconSize);
+    SIZE size {};
+    if(customIconSize)
+        size.cx = (LONG)*customIconSize, size.cy = (LONG)*customIconSize;
+    HBITMAP hBmp = PNGLoader::get().getBitmapFromPng(pngPath, customIconSize ? &size : nullptr);
     DWORD* pixels;
     SIZE iconSize;
     getBitmapData(hBmp, iconSize, pixels);
