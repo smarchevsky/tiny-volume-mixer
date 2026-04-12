@@ -6,9 +6,9 @@
 
 void Button::draw(HDC hdc) const
 {
-    auto& currentRLE = _currentState == Hovered ? _rleBordered : _rleSolid;
-    auto& currentColor = _currentState == Default ? _colorSemiTransparent : _colorDefault;
-    drawGrayscaleMask(hdc, currentRLE, _imageSize, _pos, nullptr, currentColor);
+    auto& currentRLE = _isHovered ? _rleBordered : _rleSolid;
+    BYTE transparency = (_isPressed || _isHovered) ? 0xFF : _transparency;
+    drawGrayscaleMask(hdc, currentRLE, _imageSize, _pos, nullptr, _color | transparency << 24);
 }
 
 void Button::initialize(std::vector<DWORD>& pixels, int resourceID, const UIConfig& uic)
@@ -19,17 +19,17 @@ void Button::initialize(std::vector<DWORD>& pixels, int resourceID, const UIConf
 
     pixels.resize(size.cx * size.cy);
 
-    BYTE semiTransparent = uic.sliderTransparencyBorder;
-
     auto rect = RECT { 0, 0, size.cx, size.cy };
-    drawBorderedRectOverwrite(size, rect, pixels.data(), rect, uic.sliderCornerRadius, uic.sliderBorderWidth, 0xFF, 0xFF);
+    drawBorderedRectOverwrite(size, rect, pixels.data(), rect,
+        uic.sliderCornerRadius, uic.sliderBorderWidth, 0xFF, 0xFF);
     _rleSolid = PNGLoader::get().createRLEImageMaskFromResource(pixels, resourceID, &size);
 
-    drawBorderedRectOverwrite(size, rect, pixels.data(), rect, uic.sliderCornerRadius, uic.sliderBorderWidth, semiTransparent, 0xFF);
+    drawBorderedRectOverwrite(size, rect, pixels.data(), rect,
+        uic.sliderCornerRadius, uic.sliderBorderWidth, uic.sliderTransparencyBorder, 0xFF);
     _rleBordered = PNGLoader::get().createRLEImageMaskFromResource(pixels, resourceID, &size);
 
-    _colorDefault = 0xFFAA0033;
-    _colorSemiTransparent = 0x00AA0033 | semiTransparent << 24;
+    _color = 0xAA0033;
+    _transparency = uic.sliderTransparencyBorder;
 
     _imageSize = size;
 
