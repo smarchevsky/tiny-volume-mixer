@@ -21,6 +21,11 @@ enum {
 };
 
 enum class AlignUI : uint8_t {
+    Left,
+    Top,
+    Right,
+    Bottom,
+    // don't change order above
     LeftTop,
     RightTop,
     LeftBottom,

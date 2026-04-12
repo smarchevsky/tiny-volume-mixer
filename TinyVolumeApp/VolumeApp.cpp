@@ -6,26 +6,57 @@
 
 #include "resource.h"
 
-void Button::draw(HDC hdc)
+void Button::draw(HDC hdc) const
 {
     auto& currentRLE = _currentState == Hovered ? _rleBordered : _rleSolid;
     auto& currentColor = _currentState == Default ? _colorSemiTransparent : _colorDefault;
     drawGrayscaleMask(hdc, currentRLE, _imageSize, _pos, nullptr, currentColor);
 }
 
-void Button::initialize(std::vector<DWORD>& pixels, int resourceID, SIZE size, int cr, int bw)
+void Button::initialize(std::vector<DWORD>& pixels, int resourceID, const UIConfig& uic)
 {
+    SIZE size { 40 - uic.sliderSpacing, 40 - uic.sliderSpacing };
+    if (size.cx <= 0 || size.cy <= 0)
+        return;
+
+    pixels.resize(size.cx * size.cy);
+
+    BYTE semiTransparent = uic.sliderTransparencyBorder;
+
     auto rect = RECT { 0, 0, size.cx, size.cy };
-    drawBorderedRectOverwrite(size, rect, pixels.data(), rect, cr, bw, 0xFF, 0xFF);
+    drawBorderedRectOverwrite(size, rect, pixels.data(), rect, uic.sliderCornerRadius, uic.sliderBorderWidth, 0xFF, 0xFF);
     _rleSolid = PNGLoader::get().createRLEImageMaskFromResource(pixels, resourceID, &size);
 
-    drawBorderedRectOverwrite(size, rect, pixels.data(), rect, cr, bw, 0xAA, 0xFF);
+    drawBorderedRectOverwrite(size, rect, pixels.data(), rect, uic.sliderCornerRadius, uic.sliderBorderWidth, semiTransparent, 0xFF);
     _rleBordered = PNGLoader::get().createRLEImageMaskFromResource(pixels, resourceID, &size);
 
     _colorDefault = 0xFFAA0033;
-    _colorSemiTransparent = 0xAAAA0033;
+    _colorSemiTransparent = 0x00AA0033 | semiTransparent << 24;
 
     _imageSize = size;
+
+    _hitExtend[(int)AlignUI::Left] = uic.getSliderOffsetL();
+    _hitExtend[(int)AlignUI::Top] = uic.getSliderOffsetL();
+    _hitExtend[(int)AlignUI::Right] = uic.getSliderOffsetR();
+    _hitExtend[(int)AlignUI::Bottom] = uic.getSliderOffsetR();
+}
+
+void Button::setPos(POINT pos, AlignUI align)
+{
+    switch (align) {
+    case AlignUI::LeftTop:
+        _pos = pos;
+        break;
+    case AlignUI::RightTop:
+        _pos = { pos.x - _imageSize.cx, pos.y };
+        break;
+    case AlignUI::LeftBottom:
+        _pos = { pos.x, pos.y - _imageSize.cy };
+        break;
+    case AlignUI::RightBottom:
+        _pos = { pos.x - _imageSize.cx, pos.y - _imageSize.cy };
+        break;
+    }
 }
 
 void VolumeApp::construct(HINSTANCE instance, WNDPROC wndProc)
@@ -36,9 +67,9 @@ void VolumeApp::construct(HINSTANCE instance, WNDPROC wndProc)
     UIManager::get().init(_uic);
 
     // better initialize buttons before window creation
-    SIZE size { 40 - _uic.sliderSpacing, 40 - _uic.sliderSpacing };
-    std::vector<DWORD> pixels(size.cx * size.cy);
-    _btnClose.initialize(pixels, IDB_PNG_CLOSE, size, _uic.sliderCornerRadius, _uic.sliderBorderWidth);
+    std::vector<DWORD> pixels;
+
+    _btnClose.initialize(pixels, IDB_PNG_CLOSE, _uic);
     pixels.clear();
 
     initWindow(instance, wndProc, rc);
@@ -155,9 +186,6 @@ void VolumeApp::onPaint(HDC hdc)
 
     if (_isAppHovered) {
         _btnClose.draw(hdc);
-        // drawGrayscaleMask(hdc, imageSettings,
-        //     POINT { windowRect.right - imageSettings.w - bd, imageSettings.h + _uic.sliderSpacing + bd },
-        //     nullptr, 0x88888888);
     }
 
     // overlay text
@@ -200,6 +228,8 @@ void VolumeApp::onMouseScroll(POINT cursorClientPos, float delta)
 void VolumeApp::recalculateHitRects(const RECT& rc)
 {
     _hitDetector.clear();
+    _btnClose._hitUID = _hitDetector.addRect(_btnClose.getRectHit());
+
     _sliderManager.recalculateSliderRects(rc, _uic);
     _sliderManager.getSliderMaster()._hitUID = _hitDetector.addRect(_sliderManager.getSliderMaster()._rect);
     _sliderManager.forEachSliderApp([&](Slider& s) { s._hitUID = _hitDetector.addRect(s._rect); });
@@ -227,6 +257,16 @@ void VolumeApp::onMouseMove(POINT cursorClientPos, bool justEntered)
     HitUID newHit = _hitDetector.testHit(cursorClientPos);
 
     if (newHit != _hitHovered) {
+        if (newHit == _btnClose._hitUID) {
+            _btnClose._currentState = Button::Hovered;
+            RECT bRect = _btnClose.getRectDraw();
+            InvalidateRect(_hWnd, &bRect, FALSE);
+        } else {
+            _btnClose._currentState = Button::Default;
+            RECT bRect = _btnClose.getRectDraw();
+            InvalidateRect(_hWnd, &bRect, FALSE);
+        }
+
         if (auto slider = _sliderManager.getSliderFromHitUID(newHit)) {
             slider->_focused = true;
             RECT u = slider->calculateTextRect();
