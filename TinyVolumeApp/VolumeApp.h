@@ -3,41 +3,10 @@
 #include "App.h"
 
 #include "AudioUtils.h"
+#include "Button.h"
 #include "HitDetector.h"
 #include "SliderManager.h"
 #include "UIManager.h"
-
-class Button {
-    BufferRLE _rleSolid;
-    BufferRLE _rleBordered;
-    DWORD _colorDefault, _colorSemiTransparent;
-    SIZE _imageSize;
-    POINT _pos;
-    BYTE _hitExtend[4];
-
-public:
-    HitUID _hitUID;
-    enum State : uint8_t {
-        Default,
-        Hovered,
-        Pressed
-    } _currentState;
-
-    SIZE getSize() const { return _imageSize; }
-    void setPos(POINT pos, AlignUI align);
-    RECT getRectHit() const
-    {
-        return {
-            _pos.x - _hitExtend[(int)AlignUI::Left],
-            _pos.y - _hitExtend[(int)AlignUI::Top],
-            _pos.x + _imageSize.cx + _hitExtend[(int)AlignUI::Right],
-            _pos.y + _imageSize.cy + _hitExtend[(int)AlignUI::Bottom]
-        };
-    }
-    RECT getRectDraw() const { return { _pos.x, _pos.y, _pos.x + _imageSize.cx, _pos.y + _imageSize.cy }; }
-    void draw(HDC hdc) const;
-    void initialize(std::vector<DWORD>& pixels, int resourceID, const UIConfig& uic);
-};
 
 class VolumeApp : public App {
     AudioUpdateListener _audioAppListerner;

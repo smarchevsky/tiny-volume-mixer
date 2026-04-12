@@ -130,6 +130,7 @@
   <ItemGroup>
     <ClInclude Include="App.h" />
     <ClInclude Include="AudioUtils.h" />
+    <ClInclude Include="Button.h" />
     <ClInclude Include="ColorUtils.h" />
     <ClInclude Include="Common.h" />
     <ClInclude Include="Draw.h" />
@@ -146,6 +147,7 @@
   <ItemGroup>
     <ClCompile Include="App.cpp" />
     <ClCompile Include="AudioUtils.cpp" />
+    <ClCompile Include="Button.cpp" />
     <ClCompile Include="ColorUtils.cpp" />
     <ClCompile Include="Draw.cpp" />
     <ClCompile Include="UIManager.cpp" />
