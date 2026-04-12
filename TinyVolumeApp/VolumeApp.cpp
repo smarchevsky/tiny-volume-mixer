@@ -6,7 +6,29 @@
 
 #include "resource.h"
 
-ImageBufferRLE imageClose, imageSettings;
+void Button::draw(HDC hdc)
+{
+    // int bd = _uic.sliderSpacing + _uic.windowBorderWidth;
+    auto& currentRLE = _currentState == Hovered ? _rleBordered : _rleSolid;
+    auto& currentColor = _currentState == Default ? _colorSemiTransparent  : _colorDefault;
+    drawGrayscaleMask(hdc, currentRLE, _pos, nullptr, currentColor);
+}
+
+void Button::initialize(std::vector<DWORD>& pixels, int resourceID, SIZE size, int cr, int bw)
+{
+    //_pos = POINT { windowRect.right - imageClose.w - bd, bd };
+    auto rect = RECT { 0, 0, size.cx, size.cy };
+    drawBorderedRectOverwrite(size, rect, pixels.data(), rect, cr, bw, 0xFF, 0xFF);
+    _rleSolid = PNGLoader::get().createRLEImageMaskFromResource(pixels, resourceID, &size);
+
+    drawBorderedRectOverwrite(size, rect, pixels.data(), rect, cr, bw, 0xAA, 0xFF);
+    _rleBordered = PNGLoader::get().createRLEImageMaskFromResource(pixels, resourceID, &size);
+
+    _colorDefault = 0xFFAA0033;
+    _colorSemiTransparent = 0xAAAA0033;
+
+    _rleSolid.w = size.cx, _rleSolid.h = size.cy;
+}
 
 void VolumeApp::construct(HINSTANCE instance, WNDPROC wndProc)
 {
@@ -22,11 +44,10 @@ void VolumeApp::construct(HINSTANCE instance, WNDPROC wndProc)
 
     _audioAppListerner.init(_hWnd);
 
-    SIZE customSize { 40 - _uic.sliderSpacing, 40 - _uic.sliderSpacing };
-    int r = _uic.sliderCornerRadius;
-    int bw = _uic.sliderBorderWidth;
-    imageClose = PNGLoader::get().getGrayscalePngFromResource(IDB_PNG_CLOSE, r, bw, &customSize);
-    imageSettings = PNGLoader::get().getGrayscalePngFromResource(IDB_PNG_SETTINGS, r, bw, &customSize);
+    SIZE size { 40 - _uic.sliderSpacing, 40 - _uic.sliderSpacing };
+    std::vector<DWORD> pixels(size.cx * size.cy);
+
+    _btnClose.initialize(pixels, IDB_PNG_CLOSE, size, _uic.sliderCornerRadius, _uic.sliderBorderWidth);
 }
 
 void VolumeApp::destroyWindow(HWND hWnd)
@@ -134,13 +155,10 @@ void VolumeApp::onPaint(HDC hdc)
     // ScreenToClient(_hWnd, &p);
 
     if (_isAppHovered) {
-        int bd = _uic.sliderSpacing + _uic.windowBorderWidth;
-        drawGrayscaleMask(hdc, imageClose,
-            POINT { windowRect.right - imageClose.w - bd, bd },
-            nullptr, 0x88AA0033);
-        drawGrayscaleMask(hdc, imageSettings,
-            POINT { windowRect.right - imageSettings.w - bd, imageSettings.h + _uic.sliderSpacing + bd },
-            nullptr, 0x88888888);
+        _btnClose.draw(hdc);
+        // drawGrayscaleMask(hdc, imageSettings,
+        //     POINT { windowRect.right - imageSettings.w - bd, imageSettings.h + _uic.sliderSpacing + bd },
+        //     nullptr, 0x88888888);
     }
 
     // overlay text

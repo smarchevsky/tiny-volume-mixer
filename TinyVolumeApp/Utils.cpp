@@ -84,7 +84,7 @@ struct PngLoaderData {
 };
 } // namespace
 
-PNGLoader::PNGLoader() { CoCreateInstance(CLSID_WICImagingFactory, nullptr, CLSCTX_INPROC_SERVER, IID_PPV_ARGS(&_pFactory)); }
+PNGLoader::PNGLoader() { (void)CoCreateInstance(CLSID_WICImagingFactory, nullptr, CLSCTX_INPROC_SERVER, IID_PPV_ARGS(&_pFactory)); }
 PNGLoader::~PNGLoader() { _pFactory->Release(); }
 
 HBITMAP PNGLoader::getBitmapFromPng(const std::wstring& pngPath, const SIZE* customImageSize)
@@ -106,7 +106,8 @@ HBITMAP PNGLoader::getBitmapFromPng(const std::wstring& pngPath, const SIZE* cus
     return hBmp;
 }
 
-ImageBufferRLE PNGLoader::getGrayscalePngFromResource(int resourceID, int cornerRadius, int borderWidth, const SIZE* customImageSize)
+ImageBufferRLE PNGLoader::createRLEImageMaskFromResource(std::vector<DWORD>& dst,
+    int resourceID, const SIZE* customImageSize)
 {
     ImageBufferRLE result {};
     PngLoaderData plData(_pFactory, resourceID, customImageSize, true);
@@ -123,14 +124,9 @@ ImageBufferRLE PNGLoader::getGrayscalePngFromResource(int resourceID, int corner
 
     result.w = size.cx, result.h = size.cy;
 
-    {
-        std::vector<DWORD> pixels(size.cx * size.cy);
-        auto rc = RECT { 0, 0, size.cx, size.cy };
-        drawBorderedRectOverwrite(size, rc, pixels.data(), rc, cornerRadius, borderWidth, 0xFFFFFF88, 0xFFFFFFFF);
-        for (int i = 0; i < size.cx * size.cy; ++i) {
-            BYTE pixelB = 255 - (BYTE)pixels[i];
-            rawData[i] = 255 - std::max<BYTE>(pixelB, rawData[i]);
-        }
+    for (int i = 0; i < size.cx * size.cy; ++i) {
+        BYTE pixelB = 255 - (BYTE)dst[i];
+        rawData[i] = 255 - std::max<BYTE>(pixelB, rawData[i]);
     }
 
     std::vector<std::pair<BYTE, BYTE>> compressedData;
@@ -150,7 +146,9 @@ ImageBufferRLE PNGLoader::getGrayscalePngFromResource(int resourceID, int corner
 
     compressedData.push_back({ 255, current });
 
-    printf("ResourceID: %d, imageSize: %d, dataSize: %d\n", resourceID, *customImageSize, (int)compressedData.size());
+    printf("ResourceID: %d, imageSize: %dx%d, dataSize: %d\n", resourceID,
+        customImageSize->cx, customImageSize->cy, (int)compressedData.size());
+
     for (auto& d : compressedData) {
         // printf("\\%o\\%o", d.first, d.second); // "\\%o" or "\\x%02x"
     }

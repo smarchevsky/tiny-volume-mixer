@@ -7,10 +7,32 @@
 #include "SliderManager.h"
 #include "UIManager.h"
 
+class Button {
+    ImageBufferRLE _rleSolid;
+    ImageBufferRLE _rleBordered;
+    DWORD _colorDefault, _colorSemiTransparent;
+    POINT _pos;
+
+public:
+    HitUID _hitUID;
+    enum State : uint8_t {
+        Default,
+        Hovered,
+        Pressed
+    } _currentState;
+
+    void setPos(POINT pos) { _pos = pos; }
+    void draw(HDC hdc);
+    void initialize(std::vector<DWORD>& pixels, int resourceID, SIZE size, int cr, int bw);
+};
+
 class VolumeApp : public App {
     AudioUpdateListener _audioAppListerner;
     UIConfig _uic;
     SliderManager _sliderManager;
+
+    Button _btnClose {}, _btnSettings {};
+
     HitDetector _hitDetector;
     HitUID _hitHovered = HitUID_none;
     bool _isAppHovered;
