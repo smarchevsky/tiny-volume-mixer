@@ -173,6 +173,25 @@ void VolumeApp::onMouseScroll(POINT cursorClientPos, float delta)
     }
 }
 
+void VolumeApp::onMouseButton(POINT cursorClientPos, MouseButton btn, bool down)
+{
+    switch (btn) {
+    case MouseButton::Left:
+        if (down) {
+            SendMessage(_hWnd, WM_NCLBUTTONDOWN, HTCAPTION, 0); // handle window drag on LMB
+        }
+        return;
+
+    case MouseButton::Right:
+        if (down) {
+        } else {
+            // ReleaseCapture();
+            SendMessage(_hWnd, WM_CLOSE, 0, 0);
+        }
+        return;
+    }
+}
+
 void VolumeApp::recalculateHitRects(const RECT& rc)
 {
     _hitDetector.clear();

@@ -24,6 +24,7 @@ class VolumeApp : public App {
     virtual void onMouseLeave() override;
     virtual void onMouseMove(POINT cursorClientPos, bool justEntered) override;
     virtual void onMouseScroll(POINT cursorClientPos, float delta) override;
+    virtual void onMouseButton(POINT cursorClientPos, MouseButton btn, bool down) override;
 
     void recalculateHitRects(const RECT& rc);
 

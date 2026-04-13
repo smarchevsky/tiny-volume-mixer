@@ -12,6 +12,11 @@
 // darks  0x0A0E15 0x212631 0x373F4E 0x4E576A 0x667085
 // lights 0xBFC6D4 0xD1d6E9 0xE0E4EB 0xF0F1F5 0xFFFFFF
 
+enum class MouseButton : uint8_t {
+    Left = 1,
+    Right = 2,
+    Mid = 4
+};
 class App {
 protected:
     HINSTANCE _hInstance;
@@ -28,6 +33,7 @@ protected:
     virtual void onMouseLeave() = 0;
     virtual void onMouseMove(POINT cursorClientPos, bool justEntered) = 0;
     virtual void onMouseScroll(POINT cursorClientPos, float delta) = 0;
+    virtual void onMouseButton(POINT cursorClientPos, MouseButton btn, bool down) = 0;
 
     virtual void onPaint(HDC hdc) = 0;
     virtual void onResize(RECT newRect) = 0;
@@ -43,8 +49,8 @@ public:
     void handleMouseMove(WPARAM wParam, LPARAM lParam);
     void handleMouseLeave();
     void handleMouseScroll(WPARAM wParam, LPARAM lParam);
-    void handleLMB(WPARAM wParam, LPARAM lParam, bool down);
-    void handleRMB(WPARAM wParam, LPARAM lParam, bool down);
+    void handleLMB(WPARAM wParam, LPARAM lParam, bool down) { onMouseButton(POINT { GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam) }, MouseButton::Left, down); }
+    void handleRMB(WPARAM wParam, LPARAM lParam, bool down) { onMouseButton(POINT { GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam) }, MouseButton::Right, down); }
 
     LRESULT handleNCAHitTest(HWND hWnd, LPARAM lParam);
     void handleMinMaxInfo(WPARAM wParam, LPARAM lParam);
