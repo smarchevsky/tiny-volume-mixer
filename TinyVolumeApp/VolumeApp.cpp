@@ -204,7 +204,9 @@ void VolumeApp::onMouseButton(POINT cursorClientPos, MouseButton btn, bool down)
 
 void VolumeApp::recalculateHitRects(const RECT& rc)
 {
+    auto hitItemLMB = _hitDetector.getCurrentHit(HitType::LMB);
     _hitDetector.clear();
+
     // add buttons (higher priority)
     _hitDetector.addRect(&_btnClose);
     _hitDetector.addRect(&_btnSettings);
@@ -213,6 +215,7 @@ void VolumeApp::recalculateHitRects(const RECT& rc)
     _sliderManager.recalculateSliderRects(rc, _uic);
     _hitDetector.addRect(&_sliderManager.getSliderMaster());
     _sliderManager.forEachSliderApp([&](Slider& s) { _hitDetector.addRect(&s); });
+    _hitDetector.setCurrentHit(hitItemLMB, HitType::LMB);
 }
 
 void VolumeApp::onMouseLeave()

@@ -26,7 +26,7 @@ public:
 
     RECT getHitRect() const override;
 
-    void onHitEvent(HWND hwnd, HitType type, bool enabled) override
+    bool onHitEvent(HWND hwnd, HitType type, bool enabled) override
     {
         if (type == HitType::Hover)
             _isHovered = enabled;
@@ -35,5 +35,6 @@ public:
 
         RECT r = getRectDraw();
         InvalidateRect(hwnd, &r, FALSE);
+        return true;
     }
 };
