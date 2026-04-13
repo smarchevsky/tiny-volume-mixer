@@ -4,6 +4,7 @@
 
 #include "ColorUtils.h"
 #include "Draw.h"
+#include "HitDetector.h"
 #include "UIManager.h"
 #include "Utils.h"
 
@@ -111,7 +112,7 @@ void Slider::draw(HDC hdc, const UIConfig& uic) const
         _rect.right - uic.getSliderOffsetR(), _rect.bottom
     };
 
-    const BYTE borderAlphaMask = _focused ? uic.sliderTransparencyBorderHovered : uic.sliderTransparencyBorder;
+    const BYTE borderAlphaMask = _hovered ? uic.sliderTransparencyBorderHovered : uic.sliderTransparencyBorder;
     bool colorsValid = _sliderInfo && _sliderInfo->colorsInitialized;
 
     DWORD sliderColor = colorsValid ? _sliderInfo->colorSlider : uic.sliderDefaultBackgroundRGB;
@@ -163,16 +164,6 @@ RECT Slider::calculateTextRect() const
     return RECT { x, _rect.top, x + _rect.right - _rect.left + extend, _rect.top + bitmapSize.cy };
 }
 
-Slider* SliderManager::getSliderFromHitUID(HitUID hitUID)
-{
-    if (_sliderMaster._hitUID == hitUID)
-        return &_sliderMaster;
-    auto it = std::find_if(_slidersApps.begin(), _slidersApps.end(), [&](const Slider& s) { return s._hitUID == hitUID; });
-    if (it != _slidersApps.end())
-        return &*it;
-    return nullptr;
-}
-
 Slider* SliderManager::getSliderAppByPID(PID pid)
 {
     auto it = std::find_if(_slidersApps.begin(), _slidersApps.end(), [&](const Slider& s) { return s.getPID() == pid; });
@@ -205,12 +196,8 @@ void SliderManager::recalculateSliderRects(const RECT& windowRect, const UIConfi
     });
 
     _sliderMaster._rect = RECT { offset, top, offset += uic.sliderWidthMaster, bottom };
-    _sliderMaster._hitUID = HitUID_invalid;
-
-    for (auto& slider : _slidersApps) {
+    for (auto& slider : _slidersApps)
         slider._rect = RECT { offset, top, offset += uic.sliderWidthApp, bottom };
-        slider._hitUID = HitUID_invalid;
-    }
 }
 
 void SliderManager::drawSliders(HDC hdc, const UIConfig& uic)

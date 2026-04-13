@@ -20,6 +20,8 @@ void VolumeApp::construct(HINSTANCE instance, WNDPROC wndProc)
     pixels.clear();
 
     initWindow(instance, wndProc, rc);
+
+    _hitDetector._ownerHwnd = &_hWnd;
     handleHoverChanged(false);
 
     _sliderManager.getSliderMaster()._sliderInfo = UIManager::get().getIconMasterVol();
@@ -136,7 +138,7 @@ void VolumeApp::onPaint(HDC hdc)
     }
 
     // overlay text
-    if (auto slider = _sliderManager.getSliderFromHitUID(_hitHovered)) {
+    if (auto slider = dynamic_cast<Slider*>(_hitDetector.getCurrentHit())) {
         if (slider && slider->_sliderInfo && slider->_sliderInfo->textBmp) {
             RECT r = slider->calculateTextRect();
             drawBitmapAlphaComposite(hdc, slider->_sliderInfo->textBmp,
@@ -156,7 +158,7 @@ void VolumeApp::onResize(RECT rc)
 
 void VolumeApp::onMouseScroll(POINT cursorClientPos, float delta)
 {
-    if (Slider* slider = _sliderManager.getSliderFromHitUID(_hitHovered)) {
+    if (auto slider = dynamic_cast<Slider*>(_hitDetector.getCurrentHit())) {
         float sliderHeight = slider->getHeight();
         // slider->debugUpdateIcon(_uic.iconSize);
 
@@ -175,25 +177,20 @@ void VolumeApp::onMouseScroll(POINT cursorClientPos, float delta)
 void VolumeApp::recalculateHitRects(const RECT& rc)
 {
     _hitDetector.clear();
-    _btnClose._hitUID = _hitDetector.addRect(_btnClose.getRectHit());
+    // add buttons (higher priority)
+    _hitDetector.addRect(&_btnClose);
 
+    // add sliders
     _sliderManager.recalculateSliderRects(rc, _uic);
-    _sliderManager.getSliderMaster()._hitUID = _hitDetector.addRect(_sliderManager.getSliderMaster()._rect);
-    _sliderManager.forEachSliderApp([&](Slider& s) { s._hitUID = _hitDetector.addRect(s._rect); });
+    _hitDetector.addRect(&_sliderManager.getSliderMaster());
+    _sliderManager.forEachSliderApp([&](Slider& s) { _hitDetector.addRect(&s); });
 }
 
 void VolumeApp::onMouseLeave()
 {
     handleHoverChanged(false);
 
-    if (auto slider = _sliderManager.getSliderFromHitUID(_hitHovered)) {
-        slider->_focused = false;
-        RECT u = slider->calculateTextRect();
-        UnionRect(&u, &u, &slider->_rect);
-        InvalidateRect(_hWnd, &u, FALSE);
-    }
-
-    _hitHovered = HitUID_none;
+    _hitDetector.hitReset();
 }
 
 void VolumeApp::onMouseMove(POINT cursorClientPos, bool justEntered)
@@ -201,35 +198,14 @@ void VolumeApp::onMouseMove(POINT cursorClientPos, bool justEntered)
     if (justEntered)
         handleHoverChanged(true);
 
-    HitUID newHit = _hitDetector.testHit(cursorClientPos);
+    _hitDetector.hitTest(cursorClientPos);
+}
 
-    if (newHit != _hitHovered) {
-        if (newHit == _btnClose._hitUID) {
-            _btnClose._isHovered = true;
-            RECT bRect = _btnClose.getRectDraw();
-            InvalidateRect(_hWnd, &bRect, FALSE);
-        }
-        if (_hitHovered == _btnClose._hitUID) {
-            _btnClose._isHovered = false;
-            RECT bRect = _btnClose.getRectDraw();
-            InvalidateRect(_hWnd, &bRect, FALSE);
-        }
-
-        if (auto slider = _sliderManager.getSliderFromHitUID(newHit)) {
-            slider->_focused = true;
-            RECT u = slider->calculateTextRect();
-            UnionRect(&u, &u, &slider->_rect);
-            InvalidateRect(_hWnd, &u, FALSE);
-        }
-        if (auto slider = _sliderManager.getSliderFromHitUID(_hitHovered)) {
-            slider->_focused = false;
-            RECT u = slider->calculateTextRect();
-            UnionRect(&u, &u, &slider->_rect);
-            InvalidateRect(_hWnd, &u, FALSE);
-        }
-
-        _hitHovered = newHit;
-    }
+bool VolumeApp::handleHoverChanged(bool isHovered)
+{
+    _isAppHovered = isHovered;
+    InvalidateRect(_hWnd, NULL, FALSE);
+    return false;
 }
 
 void VolumeApp::handleTimerUpdateUI()
@@ -265,11 +241,4 @@ void VolumeApp::handleTimerUpdateUI()
         // str += "PID: " + std::to_string((int)w.pid) + ", Wave: " + std::to_string(w.wave) + "   ";
     }
     // printf("Wave info:\n%s", str.c_str());
-}
-
-bool VolumeApp::handleHoverChanged(bool isHovered)
-{
-    _isAppHovered = isHovered;
-    InvalidateRect(_hWnd, NULL, FALSE);
-    return false;
 }

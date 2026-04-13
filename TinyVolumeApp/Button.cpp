@@ -57,7 +57,7 @@ void Button::setPos(POINT pos, AlignUI align)
     }
 }
 
-RECT Button::getRectHit() const
+RECT Button::getHitRect() const
 {
     return {
         _pos.x - _hitExtend[(int)AlignUI::Left],

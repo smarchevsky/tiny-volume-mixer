@@ -16,7 +16,6 @@ class VolumeApp : public App {
     Button _btnClose {}, _btnSettings {};
 
     HitDetector _hitDetector;
-    HitUID _hitHovered = HitUID_none;
     bool _isAppHovered;
 
     virtual void onPaint(HDC hdc) override;
