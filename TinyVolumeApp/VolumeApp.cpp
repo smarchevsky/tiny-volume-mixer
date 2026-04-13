@@ -21,7 +21,6 @@ void VolumeApp::construct(HINSTANCE instance, WNDPROC wndProc)
 
     initWindow(instance, wndProc, rc);
 
-    _hitDetector._ownerHwnd = &_hWnd;
     handleHoverChanged(false);
 
     _sliderManager.getSliderMaster()._sliderInfo = UIManager::get().getIconMasterVol();
@@ -190,7 +189,7 @@ void VolumeApp::onMouseLeave()
 {
     handleHoverChanged(false);
 
-    _hitDetector.hitReset();
+    _hitDetector.hitReset(_hWnd);
 }
 
 void VolumeApp::onMouseMove(POINT cursorClientPos, bool justEntered)
@@ -198,7 +197,7 @@ void VolumeApp::onMouseMove(POINT cursorClientPos, bool justEntered)
     if (justEntered)
         handleHoverChanged(true);
 
-    _hitDetector.hitTest(cursorClientPos);
+    _hitDetector.hitTest(_hWnd, cursorClientPos);
 }
 
 bool VolumeApp::handleHoverChanged(bool isHovered)

@@ -4,8 +4,8 @@
 
 #include "Common.h"
 
-#include <vector>
 #include <cassert>
+#include <vector>
 
 // clang-format off
 class IHitTestable {
@@ -23,17 +23,13 @@ class HitDetector {
     std::vector<HitRect> _hitRects;
     IHitTestable* _currentHit {};
 
-public:
-    HWND* _ownerHwnd; // used for invalidate rect
-
 private:
-    void onHitChanged(IHitTestable* newHit) {
-        assert(_ownerHwnd);
+    void onHitChanged(HWND hwnd, IHitTestable* newHit) {
         if (newHit != _currentHit) {
             if (newHit)
-                newHit->onHoverChanged(*_ownerHwnd, true);
+                newHit->onHoverChanged(hwnd, true);
             if (_currentHit)
-                _currentHit->onHoverChanged(*_ownerHwnd, false);
+                _currentHit->onHoverChanged(hwnd, false);
             _currentHit = newHit;
         }
     }
@@ -44,8 +40,8 @@ public:
 
     IHitTestable* getCurrentHit() const { return _currentHit; }
 
-    void hitReset() { onHitChanged(nullptr); }
-    void hitTest(POINT p)
+    void hitReset(HWND hwnd) { onHitChanged(hwnd, nullptr); }
+    void hitTest(HWND hwnd, POINT p)
     {
         IHitTestable* newHit = nullptr;
         for (auto& hr : _hitRects) {
@@ -55,7 +51,7 @@ public:
             }
         }
 
-        onHitChanged(newHit);
+        onHitChanged(hwnd, newHit);
     }
 };
 
