@@ -49,8 +49,7 @@ public:
     void handleMouseMove(WPARAM wParam, LPARAM lParam);
     void handleMouseLeave();
     void handleMouseScroll(WPARAM wParam, LPARAM lParam);
-    void handleLMB(WPARAM wParam, LPARAM lParam, bool down) { onMouseButton(POINT { GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam) }, MouseButton::Left, down); }
-    void handleRMB(WPARAM wParam, LPARAM lParam, bool down) { onMouseButton(POINT { GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam) }, MouseButton::Right, down); }
+    void handleMouseButton(WPARAM wParam, LPARAM lParam, MouseButton btn, bool down) { onMouseButton(POINT { GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam) }, btn, down); }
 
     LRESULT handleNCAHitTest(HWND hWnd, LPARAM lParam);
     void handleMinMaxInfo(WPARAM wParam, LPARAM lParam);

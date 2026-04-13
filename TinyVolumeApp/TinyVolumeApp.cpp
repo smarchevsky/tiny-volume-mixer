@@ -66,22 +66,32 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
     } break;
 
     case WM_LBUTTONDOWN: {
-        app.handleLMB(wParam, lParam, true);
+        app.handleMouseButton(wParam, lParam, MouseButton::Left, true);
         return 0;
     } break;
 
     case WM_LBUTTONUP: {
-        app.handleLMB(wParam, lParam, false);
+        app.handleMouseButton(wParam, lParam, MouseButton::Left, false);
         return 0;
     } break;
 
     case WM_RBUTTONDOWN: {
-        app.handleRMB(wParam, lParam, true);
+        app.handleMouseButton(wParam, lParam, MouseButton::Right, true);
         return 0;
     } break;
 
     case WM_RBUTTONUP: {
-        app.handleRMB(wParam, lParam, false);
+        app.handleMouseButton(wParam, lParam, MouseButton::Right, false);
+        return 0;
+    } break;
+
+    case WM_MBUTTONDOWN: {
+        app.handleMouseButton(wParam, lParam, MouseButton::Mid, true);
+        return 0;
+    } break;
+
+    case WM_MBUTTONUP: {
+        app.handleMouseButton(wParam, lParam, MouseButton::Mid, false);
         return 0;
     } break;
 
