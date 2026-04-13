@@ -16,7 +16,8 @@ void VolumeApp::construct(HINSTANCE instance, WNDPROC wndProc)
     // better initialize buttons before window creation
     std::vector<DWORD> pixels;
 
-    _btnClose.initialize(pixels, IDB_PNG_CLOSE, _uic);
+    _btnClose.initialize(pixels, IDB_PNG_CLOSE, _uic, 0xBB0044);
+    _btnSettings.initialize(pixels, IDB_PNG_SETTINGS, _uic, 0x999999);
     pixels.clear();
 
     initWindow(instance, wndProc, rc);
@@ -134,6 +135,7 @@ void VolumeApp::onPaint(HDC hdc)
 
     if (_isAppHovered) {
         _btnClose.draw(hdc);
+        _btnSettings.draw(hdc);
     }
 
     // overlay text
@@ -151,6 +153,7 @@ void VolumeApp::onResize(RECT rc)
     int bd = _uic.sliderSpacing + _uic.windowBorderWidth;
 
     _btnClose.setPos(POINT { rc.right - bd, bd }, AlignUI::RightTop);
+    _btnSettings.setPos(POINT { rc.right - bd, bd + _btnClose.getRectDraw().bottom }, AlignUI::RightTop);
     recalculateHitRects(rc);
     InvalidateRect(_hWnd, NULL, FALSE);
 }
@@ -204,6 +207,7 @@ void VolumeApp::recalculateHitRects(const RECT& rc)
     _hitDetector.clear();
     // add buttons (higher priority)
     _hitDetector.addRect(&_btnClose);
+    _hitDetector.addRect(&_btnSettings);
 
     // add sliders
     _sliderManager.recalculateSliderRects(rc, _uic);

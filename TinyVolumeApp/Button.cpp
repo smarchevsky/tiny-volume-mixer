@@ -15,7 +15,7 @@ void Button::draw(HDC hdc) const
     }
 }
 
-void Button::initialize(std::vector<DWORD>& pixels, int resourceID, const UIConfig& uic)
+void Button::initialize(std::vector<DWORD>& pixels, int resourceID, const UIConfig& uic, DWORD color)
 {
     SIZE size { 40 - uic.sliderSpacing, 40 - uic.sliderSpacing };
     if (size.cx <= 0 || size.cy <= 0)
@@ -32,7 +32,7 @@ void Button::initialize(std::vector<DWORD>& pixels, int resourceID, const UIConf
         uic.sliderCornerRadius, uic.sliderBorderWidth, uic.sliderTransparencyBorder, 0xFF);
     _rleBordered = PNGLoader::get().createRLEImageMaskFromResource(pixels, resourceID, &size);
 
-    _color = 0xAA0033;
+    _color = color & 0xFFFFFF;
     _transparency = uic.sliderTransparencyBorder;
 
     _imageSize = size;
