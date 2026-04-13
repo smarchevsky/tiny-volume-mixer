@@ -63,16 +63,20 @@ void App::handleMouseScroll(WPARAM wParam, LPARAM lParam)
     onMouseScroll(cursorScreenPos, wheelSteps);
 }
 
-void App::handleLMBDown(WPARAM wParam, LPARAM lParam)
+void App::handleLMB(WPARAM wParam, LPARAM lParam, bool down)
 {
-    ReleaseCapture();
-    SendMessage(_hWnd, WM_NCLBUTTONDOWN, HTCAPTION, 0); // handle window drag on LMB
+    if (down) {
+        ReleaseCapture();
+        SendMessage(_hWnd, WM_NCLBUTTONDOWN, HTCAPTION, 0); // handle window drag on LMB
+    }
 }
 
-void App::handleRMBUp(WPARAM wParam, LPARAM lParam)
+void App::handleRMB(WPARAM wParam, LPARAM lParam, bool down)
 {
-    ReleaseCapture();
-    SendMessage(_hWnd, WM_CLOSE, 0, 0);
+    if (!down) {
+        ReleaseCapture();
+        SendMessage(_hWnd, WM_CLOSE, 0, 0);
+    }
 }
 
 void App::handleMouseMove(WPARAM wParam, LPARAM lParam)
