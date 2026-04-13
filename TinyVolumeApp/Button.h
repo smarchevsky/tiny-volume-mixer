@@ -25,11 +25,15 @@ public:
     void initialize(std::vector<DWORD>& pixels, int resourceID, const UIConfig& uic);
 
     RECT getHitRect() const override;
-    void onHoverChanged(HWND hwnd, bool isHover) override
+
+    void onHitEvent(HWND hwnd, HitType type, bool enabled) override
     {
-        _isHovered = isHover;
+        if (type == HitType::Hover)
+            _isHovered = enabled;
+        else if (type == HitType::LMB)
+            _isPressed = enabled;
+
         RECT r = getRectDraw();
         InvalidateRect(hwnd, &r, FALSE);
     }
-
 };

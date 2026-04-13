@@ -137,7 +137,7 @@ void VolumeApp::onPaint(HDC hdc)
     }
 
     // overlay text
-    if (auto slider = dynamic_cast<Slider*>(_hitDetector.getCurrentHit())) {
+    if (auto slider = dynamic_cast<Slider*>(_hitDetector.getCurrentHit(HitType::Hover))) {
         if (slider && slider->_sliderInfo && slider->_sliderInfo->textBmp) {
             RECT r = slider->calculateTextRect();
             drawBitmapAlphaComposite(hdc, slider->_sliderInfo->textBmp,
@@ -157,7 +157,7 @@ void VolumeApp::onResize(RECT rc)
 
 void VolumeApp::onMouseScroll(POINT cursorClientPos, float delta)
 {
-    if (auto slider = dynamic_cast<Slider*>(_hitDetector.getCurrentHit())) {
+    if (auto slider = dynamic_cast<Slider*>(_hitDetector.getCurrentHit(HitType::Hover))) {
         float sliderHeight = slider->getHeight();
         // slider->debugUpdateIcon(_uic.iconSize);
 
@@ -178,14 +178,21 @@ void VolumeApp::onMouseButton(POINT cursorClientPos, MouseButton btn, bool down)
     switch (btn) {
     case MouseButton::Left:
         if (down) {
-            SendMessage(_hWnd, WM_NCLBUTTONDOWN, HTCAPTION, 0); // handle window drag on LMB
+            if (_hitDetector.hitTest(_hWnd, cursorClientPos, HitType::LMB)) {
+                SetCapture(_hWnd);
+            } else {
+                SendMessage(_hWnd, WM_NCLBUTTONDOWN, HTCAPTION, 0); // handle window drag on LMB
+            }
+        } else {
+            _hitDetector.hitReset(_hWnd, HitType::LMB);
+            ReleaseCapture();
         }
+
         return;
 
     case MouseButton::Right:
         if (down) {
         } else {
-            // ReleaseCapture();
             SendMessage(_hWnd, WM_CLOSE, 0, 0);
         }
         return;
@@ -208,7 +215,7 @@ void VolumeApp::onMouseLeave()
 {
     handleHoverChanged(false);
 
-    _hitDetector.hitReset(_hWnd);
+    _hitDetector.hitReset(_hWnd, HitType::Hover);
 }
 
 void VolumeApp::onMouseMove(POINT cursorClientPos, bool justEntered)
@@ -216,7 +223,7 @@ void VolumeApp::onMouseMove(POINT cursorClientPos, bool justEntered)
     if (justEntered)
         handleHoverChanged(true);
 
-    _hitDetector.hitTest(_hWnd, cursorClientPos);
+    _hitDetector.hitTest(_hWnd, cursorClientPos, HitType::Hover);
 }
 
 bool VolumeApp::handleHoverChanged(bool isHovered)

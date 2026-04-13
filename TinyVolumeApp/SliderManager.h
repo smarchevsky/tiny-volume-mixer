@@ -32,12 +32,14 @@ public:
     RECT calculateTextRect() const;
 
     RECT getHitRect() const override { return _rect; }
-    void onHoverChanged(HWND hwnd, bool isHover) override
+    void onHitEvent(HWND hwnd, HitType type, bool enabled) override
     {
-        _hovered = isHover;
-        RECT u = calculateTextRect();
-        UnionRect(&u, &u, &_rect);
-        InvalidateRect(hwnd, &u, FALSE);
+        if (type == HitType::Hover) {
+            _hovered = enabled;
+            RECT u = calculateTextRect();
+            UnionRect(&u, &u, &_rect);
+            InvalidateRect(hwnd, &u, FALSE);
+        }
     }
 };
 

@@ -6,9 +6,13 @@
 
 void Button::draw(HDC hdc) const
 {
-    auto& currentRLE = _isHovered ? _rleBordered : _rleSolid;
-    BYTE transparency = (_isPressed || _isHovered) ? 0xFF : _transparency;
-    drawGrayscaleMask(hdc, currentRLE, _imageSize, _pos, nullptr, _color | transparency << 24);
+    if (_isPressed) {
+        drawGrayscaleMask(hdc, _rleSolid, _imageSize, _pos, nullptr, _color | 0xFF000000);
+    } else if (_isHovered) {
+        drawGrayscaleMask(hdc, _rleBordered, _imageSize, _pos, nullptr, _color | 0xFF000000);
+    } else {
+        drawGrayscaleMask(hdc, _rleSolid, _imageSize, _pos, nullptr, _color | _transparency << 24);
+    }
 }
 
 void Button::initialize(std::vector<DWORD>& pixels, int resourceID, const UIConfig& uic)

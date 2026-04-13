@@ -8,9 +8,12 @@
 #include <vector>
 
 // clang-format off
+
+enum HitType : uint8_t { Hover, LMB, RMB, MMB, Max };
+
 class IHitTestable {
 public:
-    virtual void onHoverChanged(HWND hwnd, bool isHover) = 0;
+    virtual void onHitEvent(HWND hwnd, HitType type, bool enabled) = 0;
     virtual RECT getHitRect() const = 0;
 };
 
@@ -21,16 +24,16 @@ struct HitRect {
 
 class HitDetector {
     std::vector<HitRect> _hitRects;
-    IHitTestable* _currentHit {};
+    IHitTestable* _currentHit [HitType::Max] {};
 
 private:
-    void onHitChanged(HWND hwnd, IHitTestable* newHit) {
-        if (newHit != _currentHit) {
-            if (newHit)
-                newHit->onHoverChanged(hwnd, true);
-            if (_currentHit)
-                _currentHit->onHoverChanged(hwnd, false);
-            _currentHit = newHit;
+    void onHitChanged(HWND hwnd, IHitTestable* newHover, HitType type) {
+        if (newHover != _currentHit[type]) {
+            if (newHover)
+                newHover->onHitEvent(hwnd, type, true);
+            if (_currentHit[type])
+                _currentHit[type]->onHitEvent(hwnd, type, false);
+            _currentHit[type] = newHover;
         }
     }
 public:
@@ -38,10 +41,10 @@ public:
     void remove(IHitTestable* h) { std::erase_if(_hitRects, [&](const HitRect& hr) { return hr.hitPtr == h; }); }
     void clear() { _hitRects.clear(); }
 
-    IHitTestable* getCurrentHit() const { return _currentHit; }
+    IHitTestable* getCurrentHit(HitType type) const { return _currentHit[type]; }
 
-    void hitReset(HWND hwnd) { onHitChanged(hwnd, nullptr); }
-    void hitTest(HWND hwnd, POINT p)
+    void hitReset(HWND hwnd, HitType type) { onHitChanged(hwnd, nullptr, type); }
+    bool hitTest(HWND hwnd, POINT p, HitType type)
     {
         IHitTestable* newHit = nullptr;
         for (auto& hr : _hitRects) {
@@ -51,24 +54,8 @@ public:
             }
         }
 
-        onHitChanged(hwnd, newHit);
+        onHitChanged(hwnd, newHit, type);
+
+        return !!newHit;
     }
 };
-
-/*
-
-    if (newHit != _hitHovered) {
-        if (newHit == _btnClose._hitUID) {
-            _btnClose._isHovered = true;
-            RECT bRect = _btnClose.getRectDraw();
-            InvalidateRect(_hWnd, &bRect, FALSE);
-        }
-        if (_hitHovered == _btnClose._hitUID) {
-            _btnClose._isHovered = false;
-            RECT bRect = _btnClose.getRectDraw();
-            InvalidateRect(_hWnd, &bRect, FALSE);
-        }
-
-
-        _hitHovered = newHit;
-    }*/
