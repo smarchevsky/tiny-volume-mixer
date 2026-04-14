@@ -4,9 +4,14 @@
 
 #include "HitDetector.h"
 
+#include <functional>
 struct UIConfig;
 
 class Button : public IHitTestable {
+public:
+    std::function<void()> _onClicked;
+
+private:
     BufferRLE _rleSolid;
     BufferRLE _rleBordered;
     DWORD _color;
@@ -26,15 +31,5 @@ public:
 
     RECT getHitRect() const override;
 
-    bool onHitEvent(HWND hwnd, HitType type, bool enabled) override
-    {
-        if (type == HitType::Hover)
-            _isHovered = enabled;
-        else if (type == HitType::LMB)
-            _isPressed = enabled;
-
-        RECT r = getRectDraw();
-        InvalidateRect(hwnd, &r, FALSE);
-        return true;
-    }
+    bool onHitEvent(HWND hwnd, HitType type, bool enabled) override;
 };

@@ -21,6 +21,7 @@ void VolumeApp::construct(HINSTANCE instance, WNDPROC wndProc)
     pixels.clear();
 
     initWindow(instance, wndProc, rc);
+    _btnClose._onClicked = [this]() { SendMessage(_hWnd, WM_CLOSE, 0, 0); };
 
     handleHoverChanged(false);
 

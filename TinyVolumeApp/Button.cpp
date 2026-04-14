@@ -70,3 +70,18 @@ RECT Button::getHitRect() const
         _pos.y + _imageSize.cy + _hitExtend[(int)AlignUI::Bottom]
     };
 }
+
+bool Button::onHitEvent(HWND hwnd, HitType type, bool enabled)
+{
+    if (type == HitType::Hover)
+        _isHovered = enabled;
+    else if (type == HitType::LMB) {
+        _isPressed = enabled;
+        if (_onClicked && !_isPressed && _isHovered)
+            _onClicked();
+    }
+
+    RECT r = getRectDraw();
+    InvalidateRect(hwnd, &r, FALSE);
+    return true;
+}
