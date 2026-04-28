@@ -121,7 +121,7 @@ void App::handlePaint()
         onPaint(_hdcMem);
 
 #if (_DEBUG)
-        debugUpdateRegion(width, height, pixels);
+        // debugUpdateRegion(width, height, pixels);
 #endif
 
         BLENDFUNCTION blend = {};
