@@ -27,7 +27,7 @@ public:
     void setPos(POINT pos, AlignUI align);
     RECT getRectDraw() const { return { _pos.x, _pos.y, _pos.x + _imageSize.cx, _pos.y + _imageSize.cy }; }
     void draw(HDC hdc) const;
-    void initialize(std::vector<DWORD>& pixels, int resourceID, const UIConfig& uic, DWORD color);
+    Button& initialize(std::vector<DWORD>& pixels, int resourceID, const UIConfig& uic, DWORD color);
 
     RECT getHitRect() const override;
 

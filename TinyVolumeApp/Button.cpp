@@ -15,11 +15,11 @@ void Button::draw(HDC hdc) const
     }
 }
 
-void Button::initialize(std::vector<DWORD>& pixels, int resourceID, const UIConfig& uic, DWORD color)
+Button& Button::initialize(std::vector<DWORD>& pixels, int resourceID, const UIConfig& uic, DWORD color)
 {
     SIZE size { 40 - uic.sliderSpacing, 40 - uic.sliderSpacing };
     if (size.cx <= 0 || size.cy <= 0)
-        return;
+        return *this;
 
     pixels.resize(size.cx * size.cy);
 
@@ -41,6 +41,8 @@ void Button::initialize(std::vector<DWORD>& pixels, int resourceID, const UIConf
     _hitExtend[(int)AlignUI::Top] = uic.getSliderOffsetL();
     _hitExtend[(int)AlignUI::Right] = uic.getSliderOffsetR();
     _hitExtend[(int)AlignUI::Bottom] = uic.getSliderOffsetR();
+
+    return *this;
 }
 
 void Button::setPos(POINT pos, AlignUI align)

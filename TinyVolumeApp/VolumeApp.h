@@ -13,7 +13,7 @@ class VolumeApp : public App {
     UIConfig _uic;
     SliderManager _sliderManager;
 
-    Button _btnClose {}, _btnSettings {};
+    std::vector<Button> _buttons;
 
     HitDetector _hitDetector;
     bool _isAppHovered;
