@@ -16,10 +16,9 @@ void VolumeApp::construct(HINSTANCE instance, WNDPROC wndProc)
     // better initialize buttons before window creation
     std::vector<DWORD> pixels;
 
-    _buttons.reserve(2);
-    _buttons.emplace_back().initialize(pixels, IDB_PNG_CLOSE, _uic, 0xBB0044)._onClicked
+    _buttons[ButtonID::Close].initialize(pixels, IDB_PNG_CLOSE, _uic, 0xBB0044)._onClicked
         = [this]() { SendMessage(_hWnd, WM_CLOSE, 0, 0); };
-    _buttons.emplace_back().initialize(pixels, IDB_PNG_SETTINGS, _uic, 0x999999);
+    _buttons[ButtonID::Settings].initialize(pixels, IDB_PNG_SETTINGS, _uic, 0x999999);
     pixels.clear();
 
     initWindow(instance, wndProc, rc);
@@ -136,7 +135,7 @@ void VolumeApp::onPaint(HDC hdc)
     // ScreenToClient(_hWnd, &p);
 
     if (_isAppHovered) {
-        for (auto& b : _buttons)
+        for (auto& [bID, b] : _buttons)
             b.draw(hdc);
     }
 
@@ -154,8 +153,8 @@ void VolumeApp::onResize(RECT rc)
 {
     int bd = _uic.sliderSpacing + _uic.windowBorderWidth;
 
-    _buttons[0].setPos(POINT { rc.right - bd, bd }, AlignUI::RightTop);
-    _buttons[1].setPos(POINT { rc.right - bd, bd + _buttons[0].getRectDraw().bottom }, AlignUI::RightTop);
+    _buttons[ButtonID::Close].setPos(POINT { rc.right - bd, bd }, AlignUI::RightTop);
+    _buttons[ButtonID::Settings].setPos(POINT { rc.right - bd, bd + _buttons[ButtonID::Close].getRectDraw().bottom }, AlignUI::RightTop);
     recalculateHitRects(rc);
     InvalidateRect(_hWnd, NULL, FALSE);
 }
@@ -211,7 +210,7 @@ void VolumeApp::recalculateHitRects(const RECT& rc)
 
     // add buttons (higher priority)
 
-    for (auto& b : _buttons)
+    for (auto& [bID, b] : _buttons)
         _hitDetector.addRect(&b);
 
     // add sliders

@@ -1,19 +1,22 @@
 #pragma once
 
+// clang-format off
 #include "App.h"
-
 #include "AudioUtils.h"
 #include "Button.h"
 #include "HitDetector.h"
 #include "SliderManager.h"
 #include "UIManager.h"
 
+enum class ButtonID { Close, Settings };
+
+// clang-format on
 class VolumeApp : public App {
     AudioUpdateListener _audioAppListerner;
     UIConfig _uic;
     SliderManager _sliderManager;
 
-    std::vector<Button> _buttons;
+    std::unordered_map<ButtonID, Button> _buttons;
 
     HitDetector _hitDetector;
     bool _isAppHovered;
